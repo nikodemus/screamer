@@ -1275,11 +1275,7 @@
        ((valid-function-name? (second form))
 	(cond
 	 ((symbolp (second form))
-	  (if (or (#+(and (not lucid) (not ansi-90) (not allegro) (not cmu))
-		     special-form-p
-		     #+lucid lisp:special-form-p
-		     #+(or ansi-90 allegro cmu) special-operator-p
-		     (second form))
+	  (if (or (special-operator-p (second form))
 		  ;; note: Allegro has some braindamage in the way it treats
 		  ;;       some macros as special forms and refuses to
 		  ;;       provide a macro function for them. This
@@ -2024,10 +2020,7 @@
 	 (macro-function (first form) #-(or poplog akcl) environment)))
    (walk-macro-call
     map-function reduce-function screamer? partial? nested? form environment))
-  ((#+(and (not lucid) (not ansi-90) (not allegro) (not cmu)) special-form-p
-      #+lucid lisp:special-form-p
-      #+(or ansi-90 allegro cmu) special-operator-p
-      (first form))
+  ((special-operator-p (first form))
    (error "Cannot (currently) handle the special form ~S" (first form)))
   (t (walk-function-call
       map-function reduce-function screamer? partial? nested? form
@@ -2244,12 +2237,7 @@
      (let ((d (gensym "DUMMY-"))
 	   (dummy-argument (gensym "DUMMY-")))
       (cl:multiple-value-bind (vars vals stores store-form access-form)
-	(#+(and (not lucid) (not ansi-90) (not allegro) (not cmu))
-	   get-setf-method
-	   #+lucid lisp:get-setf-method
-	   #+(or ansi-90 allegro cmu) get-setf-expansion
-	   ;; note: Poplog and AKCL only support CLtL1.
-	   (first pairs) #-(or poplog akcl) environment)
+          (get-setf-expansion (first pairs) environment)
        `(let* (,@(mapcar #'list vars vals)
 		 (,dummy-argument ,(second pairs))
 		 (,d ,access-form))
@@ -2832,12 +2820,7 @@
 	   (dummy-argument (gensym "DUMMY-"))
 	   (other-arguments (gensym "OTHER-")))
       (cl:multiple-value-bind (vars vals stores store-form access-form)
-	(#+(and (not lucid) (not ansi-90) (not allegro) (not cmu))
-	   get-setf-method
-	   #+lucid lisp:get-setf-method
-	   #+(or ansi-90 allegro cmu) get-setf-expansion
-	   ;; note: Poplog and AKCL only support CLtL1.
-	   (first arguments) #-(or poplog akcl) environment)
+          (get-setf-expansion (first arguments) environment)
        (cps-convert
 	(second arguments)
 	`#'(lambda (&optional ,dummy-argument &rest ,other-arguments)
@@ -3728,9 +3711,6 @@
 ;;; also evaluate (PUSH :BUG-6920 *FEATURES*) to disable this line.
 #+(or (and lucid (not bug-6920)) poplog akcl)
 (defun realp (x) (typep x 'real))
-
-#-allegro-v4.2
-(deftype boolean () '(member t nil))
 
 (defun booleanp (x) (typep x 'boolean))
 
