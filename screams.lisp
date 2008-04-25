@@ -226,8 +226,9 @@
    (declare (special lexicon))
    (progn (parse 's '(the cup slid from john to mary))
 	  (parse 's '(john walked to the table)))
-   (iterate (for (word category) in-hashtable lexicon)
-	    (format t "~%~S: ~S" word category)))))
+   (maphash (lambda (word category)
+              (format t "~%~S: ~S" word category))
+            lexicon))))
 
 (defun parse-categoriesv (categories words1 &optional words2)
  (if (null categories)
@@ -271,14 +272,15 @@
 		     #'(LAMBDA (X) (DECLARE (IGNORE X)) NIL)
 		     #'<
 		     #'LINEAR-FORCE)
-	    (ITERATE (FOR (WORD CATEGORY) IN-HASHTABLE LEXICON)
-		     ;; note: This declaration causes a warning under MCL 2.0
-		     ;;       but if you leave it out you still get a warning
-		     ;;       so I don't see what one can do here.
-		     (DECLARE (IGNORE WORD))
-		     (COLLECT CATEGORY)))
-   (iterate (for (word category) in-hashtable lexicon)
-	    (format t "~%~S: ~S" word category)))))
+            (let (categories)
+              (maphash (lambda (word category)
+                         (declare (ignore word))
+                         (push category categories))
+                       lexicon)
+              categories))
+   (maphash (lambda (word category)
+              (format t "~%~S: ~S" word category))
+            lexicon))))
 
 (defvar *puzzle1* '((1 1 across 5)
                     (1 12 across 2)
