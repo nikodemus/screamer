@@ -37,53 +37,6 @@
 ;;; proceed much faster if you first do:
 ;;; (CLRHASH SCREAMER::*FUNCTION-RECORD-TABLE*)
 
-;;; Machines Supported or Not Supported
-;;; Please send mail to Bug-Screamer@AI.MIT.EDU whenever you discover a new
-;;; machine or CommonLisp implementation that either DOES or DOESN'T run
-;;; Screamer correctly so I can update this list.
-;;;  1. Genera 8.1.1 and 8.3 on Symbolics 36xx and Ivory:
-;;;     No known bugs.
-;;;     Updates to 8.1.1 and 8.3 based on modifications graciously provided by
-;;;     Marty Hall of the Applied Physics Laboratory.
-;;;  2. Lucid 4.0.2 and 4.1 on Sun SPARC,
-;;;     Lucid 4.1 on SGI MIPS,
-;;;     Lucid 4.1 on HP PA,
-;;;     Lucid 4.1 on DEC MIPS, and
-;;;     Lucid 4.0.1 on IBM RS/6000:
-;;;     No known bugs except the following. Lucid has a royal screw however.
-;;;     Macros like INCF and PUSH expand directly into internal structure
-;;;     updating operations when called on generalized variables. The
-;;;     expansion does not go indirectly through SETF so that (LOCAL (INCF X))
-;;;     will compile into a global increment rather than a local increment.
-;;;     This is technically allowed by the CommonLisp spec but shouldn't be.
-;;;     For greater efficiency, you should load the patch mbmfe.sbin into
-;;;     4.0.2/SPARC. This optional patch fixes a bug which prevents tail
-;;;     recursion optimization. This patch should not be loaded into 4.1/SPARC
-;;;     since 4.1/SPARC already contains this patch. Lucid 4.1/HP requires that
-;;;     the patch file bug-5511.hbin be loaded. Lucid 4.1/DEC requires that
-;;;     the patch file bug-5511.mbin be loaded.
-;;;  3. MCL 2.0 and 2.0p2 on Apple Macintosh:
-;;;     No known bugs except that 2.0 needs not-so-trivial-patch.fasl to be
-;;;     loaded. This patch should not be loaded into 2.0p2 since 2.0p2 already
-;;;     contains this patch.
-;;;     This port based on an earlier port graciously provided by Volker
-;;;     Haarslev of the Computer Science Department, University of Hamburg.
-;;;  4. Harlequin 3.0.3+ on Sun SPARC:
-;;;     No known bugs.
-;;;     Assitance for this port graciously provided by Marty Hall of the
-;;;     Applied Physics Laboratory.
-;;;  5. Allegro 4.1 and 4.2 on Sun SPARC and SGI MIPS, and
-;;;     Allegro 4.1 on DEC MIPS:
-;;;     No known bugs.
-;;;     Assistance for this port graciously provided by Brad Miller of the
-;;;     Computer Science Department, University of Rochester.
-;;;  6. Poplog 14.2 on Sun SPARC:
-;;;     No known bugs.
-;;;     This port based on an earlier port graciously provided by Aaron Sloman
-;;;     of the Computer Science Department, University of Birmingham.
-;;;  7. AKCL 1.605 and 1.615 on Sun SPARC:
-;;;     No known bugs.
-
 ;;; TTMTTD
 ;;;  1. Manual.
 ;;;  2. Should have way of having a stream of values.
@@ -495,48 +448,11 @@
 ;;;  the new official DEFTYPE BOOLEAN corresponds to what Screamer expects.
 ;;;  Version 3.20
 
-;;; A kludge to get Screamer to run under Lucid 4.0.2 without CLIM 1.1 loaded
-;;; or Poplog or AKCL.
-#+(and lucid (not lcl4.1)) (in-package :user)
-#-(or (and lucid (not lcl4.1)) poplog akcl) (in-package :cl-user)
+(in-package :cl-user)
 
-;;; A kludge to get Screamer to run under Lucid 4.0.2 without CLIM 1.1 loaded
-#+lucid
-(eval-when (compile load eval)
- (unless (find-package :cl)
-  (let* ((lisp-package (find-package :lisp))
-	 (lisp-package-name (package-name lisp-package))
-	 (lisp-package-nicknames (package-nicknames lisp-package))
-	 (foo-package (gensym)))
-   (rename-package lisp-package foo-package)
-   (rename-package lisp-package
-		   lisp-package-name
-		   (list* :cl
-			  :common-lisp
-			  lisp-package-nicknames))))
- (unless (find-package :cl-user)
-  (let* ((user-package (find-package :user))
-	 (user-package-name (package-name user-package))
-	 (user-package-nicknames (package-nicknames user-package))
-	 (foo-package (gensym)))
-   (rename-package user-package foo-package)
-   (rename-package user-package
-		   user-package-name
-		   (list* :cl-user
-			  :common-lisp-user
-			  user-package-nicknames)))))
-
-;;; MCL needs the extended LOOP macro since the default one expands into
-;;; MACROLET which WALK can't handle.
-#+mcl (eval-when (compile load eval) (require :loop))
-
-;;; note: This EVAL-WHEN shouldn't be necessary but it is due to a bug in
-;;;       Lucid.
-#-(or poplog akcl)
-(eval-when (compile load eval)
- (defpackage :screamer
+(defpackage :screamer
   (:shadow :defun :multiple-value-bind :y-or-n-p :variable)
-  (:use :cl #+lucid :lcl)
+  (:use :cl)
   (:export :either
 	   :fail
 	   :local
@@ -625,181 +541,43 @@
 	   :*iscream?*
 	   :*minimum-shrink-ratio*
 	   :*maximum-discretization-range*
-	   :*strategy*)))
+	   :*strategy*))
 
 (in-package :screamer)
 
-#+(or poplog akcl)
-(shadow '(defun multiple-value-bind y-or-n-p variable))
+(declaim (declaration magic))
 
-#+(or poplog akcl)
-(export '(either
-	  fail
-	  local
-	  global
-	  for-effects
-	  multiple-value-call-nondeterministic
-	  one-value
-	  possibly?
-	  necessarily?
-	  all-values
-	  ith-value
-	  print-values
-	  nondeterministic-function?
-	  funcall-nondeterministic
-	  apply-nondeterministic
-	  unwind-trail
-	  purge
-	  unwedge-screamer
-	  local-output
-	  a-boolean
-	  an-integer
-	  an-integer-above
-	  an-integer-below
-	  an-integer-between
-	  a-member-of
-	  when-failing
-	  count-failures
-	  boolean
-	  booleanp
-	  make-variable
-	  numberpv
-	  realpv
-	  integerpv
-	  booleanpv
-	  memberv
-	  assert!
-	  known?
-	  decide
-	  =v
-	  <v
-	  <=v
-	  >v
-	  >=v
-	  /=v
-	  a-booleanv
-	  an-integerv
-	  an-integer-abovev
-	  an-integer-belowv
-	  an-integer-betweenv
-	  a-realv
-	  a-real-abovev
-	  a-real-belowv
-	  a-real-betweenv
-	  a-numberv
-	  a-member-ofv
-	  notv
-	  andv
-	  orv
-	  count-trues
-	  count-truesv
-	  +v
-	  -v
-	  *v
-	  /v
-	  minv
-	  maxv
-	  funcallv
-	  applyv
-	  equalv
-	  bound?
-	  value-of
-	  ground?
-	  apply-substitution
-	  linear-force
-	  divide-and-conquer-force
-	  static-ordering
-	  domain-size
-	  range-size
-	  reorder
-	  solution
-	  best-value
-	  template
-	  define-screamer-package
-	  *screamer-version*
-	  *dynamic-extent?*
-	  *iscream?*
-	  *minimum-shrink-ratio*
-	  *maximum-discretization-range*
-	  *strategy*))
-
-#+(or poplog akcl)
-(use-package :lisp)
-
-;;; A kludge to get Screamer to run under Poplog or AKCL
-#+(or poplog akcl)
-(eval-when (compile load eval)
- (unless (find-package :cl)
-  (let* ((lisp-package (find-package :lisp))
-	 (lisp-package-name (package-name lisp-package))
-	 (lisp-package-nicknames (package-nicknames lisp-package))
-	 (foo-package (gensym)))
-   (rename-package lisp-package foo-package)
-   (rename-package lisp-package
-		   lisp-package-name
-		   (list* :cl
-			  :common-lisp
-			  lisp-package-nicknames))))
- (unless (find-package :cl-user)
-  (let* ((user-package (find-package :user))
-	 (user-package-name (package-name user-package))
-	 (user-package-nicknames (package-nicknames user-package))
-	 (foo-package (gensym)))
-   (rename-package user-package foo-package)
-   (rename-package user-package
-		   user-package-name
-		   (list* :cl-user
-			  :common-lisp-user
-			  user-package-nicknames)))))
-
-;;; note: Need to remove conditional when Lucid, Poplog, and AKCL
-;;;       support CLtL2.
-#-(or lucid poplog akcl) (declaim (declaration magic))
-#+(or lucid poplog akcl) (proclaim '(declaration magic))
-
-#-(or poplog akcl)
 (defmacro define-screamer-package (defined-package-name &rest options)
- ;; note: This EVAL-WHEN shouldn't be necessary but it is due to a bug in
- ;;       Lucid.
- `(eval-when (compile load eval)
-   (defpackage ,defined-package-name ,@options
-    (:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p)
-    (:use :cl #+lucid :lcl :screamer))))
+  `(defpackage ,defined-package-name 
+     ,@options
+     (:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p)
+     (:use :cl :screamer)))
 
-#-(or poplog akcl)
 (define-screamer-package :screamer-user)
 
-#+(or poplog akcl)
-(eval-when (load eval)
- (eval '(make-package :screamer-user :use '(:cl :screamer)))
- (eval
-  '(shadowing-import '(defun multiple-value-bind y-or-n-p) :screamer-user)))
-
 (defmacro defstruct-compile-time (options &body items)
- `(eval-when (compile load eval) (defstruct ,options ,@items)))
+ `(eval-when (:compile-toplevel :load-toplevel :execute) (defstruct ,options ,@items)))
 
 (defmacro defvar-compile-time (name &optional initial-value documentation)
- `(eval-when (compile load eval)
+ `(eval-when (:compile-toplevel :load-toplevel :execute)
    (defvar ,name ,initial-value ,documentation)))
 
 (defmacro defun-compile-time (function-name lambda-list &body body)
- `(eval-when (compile load eval)
-   (cl:defun ,function-name ,lambda-list ,@body)
-   #-(or akcl harlequin-common-lisp)
-   (eval-when (compile) (compile ',function-name))))
+ `(eval-when (:compile-toplevel :load-toplevel :execute)
+    (cl:defun ,function-name ,lambda-list ,@body)
+    (eval-when (:compile-toplevel) (compile ',function-name))))
 
 ;;; Needed because Allegro has some bogosity whereby (MACRO-FUNCTION <m> <e>)
 ;;; returns NIL during compile time when <m> is a macro being defined for the
 ;;; first time in the file being compiled.
 (defmacro defmacro-compile-time (function-name lambda-list &body body)
- `(eval-when (compile load eval)
+ `(eval-when (:compile-toplevel :load-toplevel :execute)
    (defmacro ,function-name ,lambda-list ,@body)))
 
 (defparameter *screamer-version* "3.20"
  "The version of Screamer which is loaded.")
 
-(defvar-compile-time *dynamic-extent?*
- #-(or poplog akcl symbolics) t #+(or poplog akcl symbolics) nil
+(defvar-compile-time *dynamic-extent?* t
  "T to enable the dynamic extent optimization.")
 
 (defvar *iscream?* nil
@@ -923,8 +701,7 @@
 
 (defun-compile-time lambda-expression? (form)
  (and (consp form)
-      (or (eq (first form) 'lambda)
-	  #+symbolics (eq (first form) 'lisp:lambda))
+      (eq (first form) 'lambda)
       (or (and (null (rest (last form)))
 	       (>= (length form) 2)
 	       (listp (second form)))
@@ -933,8 +710,7 @@
 (defun-compile-time valid-function-name? (function-name)
  (or (and (symbolp function-name) (not (null function-name)))
      (and (consp function-name)
-	  (or (eq (first function-name) 'setf)
-	      #+symbolics (eq (first function-name) 'lisp:setf))
+	  (eq (first function-name) 'setf)
 	  (null (rest (last function-name)))
 	  (= (length function-name) 2)
 	  (symbolp (second function-name))
@@ -1276,18 +1052,11 @@
 	(cond
 	 ((symbolp (second form))
 	  (if (or (special-operator-p (second form))
-		  ;; note: Allegro has some braindamage in the way it treats
-		  ;;       some macros as special forms and refuses to
-		  ;;       provide a macro function for them. This
-		  ;;       circumvents that problem.
-		  (let (#+allegro-4.1 (sys:*macroexpand-for-compiler* nil))
-		   ;; note: Poplog and AKCL only support CLtL1.
-		   (macro-function
-		    (second form) #-(or poplog akcl) environment)))
+		  (macro-function (second form) environment))
 	      (error "You can't reference the FUNCTION of a special form or~%~
                       macro: ~S"
-		     form))
-	  (funcall map-function form 'function-symbol))
+		     form)
+              (funcall map-function form 'function-symbol)))
 	 (t (funcall map-function form 'function-setf))))
        (t (error "Invalid argument to FUNCTION: ~S" form))))
 
@@ -1640,33 +1409,6 @@
 			       (rest (rest form))))))
      (funcall map-function form 'unwind-protect)))
 
-;;; note: Symbolics needs this to handle DOTIMES.
-#+symbolics
-(defun-compile-time walk-invisible-references
- (map-function reduce-function screamer? partial? nested? form environment)
- (unless (null (rest (last form)))
-  (error "Improper COMPILER:INVISIBLE-REFERENCES: ~S" form))
- (unless (>= (length form) 2)
-  (error "COMPILER:INVISIBLE-REFERENCES must have at least one argument,~%~
-          a list of VARIABLES: ~S"
-	 form))
- (unless (and (listp (second form)) (every #'symbolp (second form)))
-  (error "Invalid VARIABLE list: ~S" form))
- (if reduce-function
-     (funcall reduce-function
-	      (funcall map-function form 'compiler:invisible-references)
-	      (reduce reduce-function
-		      (mapcar #'(lambda (subform)
-				 (walk map-function
-				       reduce-function
-				       screamer?
-				       partial?
-				       nested?
-				       subform
-				       environment))
-			      (rest (rest form)))))
-     (funcall map-function form 'compiler:invisible-references)))
-
 (defun-compile-time walk-for-effects
  (map-function reduce-function screamer? partial? nested? form environment)
  (unless (null (rest (last form))) (error "Improper FOR-EFFECTS: ~S" form))
@@ -1887,13 +1629,11 @@
    (walk-flet/labels
     map-function reduce-function screamer? partial? nested? form environment
     'flet))
-  ((or (eq (first form) 'function)
-       #+symbolics (eq (first form) 'lisp:function))
+  ((eq (first form) 'function)
    (walk-function
     map-function reduce-function screamer? partial? nested? form environment))
   ((eq (first form) 'go) (walk-go map-function form))
-  ;; Change to support Genera 8.3
-  ((or (eq (first form) 'if) #+ansi-90 (eq (first form) 'lisp:if))
+  ((eq (first form) 'if)
    (walk-if map-function reduce-function screamer? partial? nested? form
 	    environment))
   ((eq (first form) 'labels)
@@ -1943,58 +1683,10 @@
   ((eq (first form) 'unwind-protect)
    (walk-unwind-protect
     map-function reduce-function screamer? partial? nested? form environment))
-  ;; note: Explorer has some braindamage and treats COND as a special form
-  ;;       and is unable to macroexpand it.
-  #+explorer
-  ((eq (first form) 'cond)
-   (unless (null (rest (last form))) (error "Improper COND: ~S" form))
-   (unless (or (null (rest form))
-	       (and (consp (rest form)) (consp (second form))))
-    (error "Improper COND clause: ~S" form))
-   (walk map-function
-	 reduce-function
-	 screamer?
-	 partial?
-	 nested?
-	 (if (null (rest form))
-	     nil
-	     `(if
-	       ,(first (second form))
-	       (progn ,@(rest (second form)))
-	       (cond ,@(rest (rest form)))))
-	 environment))
-  #+allegro-4.1
-  ((eq (first form) 'multiple-value-list)
-   (unless (null (rest (last form)))
-    (error "Improper MULTIPLE-VALUE-LIST: ~S" form))
-   (unless (= (length form) 2)
-    (error "MULTIPLE-VALUE-LIST must have one argument, a FORM: ~S" form))
-   (walk map-function
-	 reduce-function
-	 screamer?
-	 partial?
-	 nested?
-	 `(multiple-value-call #'list ,(second form))
-	 environment))
-  ;; note: Symbolics needs this to handle LOOP COLLECT clauses.
-  #+symbolics
-  ((eq (first form) 'sys:variable-location)
-   (unless (null (rest (last form)))
-    (error "Improper SYS:VARIABLE-LOCATION: ~S" form))
-   (unless (= (length form) 2)
-    (error "SYS:VARIABLE-LOCATION must have one argument, a VAR: ~S" form))
-   (funcall map-function form 'sys:variable-location))
-  ;; note: Symbolics needs this to handle DOTIMES.
-  #+symbolics
-  ((eq (first form) 'compiler:invisible-references)
-   (walk-invisible-references
-    map-function reduce-function screamer? partial? nested? form environment))
   ((and screamer? (eq (first form) 'for-effects))
    (walk-for-effects
     map-function reduce-function screamer? partial? nested? form environment))
-  ((and screamer?
-	(or (eq (first form) 'setf)
-	    #+symbolics (eq (first form) 'lisp:setf)))
+  ((and screamer? (eq (first form) 'setf))
    (walk-setf
     map-function reduce-function screamer? partial? nested? form environment))
   ((and screamer? (eq (first form) 'local))
@@ -2012,12 +1704,7 @@
     map-function reduce-function screamer? partial? nested? form environment))
   ((and partial? (eq (first form) 'full)) (walk-full map-function form))
   ((and (symbolp (first form))
-	;; note: Allegro has some braindamage in the way it treats some
-	;;       macros as special forms and refuses to provide a macro
-	;;       function for them. This circumvents that problem.
-	(let (#+allegro-4.1 (sys:*macroexpand-for-compiler* nil))
-	 ;; note: Poplog and AKCL only support CLtL1.
-	 (macro-function (first form) #-(or poplog akcl) environment)))
+	(macro-function (first form) environment))
    (walk-macro-call
     map-function reduce-function screamer? partial? nested? form environment))
   ((special-operator-p (first form))
@@ -2030,8 +1717,7 @@
  (case form-type
   (lambda-list (error "This shouldn't happen"))
   ((variable go) form)
-  ;; note: Symbolics needs this to handle DOTIMES.
-  ((eval-when #+symbolics compiler:invisible-references)
+  ((eval-when)
    (cons (first form)
 	 (cons (second form)
 	       (mapcar #'(lambda (subform)
@@ -2345,9 +2031,6 @@
 				  *tagbody-tags*)))
 		    (process-subforms
 		     #'perform-substitutions form form-type environment)))
-	  ;; note: Symbolics needs this to handle LOOP COLLECT clauses.
-	  #+symbolics
-	  (sys:variable-location (error "This shouldn't happen"))
 	  (for-effects (perform-substitutions
 			(let ((*macroexpand-hook* #'funcall))
 			 (macroexpand-1 form environment))
@@ -2377,8 +2060,7 @@
  ;; Checks that CONTINUATION is of the form:
  ;;   #'(lambda (...) (declare (magic) ...) ...)
  (and (consp continuation)
-      (or (eq (first continuation) 'function)
-	  #+symbolics (eq (first continuation) 'lisp:function))
+      (eq (first continuation) 'function)
       (null (rest (last continuation)))
       (= (length continuation) 2)
       (lambda-expression? (second continuation))
@@ -2395,8 +2077,7 @@
  (continuation types form value?)
  (unless (or (and (symbolp continuation) (not (symbol-package continuation)))
 	     (and (consp continuation)
-		  (or (eq (first continuation) 'function)
-		      #+symbolics (eq (first continuation) 'lisp:function))
+		  (eq (first continuation) 'function)
 		  (null (rest (last continuation)))
 		  (= (length continuation) 2)
 		  (symbolp (second continuation)))
@@ -2444,8 +2125,7 @@
 		  ,@(rest (rest (rest (second continuation)))))))
 	   ((or (and (consp form)
 		     (not
-		      (and (or (eq (first form) 'function)
-			       #+symbolics (eq (first form) 'lisp:function))
+		      (and (eq (first form) 'function)
 			   (null (rest (last form)))
 			   (= (length form) 2)
 			   (symbolp (second form)))))
@@ -2491,8 +2171,7 @@
 (defun-compile-time void-continuation (continuation)
  (unless (or (and (symbolp continuation) (not (symbol-package continuation)))
 	     (and (consp continuation)
-		  (or (eq (first continuation) 'function)
-		      #+symbolics (eq (first continuation) 'lisp:function))
+		  (eq (first continuation) 'function)
 		  (null (rest (last continuation)))
 		  (= (length continuation) 2)
 		  (symbolp (second continuation)))
@@ -2504,7 +2183,6 @@
   ;;       didn't.
   `#'(lambda (&rest ,dummy-argument)
       (declare (magic)
-	       #+symbolics (sys:downward-function)
 	       (ignore ,dummy-argument))
       ,@(cond ((symbolp continuation) `((funcall ,continuation)))
 	      ((symbolp (second continuation)) `((,(second continuation))))
@@ -2525,7 +2203,7 @@
 	(*block-tags* (cons (list name c types value?) *block-tags*)))
   (possibly-beta-reduce-funcall
    `#'(lambda (,c)
-       (declare (magic)	#+symbolics (sys:downward-function))
+       (declare (magic))
        ,(cps-convert-progn body c types value? environment))
    '()
    continuation
@@ -2543,12 +2221,11 @@
        (other-arguments (gensym "OTHER-")))
   (possibly-beta-reduce-funcall
    `#'(lambda (,c)
-       (declare (magic)	#+symbolics (sys:downward-function))
+       (declare (magic))
        ,(cps-convert
 	 antecedent
 	 `#'(lambda (&optional ,dummy-argument &rest ,other-arguments)
 	     (declare (magic)
-		      #+symbolics (sys:downward-function)
 		      (ignore ,other-arguments))
 	     (if ,dummy-argument
 		 ,(cps-convert consequent c types value? environment)
@@ -2586,7 +2263,6 @@
        binding-form
        `#'(lambda (&optional ,dummy-argument &rest ,other-arguments)
 	   (declare (magic)
-		    #+symbolics (sys:downward-function)
 		    (ignore ,other-arguments))
 	   ,(cps-convert-let (rest bindings)
 			     body
@@ -2626,7 +2302,6 @@
        binding-form
        `#'(lambda (&optional ,binding-variable &rest ,other-arguments)
 	   (declare (magic)
-		    #+symbolics (sys:downward-function)
 		    (ignore ,other-arguments))
 	   ,(cps-convert-let* (rest bindings)
 			      body
@@ -2658,7 +2333,7 @@
       (cps-convert
        (first forms)
        `#'(lambda (&rest ,dummy-argument)
-	   (declare (magic) #+symbolics (sys:downward-function))
+	   (declare (magic))
 	   ,(cps-convert-multiple-value-call-internal
 	     nondeterministic? function (rest forms) continuation types value?
 	     environment (cons dummy-argument arguments)))
@@ -2674,7 +2349,6 @@
    function
    `#'(lambda (&optional ,dummy-argument &rest ,other-arguments)
        (declare (magic)
-		#+symbolics (sys:downward-function)
 		(ignore ,other-arguments))
        ,(cps-convert-multiple-value-call-internal
 	 nondeterministic? dummy-argument forms continuation types value?
@@ -2690,11 +2364,11 @@
       (cps-convert
        form
        `#'(lambda (&rest ,dummy-argument)
-	   (declare (magic) #+symbolics (sys:downward-function))
+	   (declare (magic))
 	   ,(cps-convert-progn
 	     forms
 	     `#'(lambda ()
-		 (declare (magic) #+symbolics (sys:downward-function))
+		 (declare (magic))
 		 (possibly-beta-reduce-funcall
 		  continuation types `(values-list ,dummy-argument) t))
 	     nil
@@ -2714,7 +2388,7 @@
   (t (cps-convert
       (first body)
       `#'(lambda ()
-	  (declare (magic) #+symbolics (sys:downward-function))
+	  (declare (magic))
 	  ,(cps-convert-progn
 	    (rest body) continuation types value? environment))
       '()
@@ -2736,7 +2410,7 @@
        (cps-convert
 	result
 	`#'(lambda (&rest ,dummy-argument)
-	    (declare (magic) #+symbolics (sys:downward-function))
+	    (declare (magic))
 	    (return-from ,name (values-list ,dummy-argument)))
 	'()
 	t
@@ -2752,7 +2426,6 @@
        (second arguments)
        `#'(lambda (&optional ,dummy-argument &rest ,other-arguments)
 	   (declare (magic)
-		    #+symbolics (sys:downward-function)
 		    (ignore ,other-arguments)
 		    ,@(if (and (null (rest (rest arguments)))
 			       (not (null types)))
@@ -2825,7 +2498,6 @@
 	(second arguments)
 	`#'(lambda (&optional ,dummy-argument &rest ,other-arguments)
 	    (declare (magic)
-		     #+symbolics (sys:downward-function)
 		     (ignore ,other-arguments)
 		     ,@(if (and (null (rest (rest arguments)))
 				(not (null types)))
@@ -2866,7 +2538,7 @@
      (let ((c (gensym "CONTINUATION-")))
       (possibly-beta-reduce-funcall
        `#'(lambda (,c)
-	   (declare (magic) #+symbolics (sys:downward-function))
+	   (declare (magic))
 	   (,(cps-convert-function-name function-name)
 	    ,c
 	    ,@(reverse dummy-arguments)))
@@ -2879,7 +2551,6 @@
        (first arguments)
        `#'(lambda (&optional ,dummy-argument &rest ,other-arguments)
 	   (declare (magic)
-		    #+symbolics (sys:downward-function)
 		    (ignore ,other-arguments))
 	   ,(cps-convert-call
 	     function-name
@@ -2915,7 +2586,6 @@
        (first arguments)
        `#'(lambda (&optional ,dummy-argument &rest ,other-arguments)
 	   (declare (magic)
-		    #+symbolics (sys:downward-function)
 		    (ignore ,other-arguments))
 	   ,(cps-non-convert-call
 	     function-name
@@ -3024,19 +2694,6 @@
 				 (cons (second form) types)
 				 value?
 				 environment))
-	       ;; note: Symbolics needs this to handle LOOP COLLECT clauses.
-	       #+symbolics
-	       (sys:variable-location (error "This shouldn't happen"))
-	       ;; note: Symbolics needs this to handle DOTIMES.
-	       #+symbolics
-	       (compiler:invisible-references
-		`(compiler:invisible-references ,(second form)
-						,(cps-convert-progn
-						  (rest (rest form))
-						  continuation
-						  types
-						  value?
-						  environment)))
 	       (for-effects (possibly-beta-reduce-funcall
 			     continuation types form value?))
 	       (local-setf
@@ -3258,13 +2915,6 @@
 
 ;;; The protocol
 
-#+symbolics
-(setf (gethash 'defun zwei:*lisp-indentation-offset-hash-table*) '(2 1))
-
-#+symbolics
-(setf (get 'defun 'zwei:definition-function-spec-parser)
-      (get 'cl:defun 'zwei:definition-function-spec-parser))
-
 (defmacro-compile-time defun
  (function-name lambda-list &body body &environment environment)
  (let ((*nondeterministic-context?* t))
@@ -3298,7 +2948,7 @@
 	  function-record-old-deterministic?)
     (setf (function-record-screamer? function-record)
 	  function-record-screamer?)
-    `(eval-when (compile load eval)
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
       (cache-definition ',function-name ',lambda-list ',body ',callees)
       ,@modified-function-definitions
       ',function-name)))))
@@ -3375,7 +3025,6 @@
 		    (format nil "~A (Y or N): "
 			    (apply #'format nil format-string format-args))
 		    "(Y or N): ")))
-    #-allegro
     (emacs-eval '(y-or-n-p-begin))
     (unwind-protect
       (tagbody
@@ -3390,7 +3039,6 @@
 	 (return-from y-or-n-p nil)))
        (format *query-io* "Please type a single character, Y or N")
        (go loop))
-     #-allegro
      (emacs-eval '(y-or-n-p-end)))))
   (format-string? (apply #'cl:y-or-n-p format-string format-args))
   (t (cl:y-or-n-p))))
@@ -3405,7 +3053,7 @@
 
 ;;; note: Should have way of having a stream of values.
 
-(eval-when (compile load eval) (setf *screamer?* t))
+(eval-when (:compile-toplevel :load-toplevel :execute) (setf *screamer?* t))
 
 (defun print-nondeterministic-function
   (nondeterministic-function stream print-level)
@@ -3414,7 +3062,7 @@
 	 'nondeterministic
 	 (nondeterministic-function-function nondeterministic-function)))
 
-(eval-when (compile load eval) (declare-nondeterministic 'a-boolean))
+(eval-when (:compile-toplevel :load-toplevel :execute) (declare-nondeterministic 'a-boolean))
 
 (cl:defun a-boolean ()
  (screamer-error
@@ -3447,7 +3095,7 @@
 (defun nondeterministic-function? (thing)
  (nondeterministic-function?-internal (value-of thing)))
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
  (declare-nondeterministic 'funcall-nondeterministic))
 
 (cl:defun funcall-nondeterministic (function &rest arguments)
@@ -3465,7 +3113,7 @@
 	     arguments)
       (funcall continuation (apply function arguments)))))
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
  (declare-nondeterministic 'apply-nondeterministic))
 
 (cl:defun apply-nondeterministic (function argument &rest arguments)
@@ -3523,7 +3171,7 @@
 ;;;       failure counts generated by COUNT-FAILURES. A small price to pay for
 ;;;       tail recursion optimization.
 
-(eval-when (compile load eval) (declare-nondeterministic 'an-integer))
+(eval-when (:compile-toplevel :load-toplevel :execute) (declare-nondeterministic 'an-integer))
 
 (cl:defun an-integer ()
  (screamer-error
@@ -3538,7 +3186,7 @@
 	 (choice-point-internal (funcall continuation (- i)))
 	 (incf i)))))
 
-(eval-when (compile load eval) (declare-nondeterministic 'an-integer-above))
+(eval-when (:compile-toplevel :load-toplevel :execute) (declare-nondeterministic 'an-integer-above))
 
 (cl:defun an-integer-above (low)
  (declare (ignore low))
@@ -3553,7 +3201,7 @@
     (loop (choice-point-internal (funcall continuation i))
 	  (incf i))))))
 
-(eval-when (compile load eval) (declare-nondeterministic 'an-integer-below))
+(eval-when (:compile-toplevel :load-toplevel :execute) (declare-nondeterministic 'an-integer-below))
 
 (cl:defun an-integer-below (high)
  (declare (ignore high))
@@ -3568,7 +3216,7 @@
     (loop (choice-point-internal (funcall continuation i))
 	  (decf i))))))
 
-(eval-when (compile load eval) (declare-nondeterministic 'an-integer-between))
+(eval-when (:compile-toplevel :load-toplevel :execute) (declare-nondeterministic 'an-integer-between))
 
 (cl:defun an-integer-between (low high)
  (declare (ignore low high))
@@ -3585,7 +3233,7 @@
 	(choice-point-internal (funcall continuation i))))
    (funcall continuation high))))
 
-(eval-when (compile load eval) (declare-nondeterministic 'a-member-of))
+(eval-when (:compile-toplevel :load-toplevel :execute) (declare-nondeterministic 'a-member-of))
 
 (cl:defun a-member-of (sequence)
  (declare (ignore sequence))
@@ -3616,13 +3264,9 @@
 ;;;       ILisp/GNUEmacs with iscream.el loaded.
 
 (defun emacs-eval (expression)
- #+allegro
- (lep::eval-in-emacs expression)
- #-allegro
  (unless *iscream?*
-  (error "Cannot do EMACS-EVAL unless Screamer is running under~%~
+   (error "Cannot do EMACS-EVAL unless Screamer is running under~%~
           ILisp/GNUEmacs with iscream.el loaded."))
- #-allegro
  (format *terminal-io* "~A~A~A"
 	 (format nil "~A" (code-char 27))
 	 (string-downcase (format nil "~A" expression))
@@ -3653,10 +3297,10 @@
 (defvar *strategy* :gfc
  "Strategy to use for FUNCALLV and APPLYV: either :GFC or :AC")
 
-;;; note: Enable this line to use CLOS instead of DEFSTRUCT for variables.
-#|
-(eval-when (compile load eval) (pushnew :screamer-clos *features* :test #'eq))
-|#
+;;; note: Enable this to use CLOS instead of DEFSTRUCT for variables.
+#+(or)
+(eval-when (:compile-toplevel :load-toplevel :execute) 
+  (pushnew :screamer-clos *features* :test #'eq))
 
 #-screamer-clos
 (defstruct-compile-time (variable (:print-function print-variable)
@@ -3701,16 +3345,6 @@
 
 #+screamer-clos
 (defun-compile-time variable? (thing) (typep thing 'variable))
-
-;;; A kludge to get Screamer to run under Lucid 4.0.2, Poplog, and AKCL
-#+(or (and lucid (not lcl4.1)) poplog akcl)
-(deftype real () '(or rational float))
-
-;;; A kludge to get Screamer to run under Lucid 4.0.2 and 4.1 as well as
-;;; Poplog and AKCL. If you load patch bug-6920.sbin for Lucid 4.1 you MUST
-;;; also evaluate (PUSH :BUG-6920 *FEATURES*) to disable this line.
-#+(or (and lucid (not bug-6920)) poplog akcl)
-(defun realp (x) (typep x 'real))
 
 (defun booleanp (x) (typep x 'boolean))
 
@@ -6821,10 +6455,6 @@
 	      (setf ,best value))))
     (if ,bound (list ,best ,bound) ,(if form2? form2 '(fail))))))
 
-;;; Harlequin expands MUTLIPLE-VALUE-BIND into a Harlequin-specific special
-;;; form SYSTEM::MULTIPLE-VALUE-BIND-CALL which we don't yet know how to walk.
-;;; So for now, we don't support TEMPLATE under Harlequin.
-#-harlequin-common-lisp
 (defun template-internal (template variables)
  (cond
   ((and (symbolp template) (char= #\? (aref (string template) 0)))
@@ -6841,11 +6471,13 @@
      (values (cons car-template cdr-template) cdr-variables))))
   (t (values template variables))))
 
-#-harlequin-common-lisp
-(defun template (template) (template-internal (value-of template) '()))
+(defun template (template) 
+  (template-internal (value-of template) '()))
 
-(eval-when (compile load eval) (setf *screamer?* nil))
+(eval-when (:compile-toplevel :load-toplevel :execute) 
+  (setf *screamer?* nil))
 
-(eval-when (compile load eval) (pushnew :screamer *features* :test #'eq))
+(eval-when (:compile-toplevel :load-toplevel :execute) 
+  (pushnew :screamer *features* :test #'eq))
 
 ;;; Tam V'Nishlam Shevah L'El Borei Olam

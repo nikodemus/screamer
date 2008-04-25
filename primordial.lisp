@@ -6,25 +6,11 @@
 ;;; release. Run the function (PRIME-ORDEAL). If it returns T and doesn't
 ;;; produce any error messages then Screamer is probably OK.
 
-;;; CMU CommonLisp has a bug with DEFPACKAGE.
+(in-package :screamer-user)
 
-#-(or poplog akcl cmu) (in-package :screamer-user)
-
-#-(or poplog akcl cmu)
 (screamer:define-screamer-package :primordial (:use :iterate))
 
-#+cmu
-(defpackage :primordial
- (:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p)
- (:use :cl :screamer :iterate))
-
 (in-package :primordial)
-
-#+(or poplog akcl)
-(shadowing-import
- '(screamer::defun screamer::multiple-value-bind screamer::y-or-n-p))
-
-#+(or poplog akcl) (use-package '(:cl :screamer :iterate))
 
 (defun equal-set? (x y)
  (and (subsetp x y :test #'equal) (subsetp y x :test #'equal)))
