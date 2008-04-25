@@ -5,36 +5,32 @@
 ;;; Screamer
 ;;; A portable efficient implementation of nondeterministic CommonLisp
 ;;; Version 3.20
+;;;
+;;; Written by:
+;;;
+;;;   Jeffrey Mark Siskind (Department of Computer Science, University of Toronto)
+;;;   David Allen McAllester (MIT Artificial Intelligence Laboratory)
+;;;
 ;;; Copyright 1991 Massachusetts Institute of Technology. All rights reserved.
 ;;; Copyright 1992, 1993 University of Pennsylvania. All rights reserved.
 ;;; Copyright 1993 University of Toronto. All rights reserved.
-
-;;; Written by:
-;;; Jeffrey Mark Siskind
-;;; Department of Computer Science
-;;; University of Toronto LP290E
-;;; Toronto Ontario M5S 1A4 CANADA
-;;; Qobi@CS.Toronto.EDU
-;;; 416/978-6114
-;;; and:
-;;; David Allen McAllester
-;;; MIT Artificial Intelligence Laboratory
-;;; 545 Technology Square Room NE43-412
-;;; Cambridge MA 02139
-;;; DAM@AI.MIT.EDU
-;;; 617/253-6599
-
-;;; You are free to use, copy and distribute this software provided that:
-;;;  1. You report *ALL* bugs to Bug-Screamer@AI.MIT.EDU whether or not you
-;;;     need them fixed. Include the version number (3.20) in the message.
-;;;  2. You report *ALL* bugs that you fixed to Bug-Screamer@AI.MIT.EDU.
-;;;     Include the version number (3.20) in the message.
-;;;  3. Every time you run Screamer on a machine or using a Lisp compiler not
-;;;     mentioned below, you send a message stating the new environment and the
-;;;     version number (3.20) to Bug-Screamer@AI.MIT.EDU.
-;;;  4. You inform us that you obtained a copy of Screamer by sending a message
-;;;     to Info-Screamer-Request@AI.MIT.EDU to be put on the
-;;;     Info-Screamer@AI.MIT.EDU mailing list.
+;;;
+;;; Permission is hereby granted, free of charge, to any person obtaining a copy of
+;;; this software and associated documentation files (the "Software"), to deal in
+;;; the Software without restriction, including without limitation the rights to
+;;; use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+;;; the Software, and to permit persons to whom the Software is furnished to do so,
+;;; subject to the following conditions:
+;;;
+;;; The above copyright and authorship notice and this permission notice shall be
+;;; included in all copies or substantial portions of the Software.
+;;;
+;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+;;; FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+;;; COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+;;; IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+;;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; Important notice: In this version of Screamer, if Screamer is already
 ;;; loaded and you wish to recompile the entire file, the recompilation will

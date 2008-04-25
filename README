@@ -15,17 +15,7 @@ bug-5511.mbin. Also note that MCL requires patch level 2. If you only have MCL
 2.0 without any patches or only patch level 1 you must first load the patch
 not-so-trivial-patch.fasl. See the notes below for more information.
 
-You are free to use, copy and distribute this software provided that:
- 1. You report *ALL* bugs to Bug-Screamer@AI.MIT.EDU whether or not you
-    need them fixed. Include the version number (3.20) in the message.
- 2. You report *ALL* bugs that you fixed to Bug-Screamer@AI.MIT.EDU.
-    Include the version number (3.20) in the message.
- 3. Every time you run Screamer on a machine or using a Lisp compiler not
-    mentioned below, you send a message stating the new environment and the
-    version number (3.20) to Bug-Screamer@AI.MIT.EDU.
- 4. You inform us that you obtained a copy of Screamer by sending a message
-    to Info-Screamer-Request@AI.MIT.EDU to be put on the
-    Info-Screamer@AI.MIT.EDU mailing list.
+See file LICENSE for licensing details.
 
 Note that it may take a long time to compile Screamer (i.e. 1.5 hours
 using the Lucid production compiler on a Sun SPARCstation 2).
