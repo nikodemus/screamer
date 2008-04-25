@@ -6,11 +6,6 @@ This directory contains the following files:
 
 screamer.lisp - The source code for Screamer.
 
-iterate.lisp - The source code for Jonathan Amsterdam's Iterate macro. This
-has been modified slightly. This file is not need to run Screamer but is
-needed to run the examples in primordial.lisp, screams.lisp, and
-equations.lisp.
-
 primordial.lisp - A sort of torture test to determine whether Screamer is
 working. To run, first compile and load Screamer and Iterate, compile and load
 this file, type (IN-PACKAGE :PRIMORDIAL), and then type (PRIME-ORDEAL). If no
