@@ -1,0 +1,42 @@
+Screamer is an extension of Common Lisp that adds support for nondeterministic
+programming.  Screamer consists of two levels.  The basic nondeterministic
+level adds support for backtracking and undoable side effects.  On top of this
+nondeterministic substrate, Screamer provides a comprehensive constraint
+programming language in which one can formulate and solve mixed systems of
+numeric and symbolic constraints.  Together, these two levels augment Common
+Lisp with practically all of the functionality of both Prolog and constraint
+logic programming languages such as CHiP and CLP(R).  Furthermore, Screamer is
+fully integrated with Common Lisp. Screamer programs can coexist and
+interoperate with other extensions to Common Lisp such as CLOS, CLIM and
+Iterate.
+
+In several ways Screamer is more efficient than other implementations of
+backtracking languages.  First, Screamer code is transformed into Common Lisp
+which can be compiled by the underlying Common Lisp system.  Many competing
+implementations of nondeterministic Lisp are interpreters and thus are far
+less efficient than Screamer.  Second, the backtracking primitives require
+fairly low overhead in Screamer.  Finally, this overhead to support
+backtracking is only paid for those portions of the program which use the
+backtracking primitives.  Deterministic portions of user programs pass through
+the Screamer-to-Common-Lisp transformation unchanged.  Since in practise, only
+small portions of typical programs utilize the backtracking primitives,
+Screamer can produce more efficient code than compilers for languages in which
+backtracking is more pervasive.
+
+Screamer is fairly portable across most Common Lisp implementations. It
+currently runs under Genera 8.1.1 and 8.3 on Symbolics 36xx and Ivory
+machines, under Lucid 4.0.2 and 4.1 on Sun SPARC machines, under Lucid 4.1 on
+SGI MIPS machines, under Lucid 4.1 on HP PA machines, under Lucid 4.1 on DEC
+MIPS machines, under Lucid 4.0.1 on IBM RS/6000 machines, under MCL 2.0 and
+2.0p2 on Apple Macintosh machines, under Harlequin 3.0.3+ on Sun SPARC
+machines, under Allegro 4.1 and 4.2 on Sun SPARC and SGI MIPS machines, under
+Allegro 4.1 on DEC MIPS machines, under Poplog 14.2 on Sun SPARC machines, and
+under AKCL 1.605 and 1.615 on Sun SPARC machines. It should run under any
+implementation of Common Lisp which is compliant with CLtL2 and with minor
+revision could be made to run under implementations compliant with CLtL1 or
+dpANS.
+
+Screamer was written by Jeffrey Mark Siskind and David Allen McAllester.
+It is available by anonymous FTP from either ftp.ai.mit.edu,
+ftp.cis.upenn.edu, or ftp.cs.toronto.edu as the file /pub/qobi/screamer.tar.Z.
+Contact Jeffrey Mark Siskind (Qobi@CS.Toronto.EDU) for further information.

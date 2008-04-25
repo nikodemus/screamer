@@ -1,0 +1,247 @@
+This is the release of Screamer version 3.20. Screamer 3.20 should run under
+Genera 8.1.1 and 8.3 on Symbolics 36xx and Ivory machines, under Lucid 4.0.2
+and 4.1 on Sun SPARC machines, under Lucid 4.1 on SGI MIPS machines, under
+Lucid 4.1 on HP PA machines, under Lucid 4.1 on DEC MIPS machines, under
+Lucid 4.0.1 on IBM RS/6000 machines, under MCL 2.0 and 2.0p2 on Apple
+Macintosh machines, under Harlequin 3.0.3+ on Sun SPARC machines, under
+Allegro 4.1 and 4.2 on Sun SPARC and SGI MIPS machines, under Allegro 4.1 on
+DEC MIPS machines, under Poplog 14.2 on Sun SPARC machines, and under
+AKCL 1.605 and 1.615 on Sun SPARC machines. Note that for Lucid 4.0.2/SPARC
+you might want to load the patch mbmfe.sbin and for Lucid 4.1/SPARC you might
+want to load the patch bug-6920 (bug-6920-non-dbcs.sbin or bug-6920-dbcs.sbin
+as appropriate). Also note that with Lucid 4.1/HP you must load the patch file
+bug-5511.hbin. Also note that with Lucid 4.1/DEC you must load the patch file
+bug-5511.mbin. Also note that MCL requires patch level 2. If you only have MCL
+2.0 without any patches or only patch level 1 you must first load the patch
+not-so-trivial-patch.fasl. See the notes below for more information.
+
+You are free to use, copy and distribute this software provided that:
+ 1. You report *ALL* bugs to Bug-Screamer@AI.MIT.EDU whether or not you
+    need them fixed. Include the version number (3.20) in the message.
+ 2. You report *ALL* bugs that you fixed to Bug-Screamer@AI.MIT.EDU.
+    Include the version number (3.20) in the message.
+ 3. Every time you run Screamer on a machine or using a Lisp compiler not
+    mentioned below, you send a message stating the new environment and the
+    version number (3.20) to Bug-Screamer@AI.MIT.EDU.
+ 4. You inform us that you obtained a copy of Screamer by sending a message
+    to Info-Screamer-Request@AI.MIT.EDU to be put on the
+    Info-Screamer@AI.MIT.EDU mailing list.
+
+Note that it may take a long time to compile Screamer (i.e. 1.5 hours
+using the Lucid production compiler on a Sun SPARCstation 2).
+
+This directory contains the following files:
+
+screamer.lisp - The source code for Screamer.
+
+iterate.lisp - The source code for Jonathan Amsterdam's Iterate macro. This
+has been modified slightly. This file is not need to run Screamer but is
+needed to run the examples in primordial.lisp, screams.lisp, and
+equations.lisp.
+
+primordial.lisp - A sort of torture test to determine whether Screamer is
+working. To run, first compile and load Screamer and Iterate, compile and load
+this file, type (IN-PACKAGE :PRIMORDIAL), and then type (PRIME-ORDEAL). If no
+errors result then Screamer is probably working correctly.
+
+screams.lisp - A file containing all of the examples from the Screamer manual
+and the two papers ircs-93-03 and aaai93. To use, first compile and load
+Screamer and Iterate, compile and load this file, and then type
+(IN-PACKAGE :SCREAMS).
+
+equations.lisp - A file containing some equations for testing Screamer's
+numeric constraint satisfaction procedures. To use, first compile and load
+Screamer, compile and load this file, and then type (IN-PACKAGE :SCREAMS).
+
+mbmfe.sbin - A patch for Lucid 4.0.2/SPARC. This patch is optional but will
+make the compiled code tail recursive in an greater number of cases. You
+should either load this in your lisp-init.lisp file or make it part of your
+standard image. This patch is already part of Lucid 4.1/SPARC so should not be
+loaded if you are running 4.1 on SPARC machines.
+
+bug-6920-non-dbcs.sbin - Lucid 4.0.2/SPARC and 4.1/SPARC are both missing the
+CLtL2 function REALP which is needed by Screamer. This patch from Lucid adds
+that function but will only work under non-DBCS 4.1/SPARC. The file
+screamer.lisp also contains a definition of REALP so you have three choices:
+a) If you run 4.0.2/SPARC do NOT load this patch. The version in screamer.lisp
+will be used automatically. b) If you run 4.1/SPARC you can choose not to load
+this patch and the version in screamer.lisp will be used automatically. c) If
+you run 4.1/SPARC and doload this patch then you MUST also evaluate
+(PUSH :BUG-6920 *FEATURES* ) before compiling Screamer to disable the
+inclusion of the Screamer version of the REALP function.
+
+bug-6920-dbcs.sbin - A DBCS version of the patch for bug-6920 for
+Lucid 4.1/SPARC.
+
+bug-5511.hbin - Lucid 4.1/HP has a bug. This patch must be loaded to fix that
+bug when compiling or using Screamer under Lucid 4.1/HP.
+
+bug-5511.mbin - Lucid 4.1/DEC has a bug. This patch must be loaded to fix that
+bug when compiling or using Screamer under Lucid 4.1/DEC.
+
+not-so-trivial-patch.fasl.hqx - A patch for MCL 2.0 in BinHex 4.0 format. If
+you are running a version prior to patch level 2 this patch is required to fix
+a code generator bug in the MCL compiler necessary to correctly compile
+Screamer. If you are running patch level 2 or greater you should not load this
+patch as it is already included in patch level 2.
+
+iscream.el - If you run Lisp on Unix under GNUEmacs using ILisp you can load
+this Emacs Lisp file (preferably byte compiled first). You must also then
+set the variable SCREAMER:*ISCREAM?* to T. This will enable the Screamer
+macro LOCAL-OUTPUT and improve the behavior of Y-OR-N-P and PRINT-VALUES
+under ILisp.
+
+screamer.dvi
+screamer.ps - DVI and Postscript versions of an outdated manual for Screamer.
+The code in this manual has some bugs but corrected versions are included in
+screams.lisp.
+
+ircs-93-03.dvi
+ircs-93-03.ps - DVI and Postscript versions of a paper describing the
+fundamentals of nondeterministic CommonLisp. This paper is available at
+Technical Report 93-03 of the University of Pennsylvania Institute for
+Research in Cognitive Science. The appropriate BibTeX entry is:
+\newcommand{\Screamer}{{\mbox{\sc Screamer}}}
+\newcommand{\CommonLisp}{{\mbox{\sc Common Lisp}}}
+@string{IRCS = {University of Pennsylvania Institute for Research in Cognitive
+	Science}}
+@techreport{SiskindM93,
+	author = {Jeffrey Mark Siskind and David Allen McAllester},
+	title = {{\Screamer:} A Portable Efficient Implementation of
+		Nondeterministic {\CommonLisp}},
+	institution = IRCS,
+	year = 1993,
+        number = {IRCS--93--03}}
+The code in this paper is included in screams.lisp.
+
+aaai93.dvi
+aaai93.ps - DVI and Postscript versions of a paper describing the constraint
+package included with Screamer. This paper will appear in the Proceedings of
+AAAI-93. The appropriate BibTeX entry is:
+The code in this paper is also included in screams.lisp.
+\newcommand{\Lisp}{{\mbox{\sc Lisp}}}
+@string{AAAI93 = {Proceedings of the Eleventh National Conference on
+	Artifical Intelligence}}
+@inproceedings{SiskindM93a,
+	author = {Jeffrey Mark Siskind and David Allen McAllester},
+	title = {Nondeterministic {\Lisp} as a Substrate for Constraint Logic
+		Programming},
+	booktitle = AAAI93,
+	year = 1993,
+	month = jul}
+
+Incompatibilities between Screamer 3.20 and Screamer 2.4:
+
+Screamer 3.20 contains numerous bug fixes, performance enhancements and novel
+features over Screamer 2.4, the prior widely released version. I do not have
+the time to describe all such improvements. Until the completion of a new
+Screamer manual you must resort to looking at the source code. At the beginning
+of the file there is a fairly extensive change log.
+
+A small number of incompatibilities have been introduced in the transition
+from Screamer 2.4 to Screamer 3.20. These are summarized below. Those already
+familiar with Screamer should have no difficulty modifying their code modulo
+these changes.
+
+1. All Screamer code must be recompiled. The Screamer 3.20 runtime is
+incompatibile with the Screamer 2.4 compiler.
+
+2. The function MAP-VALUES has been removed. An expression such as:
+(MAP-VALUES function expression)
+can be rewritten using the new FOR-EFFECTS macro as follows:
+(FOR-EFFECTS (FUNCALL function expression))
+The new syntax is every bit as powerful as the old syntax. In fact it is more
+powerfull. MAP-VALUES used to require that the function argument be a
+deterministic expression while the new syntax makes no such requirement. (Note
+that FUNCALL still requires that its first argument evaluate to a deterministic
+function.)
+
+3. You no longer need to reload Screamer after doing an UNWEDGE-SCREAMER since
+Screamer keeps track of which functions are intrinsic and UNWEDGE-SCREAMER
+does not purge those functions.
+
+4. The following functions have been renamed:
+NUMBERV  -> NUMBERPV
+REALV    -> REALPV
+INTEGERV -> INTEGERPV
+BOOLEANV -> BOOLEANPV
+The original names were inconsistent with the naming convention that every
+function ending in V names a lifted version of the function name without the V.
+I.e. NUMBERV would have been a lifted version of a function NUMBER but there
+is no ground function. NUMBERV was really a lifted version of NUMBERP and thus
+should have been named NUMBERPV.
+
+5. A new naming convention has been introduced. All nondeterministic
+`generators' now begin with the prefix A- or AN-. This results in the
+following name changes:
+INTEGER-BETWEEN -> AN-INTEGER-BETWEEN
+MEMBER-OF       -> A-MEMBER-OF
+FLIP            -> A-BOOLEAN
+Furthermore, `lifted generators' both begin with A- or AN- and end with V.
+This results in the following name changes:
+REAL-ABOVEV      -> A-REAL-ABOVEV
+REAL-BELOWV      -> A-REAL-BELOWV
+REAL-BETWEENV    -> A-REAL-BETWEENV
+INTEGER-ABOVEV   -> AN-INTEGER-ABOVEV
+INTEGER-BELOWV   -> AN-INTEGER-BELOWV
+INTEGER-BETWEENV -> AN-INTEGER-BETWEENV
+
+6. The variable *FUZZ* has been eliminated. The functionality of this variable
+has been replaced by additional arguments to the REORDER function.
+
+7. REORDER now takes four arguments:
+(COST-FUNCTION TERMINATE? ORDER FORCE-FUNCTION)
+instead of one. The FORCE-FUNCTION is the same as the prior lone argument.
+The COST-FUNCTION is a function to be applied to each VARIABLE at each
+reordering step to return its cost. Typical values for COST-FUNCTION are
+#'DOMAIN-SIZE or #'RANGE-SIZE. The COST-FUNCTION can return NIL which causes
+REORDER to not consider that variable for further forcing. ORDER is a two
+argument predicate applied to the non-NIL cost functions computed for the
+variables at each reordering step. Typical values are #'<, to choose the least
+cost, and #'>, to choose the greatest cost variable to force next. TERMINATE?
+is a one argument predicate applied to the (non-NIL) cost function computed
+for the variable chosen to force next. If TERMINATE? returns T then the
+variable reordering and forcing terminates. The following is a typical call
+to REORDER used to solve numerical constraints:
+
+(REORDER #'RANGE-SIZE
+         #'(LAMBDA (X) (< X 1E-6))
+         #'>
+         #'DIVIDE-AND-CONQUER-FORCE)
+
+The following is a typical call to REORDER used to solve symbolic constraints:
+
+(REORDER #'DOMAIN-SIZE
+         #'(LAMBDA (X) (DECLARE (IGNORE X)) NIL)
+         #'<
+         #'LINEAR-FORCE)
+
+8. Instead of the standard Screamer file preamble which used to be:
+
+(IN-PACKAGE :<my-package>)
+(USE-PACKAGE '(:LISP :SCREAMER))
+(SHADOWING-IMPORT '(SCREAMER::DEFUN))
+
+there is now a different standard preamble. Loading Screamer creates a
+predefined package SCREAMER-USER which is useful for small student and
+demonstration programs. If you wish your file to be in the SCREAMER-USER
+package the single line:
+
+(IN-PACKAGE :SCREAMER-USER)
+
+should be placed at the top of the file. In addition:
+
+(IN-PACKAGE :SCREAMER-USER)
+
+should be typed to the Listener after loading Screamer. More complex programs
+typically reside in their own package. You can place a program in its own
+package by using the following preamble to your file:
+
+(IN-PACKAGE :CL-USER)
+(SCREAMER:DEFINE-SCREAMER-PACKAGE :<my-package>
+ <optional defpackage arguments>)
+(IN-PACKAGE :MY-PACKAGE)
+
+Note that DEFINE-SCREAMER-PACKAGE doesn't work under AKCL or Poplog so on
+these systems you must either use the SCREAMER-USER package or figure out on
+your own how to appropriately define a Screamer package.
