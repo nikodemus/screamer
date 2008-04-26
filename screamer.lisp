@@ -5369,6 +5369,25 @@ non-numeric."
         (attach-noticer! #'(lambda () (assert!-notv-memberv-internal x y)) y))))
 
 (defun memberv (x y)
+  "The current implementation imposes two constraints on the parameter
+Y. First, Y must be bound when MEMBERV is called. Second, Y must not
+contain any unbound variables when MEMBERV is called. The value of
+parameter Y must be a sequence, i.e. either a list or a vector. If
+when MEMBERV is called, X is known to be a member of Y \(using the
+Common Lisp function EQL as a test function) then MEMBERV returns T.
+Alternatively, if when MEMBERV is called, X is known not to be a
+member of Y then MEMBERV returns NIL. If it is not known whether or
+not X is a member of Y when MEMBERV is called then MEMBERV creates and
+returns a new boolean variable V. The values of X and V are mutually
+constrained via noticers so that V is equal to T if and only if X is
+known to be a member of Y and V is equal to NIL if and only if X is
+known not to be a member of Y. If X later becomes known to be a member
+of Y, a noticer attached to X restricts v to equal T. Likewise, if X
+later becomes known not to be a member of Y, a noticer attached to X
+restricts V to equal NIL. Furthermore, if V ever becomes known to
+equal T then a noticer attached to V restricts X to be a member of Y.
+Likewise, if V ever becomes known to equal NIL then a noticer attached
+to V restricts X not to be a member of Y."
   (cond ((known?-memberv x y) t)
         ((known?-notv-memberv x y) nil)
         (t (let ((x (variablize x))
