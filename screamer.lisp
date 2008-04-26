@@ -3349,10 +3349,14 @@ objects for function."
      (go loop)))
 
 (defun purge (function-name)
+  "Removes any information about FUNCTION-NAME from Screamer's
+who-calls database."
   (remhash (value-of function-name) *function-record-table*)
   t)
 
 (defun unwedge-screamer ()
+  "Removes any information about all user defined functions from
+Screamer's who-calls database."
   (maphash #'(lambda (function-name function-record)
                (unless (function-record-screamer? function-record)
                  (remhash function-name *function-record-table*)))
