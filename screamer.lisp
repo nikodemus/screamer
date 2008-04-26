@@ -3623,6 +3623,11 @@ be either a list or a vector."
       (t (format stream "~S" x)))))
 
 (defun make-variable (&optional (name nil name?))
+  "Creates and returns a new variable. Variables are assigned a name
+which is only used to identify the variable when it is printed. If the
+parameter NAME is given then it is assigned as the name of the
+variable. Otherwise, a unique name is assigned. The parameter NAME can
+be any Lisp object."
   (let ((variable
          #-screamer-clos
           (make-variable-internal :name (if name? name (incf *name*)))
