@@ -3008,11 +3008,28 @@ transparent to the user."
                #'(lambda (form) (perform-substitutions form environment))
                expressions))))
 
-(defmacro-compile-time global (&body forms &environment environment)
+(defmacro-compile-time global (&body expressions &environment environment)
+  "Evaluates EXPRESSIONS in the same fashion as PROGN except that all
+SETF and SETQ expressions lexically nested in its body result in
+global side effects which are not undone upon backtracking. Note that
+this affects only side effects introduced explicitly via SETF and
+SETQ. Side effects introduced by Common Lisp builtin functions such as
+RPLACA are always global anyway. Furthermore, it affects only
+occurrences of SETF and SETQ which appear textually nested in the body
+of the GLOBAL expression -- not those appearing in functions called
+from the body. LOCAL and GLOBAL expressions may be nested inside one
+another. The nearest surrounding declaration determines whether or not
+a given SETF or SETQ results in a local or global side effect. Side
+effects default to be global when there is no surrounding LOCAL or
+GLOBAL expression. Global side effects can appear both in
+deterministic as well as nondeterministic contexts. In
+nondeterministic contexts, GLOBAL as well as SETF are treated as
+special forms rather than macros. This should be completely
+transparent to the user."
   (let ((*local?* nil))
     `(progn ,@(mapcar
                #'(lambda (form) (perform-substitutions form environment))
-               forms))))
+               expressions))))
 
 (defmacro-compile-time for-effects (&body forms &environment environment)
   `(choice-point
