@@ -5227,6 +5227,7 @@ non-numeric."
              z))))
 
 (defun booleanpv (x)
+  "The expression \(BOOLEANPV X) is an abbreviation for \(MEMBERV X '\(T NIL))."
   (cond ((known?-booleanpv x) t)
         ((known?-notv-booleanpv x) nil)
         (t (let ((x (variablize x))
