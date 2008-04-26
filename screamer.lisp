@@ -6414,7 +6414,27 @@ to V restricts X not to be a member of Y."
         (t `(assert!-false ,form)))
       (if polarity? `(assert!-true ,form) `(assert!-false ,form))))
 
-(defmacro-compile-time assert! (form) (transform-assert! form t))
+(defmacro-compile-time assert! (x)
+  "The argument X can be either a variable or a non-variable. The
+expression \(ASSERT! X) restricts X to equal T. This assertion may
+cause other assertions to be made due to noticers attached to X. A
+call to ASSERT! fails if X is known not to equal T prior to the
+assertion or if any of the assertions performed by the noticers result
+in failure. No meaningful result is returned. Except for the fact that
+one cannot write #'ASSERT!, ASSERT! behaves like a function, even
+though it is implemented as a macro. The reason it is implemented as a
+macro is to allow a number of compile time optimizations. Expressions
+like \(ASSERT! \(NOTV X)), \(ASSERT! \(NUMBERPV X)) and \(ASSERT!
+\(NOTV \(NUMBERV X))) are transformed into calls to functions internal
+to Screamer which eliminate the need to create the boolean
+variable\(s) normally returned by functions like NOTV and NUMBERPV.
+Calls to the functions NUMBERPV, REALPV, INTEGERPV, MEMBERV,
+BOOLEANPV, =V, <V, <=V, >V, >=V, /=V, NOTV, FUNCALLV, APPLYV and
+EQUALV which appear directly nested in a call to ASSERT!, or directly
+nested in a call to NOTV which is in turn directly nested in a call to
+ASSERT!, are similarly transformed."
+  ;; FIXME: Should probably be a function + a compiler macro.
+  (transform-assert! x t))
 
 (defun-compile-time transform-decide (form polarity?)
   (if (and (consp form) (null (rest (last form))))
