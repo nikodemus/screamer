@@ -5134,6 +5134,21 @@ be any Lisp object."
 ;;; Lifted Type Functions
 
 (defun integerpv (x)
+  "If when INTEGERPV is called, X is known to be integer valued then
+INTEGERPV returns T. Alternatively, if when INTEGERPV is called, X is
+known to be non-integer valued then INTEGERPV returns NIL. If it is
+not known whether or not X is integer valued when INTEGERPV is called
+then INTEGERPV creates and returns a new boolean variable V. The
+values of X and V are mutually constrained via noticers so that V is
+equal to T if and only if X is known to be integer valued and V is
+equal to NIL if and only if X is known to be non-integer valued. If X
+later becomes known to be integer valued, a noticer attached to X
+restricts V to equal t. Likewise, if X later becomes known to be
+non-integer valued, a noticer attached to X restricts V to equal NIL.
+Furthermore, if V ever becomes known to equal T then a noticer
+attached to V restricts X to be integer valued. Likewise, if V ever
+becomes known to equal NIL then a noticer attached to V restricts X to
+be non-integer valued."
   (cond ((known?-integerpv x) t)
         ((known?-notv-integerpv x) nil)
         (t (let ((x (variablize x))
