@@ -5151,6 +5151,19 @@ be any Lisp object."
              z))))
 
 (defun realpv (x)
+  "If when REALPV is called, X is known to be real then REALPV returns
+T. Alternatively, if when REALPV is called, X is known to be non-real
+then REALPV returns NIL. If it is not known whether or not X is real
+when REALPV is called then REALPV creates and returns a new boolean
+variable V. The values of X and V are mutually constrained via
+noticers so that V is equal to T if and only if X is known to be real
+and V is equal to NIL if and only if X is known to be non-real. If X
+later becomes known to be real, a noticer attached to X restricts V to
+equal T. Likewise, if X later becomes known to be non-real, a noticer
+attached to X restricts V to equal NIL. Furthermore, if V ever becomes
+known to equal T then a noticer attached to V restricts X to be real.
+Likewise, if V ever becomes known to equal NIL then a noticer attached
+to V restricts X to be non-real."
   (cond ((known?-realpv x) t)
         ((known?-notv-realpv x) nil)
         (t (let ((x (variablize x))
