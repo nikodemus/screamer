@@ -3170,10 +3170,30 @@ restarted for, each backtrack of I."
     (format-string? (apply #'cl:y-or-n-p format-string format-args))
     (t (cl:y-or-n-p))))
 
-(defmacro-compile-time print-values (&body forms)
+(defmacro-compile-time print-values (&body expressions)
+  "Evaluates EXPRESSIONS \(wrapped in an implicit PROGN) and prints
+each of the nondeterministic values returned by the last EXPRESSION in
+succession \(using PRINT). After each value is printed, the user is
+queried as to whether or not further values are desired. These values
+are produced by repeatedly evaluating the body and backtracking to
+produce the next value, until either the user indicates that no
+further values are desired or until the body fails and yields no
+further values. Accordingly, local side effects performed by the body
+while producing each value are undone after printing each value,
+before attempting to produce subsequent values, and all local side
+effects performed by the body are undone upon exit from PRINT-VALUES,
+either because there are no further values or because the user
+declines to produce further values. A PRINT-VALUES expression can
+appear in both deterministic and nondeterministic contexts.
+Irrespective of what context the PRINT-VALUES expression appears in,
+the EXPRESSIONS are always in a nondeterministic context. A
+PRINT-VALUES expression itself is always deterministic and always
+returns NIL. PRINT-VALUES is analogous to the standard top-level user
+interface in Prolog."
+  ;; FIXME: Documentation lies: does not always return NIL.
   `(catch 'succeed
      (for-effects
-       (let ((value (progn ,@forms)))
+       (let ((value (progn ,@expressions)))
          (print value)
          (unless (y-or-n-p "Do you want another solution?")
            (throw 'succeed value))))))
