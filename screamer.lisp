@@ -3094,8 +3094,19 @@
            (format t "Failures         = ~10<~;~d~>" failure-count)
            (values-list ,values))))))
 
-(defun nondeterministic-function? (thing)
-  (nondeterministic-function?-internal (value-of thing)))
+(defun nondeterministic-function? (x)
+  "Returns T if X is a nondeterministic function object and NIL
+otherwise. Nondeterministic function objects can be produced in two
+ways. First, the special form \(FUNCTION FOO) \(i.e. #'FOO) will
+\(deterministically) evaluate to a nondeterministic function object if
+FOO names a nondeterministic function defined by DEFUN. Second, the
+special form \(FUNCTION \(LAMBDA \(...) ...)) \(i.e. #'\(lambda \(...)
+...)) will \(deterministically) evaluate to a nondeterministic function
+object if the body of the lambda expression contains a
+nondeterministic expression."
+  ;; FIXME: Is the above really true? What about FDEFINITION,
+  ;; SYMBOL-FUNCTION, or #'X where X is defined by FLET or LABELS?
+  (nondeterministic-function?-internal (value-of x)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'funcall-nondeterministic))
