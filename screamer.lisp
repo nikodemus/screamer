@@ -3100,13 +3100,44 @@ analogous to the bagof primitive in Prolog."
                              ,last-value-cons (rest ,last-value-cons))))))
        ,values)))
 
-(defmacro-compile-time ith-value (i form1 &optional (form2 nil form2?))
-  `(block ith-value
-     (let ((i (value-of ,i)))
-       (for-effects (let ((value ,form1))
-                      (if (zerop i) (return-from ith-value value))
-                      (decf i)))
-       ,(if form2? form2 '(fail)))))
+(defmacro-compile-time ith-value (i expression &optional (default-expression '(fail)))
+  "Returns the Ith value of a nondeterministic expression. EXPRESSION
+is evaluated, deterministically returning only its Ith
+nondeterministic value, if any. I must be an integer. The first
+nondeterministic value returned by EXPRESSION is numbered zero, the
+second one, etc. The Ith value is produced by repeatedly evaluating
+EXPRESSION, backtracking through and discarding the first I values and
+deterministically returning the next value produced. No further
+execution of EXPRESSION is attempted after it successfully returns the
+desired value. If EXPRESSION fails before returning both the I values
+to be discarded, as well as the desired Ith value, then
+DEFAULT-EXPRESSION is evaluated and its value returned instead.
+DEFAULT-EXPRESSION defaults to \(FAIL) if not present. Local side
+effects performed by EXPRESSION are undone when ITH-VALUE returns. On
+the other hand, local side effects performed by DEFAULT-EXPRESSION and
+by I are not undone when ITH-VALUE returns. An ITH-VALUE expression
+can appear in both deterministic and nondeterministic contexts.
+Irrespective of what context the ITH-VALUE expression appears in,
+EXPRESSION is always in a nondeterministic context, while
+DEFAULT-EXPRESSION and I are in whatever context the ITH-VALUE
+expression appears. An ITH-VALUE expression is nondeterministic if
+DEFAULT-EXPRESSION is present and is nondeterministic, or if I is
+nondeterministic. Otherwise it is deterministic. If DEFAULT-EXPRESSION
+is present and nondeterministic, and if EXPRESSION fails, then it is
+possible to backtrack into the DEFAULT-EXPRESSION and for the
+ITH-VALUE expression to nondeterministically return multiple times. If
+I is nondeterministic then the ITH-VALUE expression operates
+nondeterministically on each value of I. In this case, backtracking
+for each value of EXPRESSION and DEFAULT-EXPRESSION is nested in, and
+restarted for, each backtrack of I."
+  (let ((counter (gensym "I")))
+    `(block ith-value
+       (let ((,counter (value-of ,i)))
+         (for-effects (let ((value ,expression))
+                        (if (zerop ,counter) 
+                            (return-from ith-value value)
+                            (decf ,counter))))
+         ,default-expression))))
 
 (defun trail (function)
   ;; note: Is it really better to use VECTOR-PUSH-EXTEND than CONS for the
