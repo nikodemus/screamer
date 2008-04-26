@@ -5168,6 +5168,20 @@ be any Lisp object."
              z))))
 
 (defun numberpv (x)
+  "If when NUMBERPV is called, X is known to be numeric then NUMBERPV
+returns T. Alternatively, if when NUMBERPV is called, X is known to be
+non-numeric then NUMBERPV returns NIL. If it is not known whether or
+not X is numeric when NUMBERPV is called then NUMBERPV creates and
+returns a new boolean variable V. The values of X and V are mutually
+constrained via noticers so that V is equal to T if and only if X is
+known to be numeric and V is equal to NIL if and only if X is known to
+be non-numeric. If X later becomes known to be numeric, a noticer
+attached to X restricts V to equal T. Likewise, if X later becomes
+known to be non-numeric, a noticer attached to X restricts V to equal
+NIL. Furthermore, if V ever becomes known to equal T then a noticer
+attached to V restricts X to be numeric. Likewise, if V ever becomes
+known to equal NIL then a noticer attached to V restricts X to be
+non-numeric."
   (cond ((known?-numberpv x) t)
         ((known?-notv-numberpv x) nil)
         (t (let ((x (variablize x))
