@@ -3298,6 +3298,20 @@ objects for function."
   (declare-nondeterministic 'apply-nondeterministic))
 
 (cl:defun apply-nondeterministic (function argument &rest arguments)
+  "Analogous to the Common Lisp built-in function APPLY except that it
+accepts both ordinary Common Lisp \(deterministic) function objects as
+well as nondeterministic function objects for function. You must use
+APPLY-NONDETERMINISTIC to apply a nondeterministic function object. A
+runtime error will be signalled if you attempt to apply a
+nondeterministic function object with APPLY. You can use
+APPLY-NONDETERMINISTIC to apply either a deterministic or
+nondeterministic function object though even if all of the arguments
+to APPLY-NONDETERMINISTIC are deterministic and function is a
+deterministic function object, the call expression will still be
+nondeterministic \(with presumably a single value), since it is
+impossible to determine at compile time that a given call to
+APPLY-NONDETERMINISTIC will be passed only deterministic function
+objects for function."
   (declare (ignore function argument arguments))
   (screamer-error
    "APPLY-NONDETERMINISTIC is a nondeterministic function. As such, it must~%~
