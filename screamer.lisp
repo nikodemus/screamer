@@ -3072,17 +3072,33 @@ ONE-VALUE is analogous to the cut primitive \(!) in Prolog."
         value)
       result)))
 
-(defmacro-compile-time all-values (&body forms)
-  `(let ((values '())
-         (last-value-cons nil))
-     (for-effects
-       (let ((value (progn ,@forms)))
-         (global (cond ((null values)
-                        (setf last-value-cons (list value))
-                        (setf values last-value-cons))
-                       (t (setf (rest last-value-cons) (list value))
-                          (setf last-value-cons (rest last-value-cons)))))))
-     values))
+(defmacro-compile-time all-values (&body expressions)
+  "Evaluates EXPRESSIONS \(wrapped in an implicit PROGN) and returns a
+list of all of the nondeterministic values returned by the last
+EXPRESSION. These values are produced by repeatedly evaluating the
+body and backtracking to produce the next value, until the body fails
+and yields no further values. Accordingly, local side effects
+performed by the body while producing each value are undone before
+attempting to produce subsequent values, and all local side effects
+performed by the body are undone upon exit from ALL-VALUES. Returns
+the list containing NIL if there are no EXPRESSIONS. An ALL-VALUES
+expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the ALL-VALUES expression
+appears in, the EXPRESSIONS are always in a nondeterministic context.
+An ALL-VALUES expression itself is always deterministic. ALL-VALUES is
+analogous to the bagof primitive in Prolog."
+  (let ((values (gensym "VALUES"))
+        (last-value-cons (gensym "LAST-VALUE-CONS")))
+    `(let ((,values '())
+           (,last-value-cons nil))
+       (for-effects
+         (let ((value (progn ,@expressions)))
+           (global (if (null ,values)
+                       (setf ,last-value-cons (list value)
+                             ,values ,last-value-cons)
+                       (setf (rest ,last-value-cons) (list value)
+                             ,last-value-cons (rest ,last-value-cons))))))
+       ,values)))
 
 (defmacro-compile-time ith-value (i form1 &optional (form2 nil form2?))
   `(block ith-value
