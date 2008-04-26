@@ -2954,11 +2954,35 @@
            ,@modified-function-definitions
            ',function-name)))))
 
-(defmacro-compile-time either (&body forms)
-  (case (length forms)
-    (0 '(fail))
-    (1 (first forms))
-    (otherwise `(if (a-boolean) ,(first forms) (either ,@(rest forms))))))
+(defmacro-compile-time either (&body expressions)
+  "Nondeterministically evaluates and returns the value of one of its
+EXPRESSIONS. It sets up a choice point and evaluates the first
+EXPRESSION returning its result. Whenever backtracking proceeds to
+this choice point, the next EXPRESSION is evaluated and its result
+returned. When no more EXPRESSIONS remain, the current choice point is
+removed and backtracking continues to the next most recent choice
+point. As an optimization, the choice point created for this
+expression is removed before the evaluation of the last EXPRESSION so
+that a failure during the evaluation of the last expression will
+backtrack directly to the parent choice point of the EITHER
+expression. EITHER takes any number of arguments. With no arguments,
+\(EITHER) is equivalent to \(FAIL) and is thus deterministic. With one
+argument, \(EITHER EXPRESSION) is equivalent to expression itself and
+is thus deterministic only when EXPRESSION is deterministic. Either is
+a special form, not a function. It is an error for the expression
+#'EITHER to appear in a program. Thus \(FUNCALL #'EITHER ...) or
+\(APPLY #'EITHER ...) are in error and will yield unpredictable
+results. With two or more argument it is nondeterministic and can only
+appear in a nondeterministic context."
+  ;; FIXME: ref to operators providing nondeterministic contexts
+  (cond ((not expressions)
+         '(fail))
+        ((not (rest expressions))
+         (first expressions))
+        (t
+         `(if (a-boolean)
+              ,(first expressions)
+              (either ,@(rest expressions))))))
 
 (defmacro-compile-time local (&body forms &environment environment)
   (let ((*local?* t))
