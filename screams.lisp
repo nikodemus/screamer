@@ -2,16 +2,11 @@
 
 ;;; LaHaShem HaAretz U'Mloah
 
-#||#(in-package :screamer-user)
+(in-package :screamer-user)
 
-#-(or poplog akcl)
 (screamer:define-screamer-package :screams (:use :iterate))
 
-#-(or poplog akcl)
 (in-package :screams)
-
-#+(or poplog akcl)
-(use-package :iterate)
 
 (defun pythagorean-triples (n)
  (all-values
