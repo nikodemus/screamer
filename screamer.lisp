@@ -3422,6 +3422,10 @@ Screamer's who-calls database."
   (declare-nondeterministic 'an-integer-between))
 
 (cl:defun an-integer-between (low high)
+  "Nondeterministically returns an integer in the closed interval
+[LOW, HIGH]. The results are returned in ascending order. LOW and HIGH
+must be integers. Fails if the interval does not contain any
+integers."
   (declare (ignore low high))
   (screamer-error
    "AN-INTEGER-BETWEEN is a nondeterministic function. As such, it must be~%~
@@ -3440,6 +3444,9 @@ Screamer's who-calls database."
   (declare-nondeterministic 'a-member-of))
 
 (cl:defun a-member-of (sequence)
+  "Nondeterministically returns an element of SEQUENCE. The elements
+are returned in the order that they appear in SEQUENCE. SEQUENCE must
+be either a list or a vector."
   (declare (ignore sequence))
   (screamer-error
    "A-MEMBER-OF is a nondeterministic function. As such, it must be called~%~
