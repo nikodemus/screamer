@@ -3099,7 +3099,15 @@ appear in a nondeterministic context."
   (choice-point (funcall continuation t))
   (funcall continuation nil))
 
-(defun fail () (throw 'fail nil))
+(defun fail ()
+  "Backtracks to the most recent choise point. Equivalent to
+\(EITHER). Note that FAIL is deterministic function and thus it is
+permissible to reference #'FAIL, and write \(FUNCALL #'FAIL) or
+\(APPLY #'FAIL). In nondeterministic contexts, the expression \(FAIL)
+is optimized to generate inline backtracking code."
+  ;; FIXME: Since we export FAIL, throwing to it is probably a bad idea.
+  ;; ...better throw to %FAIL.
+  (throw 'fail nil))
 
 (defmacro-compile-time when-failing ((&body failing-forms) &body forms)
   (let ((old-fail (gensym "FAIL-")))
