@@ -3036,10 +3036,30 @@ transparent to the user."
     ,(let ((*nondeterministic-context?* t))
           (cps-convert-progn forms '#'fail nil nil environment))))
 
-(defmacro-compile-time one-value (form1 &optional (form2 nil form2?))
+(defmacro-compile-time one-value (expression &optional (default-expression '(fail)))
+  "Returns the first value of a nondeterministic expression.
+EXPRESSION is evaluated, deterministically returning only its first
+nondeterministic value, if any. No further execution of EXPRESSION is
+attempted after it successfully returns one value. If EXPRESSION does
+not return any nondeterministic values \(i.e. it fails) then
+DEFAULT-EXPRESSION is evaluated and its value returned instead.
+DEFAULT-EXPRESSION defaults to \(FAIL) if not present. Local side
+effects performed by EXPRESSION are undone when ONE-VALUE returns. On
+the other hand, local side effects performed by DEFAULT-EXPRESSION are
+not undone when ONE-VALUE returns. A ONE-VALUE expression can appear
+in both deterministic and nondeterministic contexts. Irrespective of
+what context the ONE-VALUE expression appears in, EXPRESSION is always
+in a nondeterministic context, while DEFAULT-EXPRESSION is in whatever
+context the ONE-VALUE expression appears. A ONE-VALUE expression is
+nondeterministic if DEFAULT-EXPRESSION is present and is
+nondeterministic, otherwise it is deterministic. If DEFAULT-EXPRESSION
+is present and nondeterministic, and if EXPRESSION fails, then it is
+possible to backtrack into the DEFAULT-EXPRESSION and for the
+ONE-VALUE expression to nondeterministically return multiple times.
+ONE-VALUE is analogous to the cut primitive \(!) in Prolog."
   `(block one-value
-     (for-effects (return-from one-value ,form1))
-     ,(if form2? form2 '(fail))))
+     (for-effects (return-from one-value ,expression))
+     ,default-expression))
 
 (defmacro-compile-time possibly? (&body forms)
   `(one-value (let ((value (progn ,@forms))) (unless value (fail)) value) nil))
