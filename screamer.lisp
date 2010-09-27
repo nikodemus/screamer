@@ -6294,7 +6294,46 @@ X2."
       t
       (andv (<v2 x (first xs)) (<v-internal (first xs) (rest xs)))))
 
-(defun <v (x &rest xs) (<v-internal x xs))
+(defun <v (x &rest xs)
+  "Returns a boolean value which is constrained to be T if each argument Xi is
+less than the following argument Xi+1 and constrained to be NIL if some
+argument Xi is greater than or equal to the following argument Xi+1. This
+function takes one or more arguments. All of the arguments are restricted to
+be real. Returns T when called with one argument. A call such as \(<v X1 X2
+... Xn) with more than two arguments behaves like a conjunction of two
+argument calls:
+
+  \(ANDV \(<V X1 X2) ... \(<V Xi Xi+1 ) ... \(<V XNn-1 Xn))
+
+Behaves as follows when called with two arguments. Returns T if X1 is known to
+be less than X2 at the time of call. A real value X1 is known to be less than
+a real value X2 if X1 has an upper bound, X2 has a lower bound and the upper
+bound of X1 is less than the lower bound of X2. Returns NIL if X1 is known to
+be greater than or equal to X2 at the time of call. A real value X1 is known
+to be greater than or equal to a real value X2 if X1 has a lower bound, X2 has
+an upper bound and the lower bound of X1 is greater than or equal to the upper
+bound of X2. If it is not known whether or not X1 is less than X2 when <V is
+called then <V creates and returns a new boolean variable V. The values of X1,
+X2 and v are mutually constrained via noticers so that C is equal to T if and
+only if X1 is known to be less than X2 and V is equal to NIL if and only if X1
+is known to be greater than or equal to X2. If it later becomes known that X1
+is less than X2, noticers attached to X1 and X2 restrict V to equal T.
+Likewise, if it later becomes known that X1 is greater than or equal to X2,
+noticers attached to X1 and X2 restrict V to equal NIL. Furthermore, if V ever
+becomes known to equal T then a noticer attached to V restricts X1 to be less
+than X2. Likewise, if V ever becomes known to equal NIL then a noticer
+attached to V restricts X1 to be greater than or equal to X2. Restricting a
+real value X1 to be less than a real value X2 is performed by attaching
+noticers to X1 and X2. The noticer attached to X1 continually restricts the
+lower bound of X2 to be no lower than the upper bound of X1 if X1 has an upper
+bound. The noticer attached to X2 continually restricts the upper bound of X1
+to be no higher than the lower bound of X2 if X2 has a lower bound. Since
+these restrictions only guarantee that X1 be less than or equal to X2, the
+constraint that X1 be strictly less than X2 is enforced by having the noticers
+fail when both X1 and X2 become known to be equal. Restricting a real value X1
+to be greater than or equal to a real value X2 is performed by an analogous
+set of noticers without this last equality check."
+  (<v-internal x xs))
 
 (defun <=v-internal (x xs)
   (if (null xs)
@@ -6386,7 +6425,7 @@ X2."
         (t `(known?-false ,form)))
       (if polarity? `(known?-true ,form) `(known?-false ,form))))
 
-(defmacro-compile-time known? (x) 
+(defmacro-compile-time known? (x)
   "The argument X can be either a variable or a non-variable. The
 expression \(KNOWN? X) restricts X to be boolean. This assertion may
 cause other assertions to be made due to noticers attached to X. A
