@@ -6,6 +6,9 @@
 ;;; release. Run the function (PRIME-ORDEAL). If it returns T and doesn't
 ;;; produce any error messages then Screamer is probably OK.
 
+(eval-when (:compile-toplevel :load-toplevel)
+  (require :iterate))
+
 (in-package :screamer-user)
 
 (screamer:define-screamer-package :primordial (:use :iterate))
