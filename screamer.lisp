@@ -6247,7 +6247,47 @@ to V restricts X not to be a member of Y."
       t
       (andv (=v2 x (first xs)) (=v-internal (first xs) (rest xs)))))
 
-(defun =v (x &rest xs) (=v-internal x xs))
+(defun =v (x &rest xs)
+  "Returns a boolean value which is constrained to be T if all of the
+arguments are numerically equal and constrained to be NIL if two or more of
+the arguments numerically differ. This function takes one or more arguments.
+All of the arguments are restricted to be numeric. Returns T when called with
+one argument. A call such as \(=V X1 X2 ... Xn) with more than two arguments
+behaves like a conjunction of two argument calls:
+
+  \(ANDV (=V X1 X2) ... (=V Xi Xi+1) ... (=V Xn-1 Xn))
+
+Behaves as follows when called with two arguments. Returns T if X1 is known to
+be equal to X2 at the time of call. Two numeric values are known to be equal
+only when they are both bound and equal according to the Common Lisp function
+=. Returns NIL if X1 is known not to be equal to X2 at the time of call. Two
+numeric values are known not to be equal when their domains are disjoint.
+Furthermore two real values are known not to be equal when their ranges are
+disjoint, i.e. the upper bound of one is greater than the lower bound of the
+other. If it is not known whether or not X1 is equal to X1 when =V is called
+then =V creates and returns a new boolean variable V. The values of X1, X2,
+and V are mutually constrained via noticers so that V is equal to T if and
+only if X1 is known to be equal to X2 and V is equal to NIL if and only if X1
+is known not to be equal to X2. If it later becomes known that X1 is equal to
+X2 noticers attached to X1 and X2 restrict V to equal T. Likewise if it later
+becomes known that X1 is not equal to X2 noticers attached to X1 and X2
+restrict V to equal NIL. Furthermore if V ever becomes known to equal T then a
+noticer attached to V restricts X1 to be equal to X2. Likewise if V ever
+becomes known to equal NIL then a noticer attached to V restricts X1 not to be
+equal to X2. Restricting two values X1 and X2 to be equal is performed by
+attaching noticers to X1 and X2. These noticers continually restrict the
+domains of X1 and X2 to be equivalent sets (using the Common Lisp function =
+as a test function) as their domains are restricted. Furthermore if X1 is
+known to be real then the noticer attached to X2 continually restrict the
+upper bound of X1 to be no higher than the upper bound of X2 and the lower
+bound of X1 to be no lower than the lower bound of X2. The noticer of X2
+performs a symmetric restriction on the bounds of X1 if it is known to be
+real. Restricting two values X1 and X2 to not be equal is also performed by
+attaching noticers to X1 and X2. These noticers however do not restrict the
+domains or ranges of X1 or X2. They simply monitor their continually
+restrictions and fail when any assertion causes X1 to be known to be equal to
+X2."
+  (=v-internal x xs))
 
 (defun <v-internal (x xs)
   (if (null xs)
