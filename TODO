@@ -1,0 +1,7 @@
+* Copy available docs from screamer.ps to docstrings.
+* Find / write docs for then still undocumented exported functions.
+* Rewrite dynamic-extent continuations using FLET
+  At least SBCL cannot currently stack-allocate a let-bound lambda,
+  but manages FLET and LABELS just fine.
+* Dynamic-extent in CPS-CONVERT-TAGBODY.
+* TEST-OP for the system.
