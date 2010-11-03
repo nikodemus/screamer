@@ -28,5 +28,7 @@
 ;;;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (defsystem :screamer
+  :serial t
   :components
-  ((:file "screamer")))
+  ((:file "package")
+   (:file "screamer")))
