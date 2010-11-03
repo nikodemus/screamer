@@ -578,7 +578,12 @@
 (defparameter *screamer-version* "3.20"
   "The version of Screamer which is loaded.")
 
-(defvar-compile-time *dynamic-extent?* t
+(defvar-compile-time *dynamic-extent?*
+    ;; SBCL cannot stack-allocate LET-bound lambdas that screamer
+    ;; currently uses, so setting dynamic-extent to T will only
+    ;; generate compiler notes about it inability to do so.
+    #-sbcl t
+    #+sbcl nil
   "T to enable the dynamic extent optimization.")
 
 (defvar *iscream?* nil
