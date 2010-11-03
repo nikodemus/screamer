@@ -128,8 +128,8 @@ documented here -- if not, go for the paper.
 @include include/fun-screamer-unwedge-screamer.texinfo
 @include include/macro-screamer-all-values.texinfo
 @include include/macro-screamer-assert!.texinfo
+@include include/macro-screamer-decide.texinfo
 @c Not cleaned up yet:
-@c @include include/macro-screamer-decide.texinfo
 @c @include include/macro-screamer-either.texinfo
 @c @include include/macro-screamer-global.texinfo
 @c @include include/macro-screamer-ith-value.texinfo

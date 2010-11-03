@@ -6682,35 +6682,37 @@ directly nested in a call to ASSERT!, are similarly transformed."
          (if polarity? `(assert!-false ,argument) `(assert!-true ,argument))))))
 
 (defmacro-compile-time decide (x)
-  "The argument X can be either a variable or a non-variable. The
-expression \(DECIDE X) restricts X to be boolean. This assertion may
-cause other assertions to be made due to noticers attached to X. A
-call to DECIDE immediately fails if X is known not to be boolean prior
-to the assertion or if any of the assertions performed by the noticers
-result in failure. Restricting X to be boolean attaches a noticer on X
-so that any subsequent assertion which restricts X to be non-boolean
-will fail. After X is restricted to be boolean a nondeterministic
-choice is made. For one branch, X is restricted to equal T and
-\(DECIDE X) returns T as a result. For the other branch, X is
-restricted to equal NIL and \(DECIDE X) returns NIL as a result.
+  "Restricts X to a be boolean. After X is restricted a nondeterministic
+choice is made. For one branch, X is restricted to equal T and \(DECIDE X)
+returns T as a result. For the other branch, X is restricted to equal NIL and
+\(DECIDE X) returns NIL as a result. The argument X can be either a variable
+or a non-variable.
+
+The initial restriction to boolean may cause other assertions to be made due
+to noticers attached to X. A call to DECIDE immediately fails if X is known
+not to be boolean prior to the assertion or if any of the assertions performed
+by the noticers result in failure.
+
+Restricting X to be boolean attaches a noticer on X so that any subsequent
+assertion which restricts X to be non-boolean will fail.
+
 Except for implementation optimizations \(DECIDE X) is equivalent to:
 
-  \(EITHER \(PROGN \(ASSERT! X) T) \(PROGN \(ASSERT! \(NOTV X)) NIL)).
+  \(EITHER \(PROGN \(ASSERT! X) T) \(PROGN \(ASSERT! \(NOTV X)) NIL))
 
-The implementation guarantees that X is evaluated only once so it may
-safely contain side effects. Except for the fact that one cannot write
-#'DECIDE, DECIDE behaves like a function, even though it is
-implemented as a macro. The reason it is implemented as a macro is to
-allow a number of compile time optimizations. Expressions like
-\(DECIDE \(NOTV X)), \(DECIDE \(NUMBERPV X)) and \(DECIDE \(NOTV
-\(NUMBERPV X))) are transformed into calls to functions internal to
-Screamer which eliminate the need to create the boolean variable\(s)
-normally returned by functions like notv and numberv. Calls to the
-functions NUMBERPV, REALPV, INTEGERPV, MEMBERPV, BOOLEANPV, =V, <V,
-<=V, >V, >=V, /=V, NOTV, FUNCALLV, APPLYV and EQUALV which appear
-directly nested in a call to decide, or directly nested in a call to
-NOTV which is in turn directly nested in a call to decide, are
-similarly transformed."
+Except for the fact that one cannot write #'DECIDE, DECIDE behaves like a
+function, even though it is implemented as a macro.
+
+The reason it is implemented as a macro is to allow a number of compile time
+optimizations. Expressions like \(DECIDE \(NOTV X)), \(DECIDE \(NUMBERPV X))
+and \(DECIDE \(NOTV \(NUMBERPV X))) are transformed into calls to functions
+internal to Screamer which eliminate the need to create the boolean
+variable\(s) normally returned by functions like notv and numberv. Calls to
+the functions NUMBERPV, REALPV, INTEGERPV, MEMBERPV, BOOLEANPV, =V, <V, <=V,
+>V, >=V, /=V, NOTV, FUNCALLV, APPLYV and EQUALV which appear directly nested
+in a call to decide, or directly nested in a call to NOTV which is in turn
+directly nested in a call to decide, are similarly transformed."
+  ;; FIXME: Sounds like this should be a function + compiler-macro.
   (cl:multiple-value-bind (arguments true false)
       (transform-decide x t)
     `(let ,arguments 

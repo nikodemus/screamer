@@ -536,7 +536,9 @@ semicolon, and the previous line is empty"
                     for line = (and (< index (length lines)) (svref lines index))
                     while (indentation line)
                     collect line)))
-    (values (length lisp) `("@lisp" ,@lisp "@end lisp"))))
+    ;; KLUDGE: makeinfo likes to stick an newline after @lisp sections
+    ;; we generate, so balance it out by adding one before. Grr.
+    (values (length lisp) `("@lisp" "" ,@lisp "@end lisp"))))
 
 ;;; itemized sections
 
