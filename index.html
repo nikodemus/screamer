@@ -551,9 +551,9 @@ directly nested in a call to decide, are similarly transformed.
 <code>expressions</code>.
 
         <p><code>either</code> takes any number of arguments. With no arguments, <code>(either) </code>is
-equivalent to <code>(fail) </code>and is thus deterministic. With one argument, (EITHER
-EXPRESSION) is equivalent to expression itself and is thus deterministic only
-when <code>expression</code> is deterministic. With two or more argument it is
+equivalent to <code>(fail) </code>and is thus deterministic. With one argument,
+<code>(either expression) </code>is equivalent to expression itself and is thus deterministic
+only when <code>expression</code> is deterministic. With two or more argument it is
 nondeterministic and can only appear in a nondeterministic context.
 
         <p>It sets up a choice point and evaluates the first <code>expression</code> returning its
