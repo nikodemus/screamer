@@ -132,10 +132,10 @@ documented here -- if not, go for the paper.
 @include include/macro-screamer-either.texinfo
 @include include/macro-screamer-global.texinfo
 @include include/macro-screamer-local.texinfo
+@include include/macro-screamer-one-value.texinfo
+@include include/macro-screamer-ith-value.texinfo
 @c Not cleaned up yet:
-@c @include include/macro-screamer-ith-value.texinfo
 @c @include include/macro-screamer-known?.texinfo
-@c @include include/macro-screamer-one-value.texinfo
 @c @include include/macro-screamer-print-values.texinfo
 @c @include include/var-screamer-star-dynamic-extent?star.texinfo
 @c @include include/var-screamer-star-iscream?star.texinfo
