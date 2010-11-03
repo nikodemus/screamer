@@ -26,6 +26,7 @@
   .contents { border: 2px solid black;
               margin: 1cm 1cm 1cm 1cm;
               padding-left: 3mm; }
+  .lisp { padding: 0; margin: 0em; }
   body { padding: 2em 8em; font-family: sans-serif; }
   h1 { padding: 1em; text-align: center; }
   li { margin: 1em; }
@@ -186,7 +187,8 @@ to be numeric.
         <p>Returns <code>t</code> when called with one argument. A call such as <code>(=v x1 x2 ... xn)</code>
 with more than two arguments behaves like a conjunction of two argument calls:
 
-     <pre class="lisp">            (ANDV (=V X1 X2) ... (=V Xi Xi+1) ... (=V Xn-1 Xn))
+     <pre class="lisp">          
+            (ANDV (=V X1 X2) ... (=V Xi Xi+1) ... (=V Xn-1 Xn))
      </pre>
         <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is known to be equal to <code>x2</code> at
 the time of call, <code>nil</code> if <code>x1</code> is known not to be equal to <code>x2</code> at the time of
@@ -301,7 +303,8 @@ to be real.
         <p>Returns <code>t</code> when called with one argument. A call such as (&lt;v <code>x1</code> <code>x2</code> ... Xn)
 with more than two arguments behaves like a conjunction of two argument calls:
 
-     <pre class="lisp">            (ANDV (&lt;V X1 X2) ... (&lt;V Xi Xi+1 ) ... (&lt;V XNn-1 Xn))
+     <pre class="lisp">          
+            (ANDV (&lt;V X1 X2) ... (&lt;V Xi Xi+1 ) ... (&lt;V XNn-1 Xn))
      </pre>
         <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is known to be less than <code>x2</code> at
 the time of call, <code>nil</code> if <code>x1</code> is known to be greater than or equal to <code>x2</code> at the
@@ -502,8 +505,44 @@ the functions <code>numberpv</code>, <code>realpv</code>, <code>integerpv</code>
 in a call to <code>assert</code>!, or directly nested in a call to <code>notv</code> which is in turn
 directly nested in a call to <code>assert</code>!, are similarly transformed. 
 </p></blockquote></div>
+
+   <p><a name="Macro-decide"></a>
+
+<div class="defun">
+&mdash; Macro: <b>decide</b><var> x<a name="index-decide-37"></a></var><br>
+<blockquote><p><a name="index-decide-38"></a>Restricts <code>x</code> to a be boolean. After <code>x</code> is restricted a nondeterministic
+choice is made. For one branch, <code>x</code> is restricted to equal <code>t</code> and <code>(decide x)</code>
+returns <code>t</code> as a result. For the other branch, <code>x</code> is restricted to equal <code>nil</code> and
+<code>(decide x) </code>returns <code>nil</code> as a result. The argument <code>x</code> can be either a variable
+or a non-variable.
+
+        <p>The initial restriction to boolean may cause other assertions to be made due
+to noticers attached to <code>x</code>. A call to <code>decide</code> immediately fails if <code>x</code> is known
+not to be boolean prior to the assertion or if any of the assertions performed
+by the noticers result in failure.
+
+        <p>Restricting <code>x</code> to be boolean attaches a noticer on <code>x</code> so that any subsequent
+assertion which restricts <code>x</code> to be non-boolean will fail.
+
+        <p>Except for implementation optimizations <code>(decide x) </code>is equivalent to:
+
+     <pre class="lisp">          
+            (EITHER (PROGN (ASSERT! X) T) (PROGN (ASSERT! (NOTV X)) NIL))
+     </pre>
+        <p>Except for the fact that one cannot write <code>#'decide</code>, <code>decide</code> behaves like a
+function, even though it is implemented as a macro.
+
+        <p>The reason it is implemented as a macro is to allow a number of compile time
+optimizations. Expressions like <code>(decide (notv x))</code>, <code>(decide (numberpv x))</code>
+and <code>(decide (notv (numberpv x))) </code>are transformed into calls to functions
+internal to Screamer which eliminate the need to create the boolean
+variable(s) normally returned by functions like notv and numberv. Calls to
+the functions <code>numberpv</code>, <code>realpv</code>, <code>integerpv</code>, <code>memberpv</code>, <code>booleanpv</code>, <code>=v</code>, <code>&lt;v</code>, <code>&lt;=v</code>,
+<code>&gt;v</code>, <code>&gt;=v</code>, <code>/=v</code>, <code>notv</code>, <code>funcallv</code>, <code>applyv</code> and <code>equalv</code> which appear directly nested
+in a call to decide, or directly nested in a call to <code>notv</code> which is in turn
+directly nested in a call to decide, are similarly transformed. 
+</p></blockquote></div>
    <!-- Not cleaned up yet: -->
-<!-- @include include/macro-screamer-decide.texinfo -->
 <!-- @include include/macro-screamer-either.texinfo -->
 <!-- @include include/macro-screamer-global.texinfo -->
 <!-- @include include/macro-screamer-ith-value.texinfo -->
