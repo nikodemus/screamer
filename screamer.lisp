@@ -2956,24 +2956,27 @@
 
 (defmacro-compile-time either (&body expressions)
   "Nondeterministically evaluates and returns the value of one of its
-EXPRESSIONS. It sets up a choice point and evaluates the first
-EXPRESSION returning its result. Whenever backtracking proceeds to
-this choice point, the next EXPRESSION is evaluated and its result
-returned. When no more EXPRESSIONS remain, the current choice point is
-removed and backtracking continues to the next most recent choice
-point. As an optimization, the choice point created for this
-expression is removed before the evaluation of the last EXPRESSION so
-that a failure during the evaluation of the last expression will
-backtrack directly to the parent choice point of the EITHER
-expression. EITHER takes any number of arguments. With no arguments,
-\(EITHER) is equivalent to \(FAIL) and is thus deterministic. With one
-argument, \(EITHER EXPRESSION) is equivalent to expression itself and
-is thus deterministic only when EXPRESSION is deterministic. Either is
-a special form, not a function. It is an error for the expression
-#'EITHER to appear in a program. Thus \(FUNCALL #'EITHER ...) or
-\(APPLY #'EITHER ...) are in error and will yield unpredictable
-results. With two or more argument it is nondeterministic and can only
-appear in a nondeterministic context."
+EXPRESSIONS.
+
+EITHER takes any number of arguments. With no arguments, \(EITHER) is
+equivalent to \(FAIL) and is thus deterministic. With one argument, \(EITHER
+EXPRESSION) is equivalent to expression itself and is thus deterministic only
+when EXPRESSION is deterministic. With two or more argument it is
+nondeterministic and can only appear in a nondeterministic context.
+
+It sets up a choice point and evaluates the first EXPRESSION returning its
+result. Whenever backtracking proceeds to this choice point, the next
+EXPRESSION is evaluated and its result returned. When no more EXPRESSIONS
+remain, the current choice point is removed and backtracking continues to the
+next most recent choice point.
+
+As an optimization, the choice point created for this expression is removed
+before the evaluation of the last EXPRESSION so that a failure during the
+evaluation of the last expression will backtrack directly to the parent choice
+point of the EITHER expression.
+
+EITHER is a special form, not a function. It is an error for the expression
+#'EITHER to appear in a program."
   ;; FIXME: ref to operators providing nondeterministic contexts
   (cond ((not expressions)
          '(fail))
@@ -2987,45 +2990,56 @@ appear in a nondeterministic context."
 (defmacro-compile-time local (&body expressions &environment environment)
   "Evaluates EXPRESSIONS in the same fashion as PROGN except that all
 SETF and SETQ expressions lexically nested in its body result in local
-side effects which are undone upon backtracking. Note that this
-affects only side effects introduced explicitly via SETF and SETQ.
-Side effects introduced by Common Lisp builtin in functions such as
-RPLACA are always global. Furthermore, it affects only occurrences of
-SETF and SETQ which appear textually nested in the body of the LOCAL
-expression -- not those appearing in functions called from the body.
-LOCAL and GLOBAL expressions may be nested inside one another. The
-nearest surrounding declaration determines whether or not a given SETF
-or SETQ results in a local or global side effect. Side effects default
-to be global when there is no surrounding LOCAL or GLOBAL expression.
-Local side effects can appear both in deterministic as well as
-nondeterministic contexts though different techniques are used to
-implement the trailing of prior values for restoration upon
-backtracking. In nondeterministic contexts, LOCAL as well as SETF are
-treated as special forms rather than macros. This should be completely
-transparent to the user."
+side effects which are undone upon backtracking.
+
+Note that this affects only side effects introduced explicitly via SETF and
+SETQ. Side effects introduced by Common Lisp builtin in functions such as
+RPLACA are always global.
+
+Furthermore, it affects only occurrences of SETF and SETQ which appear
+textually nested in the body of the LOCAL expression -- not those appearing in
+functions called from the body.
+
+LOCAL and GLOBAL expressions may be nested inside one another. The nearest
+surrounding declaration determines whether or not a given SETF or SETQ results
+in a local or global side effect.
+
+Side effects default to be global when there is no surrounding LOCAL or GLOBAL
+expression. Local side effects can appear both in deterministic as well as
+nondeterministic contexts though different techniques are used to implement
+the trailing of prior values for restoration upon backtracking. In
+nondeterministic contexts, LOCAL as well as SETF are treated as special forms
+rather than macros. This should be completely transparent to the user."
+  ;; FIXME: Surely screamer isn't smart enough to undo calls to SETF
+  ;; functions... so this probably only deals with variable assignments. Check
+  ;; it, say it.
   (let ((*local?* t))
     `(progn ,@(mapcar
                #'(lambda (form) (perform-substitutions form environment))
                expressions))))
 
 (defmacro-compile-time global (&body expressions &environment environment)
-  "Evaluates EXPRESSIONS in the same fashion as PROGN except that all
-SETF and SETQ expressions lexically nested in its body result in
-global side effects which are not undone upon backtracking. Note that
-this affects only side effects introduced explicitly via SETF and
-SETQ. Side effects introduced by Common Lisp builtin functions such as
-RPLACA are always global anyway. Furthermore, it affects only
-occurrences of SETF and SETQ which appear textually nested in the body
-of the GLOBAL expression -- not those appearing in functions called
-from the body. LOCAL and GLOBAL expressions may be nested inside one
-another. The nearest surrounding declaration determines whether or not
-a given SETF or SETQ results in a local or global side effect. Side
-effects default to be global when there is no surrounding LOCAL or
-GLOBAL expression. Global side effects can appear both in
-deterministic as well as nondeterministic contexts. In
-nondeterministic contexts, GLOBAL as well as SETF are treated as
-special forms rather than macros. This should be completely
-transparent to the user."
+  "Evaluates EXPRESSIONS in the same fashion as PROGN except that all SETF and
+SETQ expressions lexically nested in its body result in global side effects
+which are not undone upon backtracking.
+
+Note that this affects only side effects introduced explicitly via SETF and
+SETQ. Side effects introduced by Common Lisp builtin functions such as RPLACA
+are always global anyway.
+
+Furthermore, it affects only occurrences of SETF and SETQ which appear
+textually nested in the body of the GLOBAL expression -- not those appearing
+in functions called from the body.
+
+LOCAL and GLOBAL expressions may be nested inside one another. The nearest
+surrounding declaration determines whether or not a given SETF or SETQ results
+in a local or global side effect.
+
+Side effects default to be global when there is no surrounding LOCAL or GLOBAL
+expression. Global side effects can appear both in deterministic as well as
+nondeterministic contexts. In nondeterministic contexts, GLOBAL as well as
+SETF are treated as special forms rather than macros. This should be
+completely transparent to the user."
   (let ((*local?* nil))
     `(progn ,@(mapcar
                #'(lambda (form) (perform-substitutions form environment))
