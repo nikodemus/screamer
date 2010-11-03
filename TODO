@@ -12,6 +12,18 @@
     Most of the DEFUN-COMPILE-TIME functions should probably go
     to a file of their own, loaded before the main screamer code
     is compiled.
+*** WIP Review the list of limitations and move it to documentation once sure it's correct
+***** DONE CATCH - not supported
+***** TODO DECLARE
+***** TODO FLET
+***** TODO LABELS
+***** TODO MACROLET
+***** TODO PROGV
+***** TODO THROW
+***** TODO UNWIND-PROTECT
+***** DONE LOAD-TIME-VALUE - not supported, should be easy to fix though
+***** TODO LOCALLY
+***** TODO SYMBOL-MACROLET
 * Old "Bugs to fix" list from screamer.lisp
   These haven't been verified or anything, just moved here.
 *** TODO LOCAL SETF does the wrong thing with GETHASH.

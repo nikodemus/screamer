@@ -70,7 +70,6 @@
 ;;;     Probably will never handle:
 ;;;       CATCH
 ;;;       DECLARE
-;;;       EVAL-WHEN
 ;;;       FLET
 ;;;       LABELS
 ;;;       MACROLET
