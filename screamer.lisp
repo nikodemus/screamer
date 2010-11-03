@@ -117,14 +117,9 @@
 ;;;       PROGV
 ;;;       THROW
 ;;;       UNWIND-PROTECT
-;;;    CLtL1 obsolete:
-;;;       COMPILER-LET
-;;;    CLtL2 additions:
-;;;       GENERIC-FLET
-;;;       GENERIC-LABELS
+;;;    ANSI CL additions:
 ;;;       LOAD-TIME-VALUE
 ;;;       LOCALLY
-;;;       WITH-ADDED-METHODS
 ;;;       SYMBOL-MACROLET
 
 (in-package :screamer)
