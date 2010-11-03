@@ -1,14 +1,4 @@
-;;;; Screamer
-;;;; A portable efficient implementation of nondeterministic Common Lisp
-;;;;
-;;;; Written by:
-;;;;
-;;;;   Jeffrey Mark Siskind (Department of Computer Science, University of Toronto)
-;;;;   David Allen McAllester (MIT Artificial Intelligence Laboratory)
-;;;;
-;;;; Copyright 1991 Massachusetts Institute of Technology. All rights reserved.
-;;;; Copyright 1992, 1993 University of Pennsylvania. All rights reserved.
-;;;; Copyright 1993 University of Toronto. All rights reserved.
+;;;; Copyright 2010, Nikodemus Siivola <nikodemus@sb-studio.net>
 ;;;;
 ;;;; Permission is hereby granted, free of charge, to any person obtaining a copy of
 ;;;; this software and associated documentation files (the "Software"), to deal in
@@ -27,16 +17,39 @@
 ;;;; IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ;;;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(defsystem :screamer
-  :serial t
-  :components
-  ((:file "package")
-   (:file "screamer")))
+(in-package :screamer-user)
 
-(defsystem :screamer-tests
-  :depends-on (:screamer :hu.dwim.stefil)
-  :components ((:file "tests")))
+(define-screamer-package :screamer-tests
+  (:use :cl :hu.dwim.stefil))
 
-(defmethod perform ((o test-op) (c (eql (find-system :screamer))))
-  (load-system :screamer-tests)
-  (funcall (intern (string '#:test-screamer) :screamer-tests)))
+(in-package :screamer-tests)
+
+(defsuite (test-screamer :in root-suite) ()
+  (run-child-tests))
+
+(in-suite test-screamer)
+
+(defun eval-when/ct ()
+  (let ((x (either :a :b)))
+    (declare (ignorable x))
+    (or (eval-when (:compile-toplevel)
+          x)
+        t)))
+
+(defun eval-when/lt ()
+  (let ((x (either :a :b)))
+    (declare (ignorable x))
+    (or (eval-when (:load-toplevel)
+          x)
+        t)))
+
+(defun eval-when/ex ()
+  (let ((x (either :a :b)))
+    (or (eval-when (:execute)
+          x)
+        t)))
+
+(deftest eval-when.situations ()
+  (is (equal '(t t) (all-values (eval-when/ct))))
+  (is (equal '(t t) (all-values (eval-when/lt))))
+  (is (equal '(:a :b) (all-values (eval-when/ex)))))

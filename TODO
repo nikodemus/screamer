@@ -8,7 +8,10 @@
     but manages FLET and LABELS just fine.
 *** TODO Dynamic-extent in CPS-CONVERT-TAGBODY.
 * Maintenance
-*** TODO TEST-OP for the system.
+*** WIP Split the system into logical pieces.
+    Most of the DEFUN-COMPILE-TIME functions should probably go
+    to a file of their own, loaded before the main screamer code
+    is compiled.
 * Old "Bugs to fix" list from screamer.lisp
   These haven't been verified or anything, just moved here.
 *** TODO LOCAL SETF does the wrong thing with GETHASH.
@@ -45,6 +48,9 @@
 *** TODO MEMBERV and derivatives should support vectors.
 *** TODO Backtracking out of INTEGER-BETWEENV and the like will yield an
     unconstrained variable since the constraints are asserted locally.
+* Refactoring
+*** Consider depending on Alexandria
+***** peal-off-documentation-string-and-declarations -> alexandria:parse-body
 * Future Work
 *** TODO See if it would make sense to make nondeterministic functions funcallable instances.
 

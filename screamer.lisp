@@ -52,7 +52,7 @@
 ;;;     take advantage of the fact that a LOCAL SETF/SETQ in a nondeterministic
 ;;;     function does not cons up closures.
 ;;;  6. Doesn't handle most CommonLisp special forms.
-;;;     Currently handle:
+;;;     Currently handles:
 ;;;       BLOCK
 ;;;       FUNCTION
 ;;;       GO
@@ -473,8 +473,8 @@
   (unless (null (rest (last (second form))))
     (error "Improper list of SITUATIONS: ~S" form))
   (unless (every #'(lambda (situation)
-                     (member situation '(:compile-top-level
-                                         :load-top-level
+                     (member situation '(:compile-toplevel
+                                         :load-toplevel
                                          :execute
                                          compile
                                          load
