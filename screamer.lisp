@@ -86,7 +86,7 @@
 
 (declaim (declaration magic))
 
-(defmacro define-screamer-package (defined-package-name &rest options)
+(defmacro define-screamer-package (defined-package-name &body options)
   `(defpackage ,defined-package-name
      ,@options
      (:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p)
