@@ -47,7 +47,7 @@
 </head>
 <body>
 <h1 class="settitle">Screamer</h1>
-Screamer provides a nondeterministic choise-point operator, a
+Screamer provides a nondeterministic choice-point operator, a
 backtracking mechanism, and a forward propagation facility.
 
    <p>Screamer was originally written by Jeffrey Mark Siskind and David
@@ -80,23 +80,23 @@ of the documentation here.
 
 <h2 class="chapter"><a name="TOC0"></a>1 Overview</h2>
 
-<p>Screamer adds nondeterminism by providing <em>choise-points</em> and a
+<p>Screamer adds nondeterminism by providing <em>choice-points</em> and a
 <em>failure</em> operator.
 
-   <p>Essentially, a choise point is a point in program where more than one
-thing can happen. When a choise point is encountered, one of the
+   <p>Essentially, a choice point is a point in program where more than one
+thing can happen. When a choice point is encountered, one of the
 possibilities occurs, and execution continues. Should a failure occur,
-the system backtracks to the last choise-point where multiple
+the system backtracks to the last choice-point where multiple
 possibilities were still present, and tries again.
 
    <p>Consider the following example:
 
-   <p>The call to <code>an-integer-between</code> represents a choise point
+   <p>The call to <code>an-integer-between</code> represents a choice point
 between integers from 0 to <code>min</code>.
 
    <p>We then compute the square of that number, and then use <code>assert!</code>
 to constrain the square to be in the desired range. If it isn't, a
-failure occurs and the system backtracks to the choise-point and tries
+failure occurs and the system backtracks to the choice-point and tries
 with a new number.
 
    <p>Finally <code>all-values</code> produces a list of all nodeterministic
