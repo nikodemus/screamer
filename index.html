@@ -1,1 +1,523 @@
-Screamer
+<html lang="en">
+<head>
+<title>Screamer</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="Screamer">
+<meta name="generator" content="makeinfo 4.8">
+<link title="Top" rel="top" href="#Top">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+.node { visibility:hidden; height: 0px; }
+  .menu { visibility:hidden; height: 0px; }
+  .chapter { background-color:#e499ff; }
+  .section { background-color:#e499ff; }
+  .subsection { background-color:#e499ff; }
+  .settitle { background-color:#e499ff; }
+  .contents { border: 2px solid black;
+              margin: 1cm 1cm 1cm 1cm;
+              padding-left: 3mm; }
+  body { padding: 2em 8em; font-family: sans-serif; }
+  h1 { padding: 1em; text-align: center; }
+  li { margin: 1em; }
+
+--></style>
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3652989-3']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</head>
+<body>
+<h1 class="settitle">Screamer</h1>
+Screamer provides a nondeterministic choise-point operator, a
+backtracking mechanism, and a forward propagation facility.
+
+   <p>Screamer was originally written by Jeffrey Mark Siskind and David
+Allen McAllester.
+
+   <p>The copy of Screamer this documentation refers to is maintained
+courtesy of <a href="http://sb-studio.net/">Steel Bank Studio Ltd</a> by
+<a href="mailto:nikodemus@sb-studio.net">Nikodemus Siivola</a>.
+
+   <p>Screamer is maintained in Git:
+<pre class="example">     git clone git://github.com/nikodemus/screamer.git
+</pre>
+   <p>will get you a local copy.
+<pre class="example">      <a href="http://github.com/nikodemus/screamer">http://github.com/nikodemus/screamer</a>
+</pre>
+   <p>is the GitHub project page.
+
+   <div class="contents">
+<h2>Table of Contents</h2>
+<ul>
+<li><a name="toc_TOC0" href="#TOC0">1 Overview</a>
+<li><a name="toc_TOC1" href="#TOC1">2 Dictionary</a>
+</li></ul>
+</div>
+
+   <p>This documentation is a work in progress. In the meanwhile you may
+wish to refer to the original
+<a href="http://nikodemus.github.com/screamer/screaming-yellow-zonkers.pdf">Screaming Yellow Zonkers</a> paper by Siskind &amp;al, which forms the basis
+of the documentation here.
+
+<h2 class="chapter"><a name="TOC0"></a>1 Overview</h2>
+
+<p>Screamer adds nondeterminism by providing <em>choise-points</em> and a
+<em>failure</em> operator.
+
+   <p>Essentially, a choise point is a point in program where more than one
+thing can happen. When a choise point is encountered, one of the
+possibilities occurs, and execution continues. Should a failure occur,
+the system backtracks to the last choise-point where multiple
+possibilities were still present, and tries again.
+
+   <p>Consider the following example:
+
+   <p>The call to <code>an-integer-between</code> represents a choise point
+between integers from 0 to <code>min</code>.
+
+   <p>We then compute the square of that number, and then use <code>assert!</code>
+to constrain the square to be in the desired range. If it isn't, a
+failure occurs and the system backtracks to the choise-point and tries
+with a new number.
+
+   <p>Finally <code>all-values</code> produces a list of all nodeterministic
+values we succesfully generate &ndash; had we needed only one answer
+instead of an enumeration of all possible answers we could have used
+<code>one-value</code> instead.
+
+<pre class="lisp">     (in-package :screamer-user)
+     
+     ;;; Square numbers are numbers produced by multiplying integer with itself.
+     (defun square-numbers (min max)
+       (let* ((x (an-integer-between 0 min))
+              (square (*v x x)))
+         (assert! (&lt;=v min square max))
+         square))
+     
+     (all-values (square-numbers 100 200)) ; =&gt; (100 121 144 169 186)
+</pre>
+   <p>Note: postfixing operator names with V is a Screamer convention:
+loosely speaking <code>foov</code> is just like <code>foo</code>, except that it
+also deals with nondeterminism.
+
+<h2 class="chapter"><a name="TOC1"></a>2 Dictionary</h2>
+
+<p>We're in the progress of adding docstrings to Screamer functions from
+the paper referenced above.
+
+   <p>This documentation is produced from those docstrings in turn. If
+you're lucky, the function you're wondering about may already be
+documented here &ndash; if not, go for the paper.
+
+   <p><a name="Function-a_002dmember_002dof"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-member-of</b><var> sequence<a name="index-a_002dmember_002dof-1"></a></var><br>
+<blockquote><p><a name="index-a_002dmember_002dof-2"></a>Nondeterministically returns an element of <code>sequence</code>. The elements are
+returned in the order that they appear in <code>sequence</code>. The <code>sequence</code> must be
+either a list or a vector. 
+</p></blockquote></div>
+
+   <p><a name="Function-an_002dinteger_002dbetween"></a>
+
+<div class="defun">
+&mdash; Function: <b>an-integer-between</b><var> low high<a name="index-an_002dinteger_002dbetween-3"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dbetween-4"></a>Nondeterministically returns an integer in the closed interval [<code>low</code>, <code>high</code>]. 
+The results are returned in ascending order. Both <code>low</code> and <code>high</code> must be
+integers. Fails if the interval does not contain any integers. 
+</p></blockquote></div>
+
+   <p><a name="Function-apply_002dnondeterministic"></a>
+
+<div class="defun">
+&mdash; Function: <b>apply-nondeterministic</b><var> function argument &amp;rest arguments<a name="index-apply_002dnondeterministic-5"></a></var><br>
+<blockquote><p><a name="index-apply_002dnondeterministic-6"></a>Analogous to the <code>cl:apply</code>, except <code>function</code> can be either a nondeterministic
+function, or an ordinary deterministic function.
+
+        <p>You must use <code>apply-nondeterministic</code> to apply a nondeterministic function. An
+error is signalled a nondeterministic function object is used with <code>cl:apply</code>.
+
+        <p>You can use <code>apply-nondeterministic</code> to apply either a deterministic or
+nondeterministic function, though even if all of the arguments to
+<code>apply-nondeterministic</code> are deterministic and function is a deterministic
+function object, the call expression will still be nondeterministic (with
+presumably a single value), since it is impossible to determine at compile
+time that a given call to <code>apply-nondeterministic</code> will be passed only
+deterministic function objects for function. 
+</p></blockquote></div>
+
+   <p><a name="Function-booleanpv"></a>
+
+<div class="defun">
+&mdash; Function: <b>booleanpv</b><var> x<a name="index-booleanpv-7"></a></var><br>
+<blockquote><p><a name="index-booleanpv-8"></a>The expression <code>(booleanpv x) </code>is an abbreviation for <code>(memberv x '(t nil))</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-_003dv"></a>
+
+<div class="defun">
+&mdash; Function: <b>=v</b><var> x &amp;rest xs<a name="index-g_t_003dv-9"></a></var><br>
+<blockquote><p><a name="index-g_t_003dv-10"></a>Returns a boolean value which is constrained to be <code>t</code> if all of the
+arguments are numerically equal, and constrained to be <code>nil</code> if two or more of
+the arguments numerically differ.
+
+        <p>This function takes one or more arguments. All of the arguments are restricted
+to be numeric.
+
+        <p>Returns <code>t</code> when called with one argument. A call such as <code>(=v x1 x2 ... xn)</code>
+with more than two arguments behaves like a conjunction of two argument calls:
+
+     <pre class="lisp">            (ANDV (=V X1 X2) ... (=V Xi Xi+1) ... (=V Xn-1 Xn))
+     </pre>
+        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is known to be equal to <code>x2</code> at
+the time of call, <code>nil</code> if <code>x1</code> is known not to be equal to <code>x2</code> at the time of
+call, and a new boolean variable <code>v</code> if is not known if the two values are
+equal.
+
+        <p>Two numeric values are known to be equal only when they are both bound and
+equal according to the Common Lisp function <code>=</code>.
+
+        <p>Two numeric values are known not to be equal when their domains are disjoint. 
+Furthermore, two real values are known not to be equal when their ranges are
+disjoint, i.e. the upper bound of one is greater than the lower bound of the
+other.
+
+        <p>When a new variable is created, the values of <code>x1</code>, <code>x2</code>, and <code>v</code> are mutually
+constrained via noticers so that <code>v</code> is equal to <code>t</code> if and only if <code>x1</code> is known to
+be equal to <code>x2</code>, and <code>v</code> is equal to <code>nil</code> if and only if <code>x1</code> is known not to be
+equal to <code>x2</code>.
+
+          <ul>
+<li>If it later becomes known that <code>x1</code> is equal to <code>x2</code> noticers attached to <code>x1</code> and
+  <code>x2</code> restrict <code>v</code> to equal <code>t</code>. Likewise if it later becomes known that <code>x1</code> is not
+  equal to <code>x2</code> noticers attached to <code>x1</code> and <code>x2</code> restrict <code>v</code> to equal <code>nil</code>.
+
+          <li>If <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x1</code>
+  to be equal to <code>x2</code>. Likewise if <code>v</code> ever becomes known to equal <code>nil</code> then a
+  noticer attached to <code>v</code> restricts <code>x1</code> not to be equal to <code>x2</code>.
+
+          <li>If <code>x1</code> is known to be real then the noticer attached to <code>x2</code> continually
+  restrict the upper bound of <code>x1</code> to be no higher than the upper bound of <code>x2</code>
+  and the lower bound of <code>x1</code> to be no lower than the lower bound of <code>x2</code>. 
+  Likewise for bounds of <code>x1</code> if <code>x2</code> is known to be real.
+
+        </ul>
+        Restricting two values x1 and x2 to be equal is performed by attaching
+noticers to x1 and x2. These noticers continually restrict the domains of x1
+and x2 to be equivalent sets (using the Common Lisp function <code>=</code> as a test
+function) as their domains are restricted.
+
+        <p>Restricting two values <code>x1</code> and <code>x2</code> to not be equal is also performed by
+attaching noticers to <code>x1</code> and <code>x2</code>. These noticers however do not restrict the
+domains or ranges of <code>x1</code> or <code>x2</code>. They simply monitor their continually
+restrictions and fail when any assertion causes <code>x1</code> to be known to be equal to
+<code>x2</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-fail"></a>
+
+<div class="defun">
+&mdash; Function: <b>fail</b><var><a name="index-fail-11"></a></var><br>
+<blockquote><p><a name="index-fail-12"></a>Backtracks to the most recent choise point. Equivalent to
+<code>(either)</code>. Note that <code>fail</code> is deterministic function and thus it is
+permissible to reference <code>#'fail</code>, and write <code>(funcall #'fail) </code>or
+<code>(apply #'fail)</code>. In nondeterministic contexts, the expression <code>(fail)</code>
+is optimized to generate inline backtracking code. 
+</p></blockquote></div>
+
+   <p><a name="Function-funcall_002dnondeterministic"></a>
+
+<div class="defun">
+&mdash; Function: <b>funcall-nondeterministic</b><var> function &amp;rest arguments<a name="index-funcall_002dnondeterministic-13"></a></var><br>
+<blockquote><p><a name="index-funcall_002dnondeterministic-14"></a>Analogous to <code>cl:funcall</code>, except <code>function</code> can be either a nondeterministic
+function, or an ordinary determinisitic function.
+
+        <p>You must use <code>funcall-nondeterministic</code> to funcall a nondeterministic function. 
+An error is signalled if you attempt to funcall a nondeterministic
+function object with <code>cl:funcall</code>.
+
+        <p>You can use <code>funcall-nondeterministic</code> to funcall either a deterministic or
+nondeterministic function, though even if all of the arguments to
+<code>funcall-nondeterministic</code> are deterministic and <code>function</code> is a deterministic
+function object, the call expression will still be nondeterministic (with
+presumably a single value), since it is impossible to determine at compile
+time that a given call to <code>funcall-nondeterministic</code> will be passed only
+deterministic function objects for function. 
+</p></blockquote></div>
+
+   <p><a name="Function-integerpv"></a>
+
+<div class="defun">
+&mdash; Function: <b>integerpv</b><var> x<a name="index-integerpv-15"></a></var><br>
+<blockquote><p><a name="index-integerpv-16"></a>Returns <code>t</code> if <code>x</code> is known to be integer valued, and <code>nil</code> if
+<code>x</code> is known be non-integer value.
+
+        <p>If it is not known whether or not <code>x</code> is integer valued when <code>integerpv</code> is called
+then <code>integerpv</code> creates and returns a new boolean variable <code>v</code>.
+
+        <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
+to <code>t</code> if and only if <code>x</code> is known to be integer valued, and <code>v</code> is equal to <code>nil</code> if
+and only if <code>x</code> is known to be non-integer valued.
+
+        <p>If <code>x</code> later becomes known to be integer valued, a noticer attached to <code>x</code>
+restricts <code>v</code> to equal <code>t</code>. Likewise, if <code>x</code> later becomes known to be non-integer
+valued, a noticer attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
+
+        <p>Furthermore, if <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code>
+restricts <code>x</code> to be integer valued. Likewise, if <code>v</code> ever becomes known to equal
+<code>nil</code> then a noticer attached to <code>v</code> restricts <code>x</code> to be non-integer valued. 
+</p></blockquote></div>
+
+   <p><a name="Function-_003cv"></a>
+
+<div class="defun">
+&mdash; Function: <b>&lt;v</b><var> x &amp;rest xs<a name="index-g_t_003cv-17"></a></var><br>
+<blockquote><p><a name="index-g_t_003cv-18"></a>Returns a boolean value which is constrained to be <code>t</code> if each argument Xi is
+less than the following argument Xi+1 and constrained to be <code>nil</code> if some
+argument Xi is greater than or equal to the following argument Xi+1.
+
+        <p>This function takes one or more arguments. All of the arguments are restricted
+to be real.
+
+        <p>Returns <code>t</code> when called with one argument. A call such as (&lt;v <code>x1</code> <code>x2</code> ... Xn)
+with more than two arguments behaves like a conjunction of two argument calls:
+
+     <pre class="lisp">            (ANDV (&lt;V X1 X2) ... (&lt;V Xi Xi+1 ) ... (&lt;V XNn-1 Xn))
+     </pre>
+        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is known to be less than <code>x2</code> at
+the time of call, <code>nil</code> if <code>x1</code> is known to be greater than or equal to <code>x2</code> at the
+time of call, and otherwise a new boolean variable <code>v</code>.
+
+        <p>A real value <code>x1</code> is known to be less than a real value <code>x2</code> if <code>x1</code> has an upper
+bound, <code>x2</code> has a lower bound and the upper bound of <code>x1</code> is less than the lower
+bound of <code>x2</code>.
+
+        <p>A real value <code>x1</code> is known to be greater than or equal to a real value <code>x2</code> if <code>x1</code>
+has a lower bound, <code>x2</code> has an upper bound and the lower bound of <code>x1</code> is greater
+than or equal to the upper bound of <code>x2</code>.
+
+        <p>When a new variable is created, the values of <code>x1</code>, <code>x2</code> and v are mutually
+constrained via noticers so that <code>c</code> is equal to <code>t</code> if and only if <code>x1</code> is known to
+be less than <code>x2</code> and <code>v</code> is equal to <code>nil</code> if and only if <code>x1</code> is known to be greater
+than or equal to <code>x2</code>.
+
+          <ul>
+<li>If it later becomes known that <code>x1</code> is less than <code>x2</code>, noticers attached to <code>x1</code>
+  and <code>x2</code> restrict <code>v</code> to equal <code>t</code>. Likewise, if it later becomes known that <code>x1</code> is
+  greater than or equal to <code>x2</code>, noticers attached to <code>x1</code> and <code>x2</code> restrict <code>v</code> to
+  equal <code>nil</code>.
+
+          <li>If <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x1</code>
+  to be less than <code>x2</code>. Likewise, if <code>v</code> ever becomes known to equal <code>nil</code> then a
+  noticer attached to <code>v</code> restricts <code>x1</code> to be greater than or equal to <code>x2</code>.
+
+        </ul>
+        Restricting a real value <code>x1</code> to be less than a real value <code>x2</code> is performed by
+attaching noticers to <code>x1</code> and <code>x2</code>. The noticer attached to <code>x1</code> continually
+restricts the lower bound of <code>x2</code> to be no lower than the upper bound of <code>x1</code> if
+<code>x1</code> has an upper bound. The noticer attached to <code>x2</code> continually restricts the
+upper bound of <code>x1</code> to be no higher than the lower bound of <code>x2</code> if <code>x2</code> has a lower
+bound. Since these restrictions only guarantee that <code>x1</code> be less than or equal
+to <code>x2</code>, the constraint that <code>x1</code> be strictly less than <code>x2</code> is enforced by having
+the noticers fail when both <code>x1</code> and <code>x2</code> become known to be equal.
+
+        <p>Restricting a real value <code>x1</code> to be greater than or equal to a real value <code>x2</code> is
+performed by an analogous set of noticers without this last equality check. 
+</p></blockquote></div>
+
+   <p><a name="Function-make_002dvariable"></a>
+
+<div class="defun">
+&mdash; Function: <b>make-variable</b><var> &amp;optional name<a name="index-make_002dvariable-19"></a></var><br>
+<blockquote><p><a name="index-make_002dvariable-20"></a>Creates and returns a new variable. Variables are assigned a name
+which is only used to identify the variable when it is printed. If the
+parameter <code>name</code> is given then it is assigned as the name of the
+variable. Otherwise, a unique name is assigned. The parameter <code>name</code> can
+be any Lisp object. 
+</p></blockquote></div>
+
+   <p><a name="Function-memberv"></a>
+
+<div class="defun">
+&mdash; Function: <b>memberv</b><var> x sequence<a name="index-memberv-21"></a></var><br>
+<blockquote><p><a name="index-memberv-22"></a>Returns <code>t</code> if <code>x</code> is known to be a member of <code>sequence</code> (using the Common Lisp
+function <code>eql</code> as a test function), <code>nil</code> if <code>x</code> is known not to be a member of
+<code>sequence</code>, and otherwise returns a new boolean variable <code>v</code>.
+
+        <p>When a new variable is created, the values of <code>x</code> and <code>v</code> are mutually constrained
+via noticers so that <code>v</code> is equal to <code>t</code> if and only if <code>x</code> is known to be a member
+of <code>sequence</code> and <code>v</code> is equal to <code>nil</code> if and only if <code>x</code> is known not to be a member
+of <code>sequence</code>.
+
+          <ul>
+<li>If <code>x</code> later becomes known to be a member of <code>sequence</code>, a noticer attached to <code>x</code>
+  restricts v to equal <code>t</code>. Likewise, if <code>x</code> later becomes known not to be a
+  member of <code>sequence</code>, a noticer attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
+
+          <li>If <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x</code>
+  to be a member of <code>sequence</code>. Likewise, if <code>v</code> ever becomes known to equal <code>nil</code>
+  then a noticer attached to <code>v</code> restricts <code>x</code> not to be a member of <code>sequence</code>.
+
+        </ul>
+        The current implementation imposes two constraints on the parameter <code>sequence</code>. 
+First, <code>sequence</code> must be bound when <code>memberv</code> is called. Second, <code>sequence</code> must
+not contain any unbound variables when <code>memberv</code> is called.
+
+        <p>The value of parameter <code>sequence</code> must be a sequence, i.e. either a list or a
+vector. 
+</p></blockquote></div>
+
+   <p><a name="Function-nondeterministic_002dfunction_003f"></a>
+
+<div class="defun">
+&mdash; Function: <b>nondeterministic-function?</b><var> x<a name="index-nondeterministic_002dfunction_003f-23"></a></var><br>
+<blockquote><p><a name="index-nondeterministic_002dfunction_003f-24"></a>Returns <code>t</code> if <code>x</code> is a nondeterministic function and <code>nil</code> otherwise. 
+</p></blockquote></div>
+
+   <p><a name="Function-numberpv"></a>
+
+<div class="defun">
+&mdash; Function: <b>numberpv</b><var> x<a name="index-numberpv-25"></a></var><br>
+<blockquote><p><a name="index-numberpv-26"></a>Returns <code>t</code> if <code>x</code> is known to be numeric, <code>nil</code> if <code>x</code> is known to be
+non-numeric, and otherwise returns a new boolean variable <code>v</code>.
+
+        <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
+to <code>t</code> if and only if <code>x</code> is known to be numeric and <code>v</code> is equal to <code>nil</code> if and only
+if <code>x</code> is known to be non-numeric.
+
+          <ul>
+<li>If <code>x</code> later becomes known to be numeric, a noticer attached to <code>x</code> restricts <code>v</code>
+  to equal <code>t</code>. Likewise, if <code>x</code> later becomes known to be non-numeric, a noticer
+  attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
+
+          <li>If <code>v</code> ever becomes known
+  to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x</code> to be numeric. Likewise,
+  if <code>v</code> ever becomes known to equal <code>nil</code> then a noticer attached to <code>v</code> restricts <code>x</code>
+  to be non-numeric. 
+</ul>
+        </p></blockquote></div>
+
+   <p><a name="Function-purge"></a>
+
+<div class="defun">
+&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-27"></a></var><br>
+<blockquote><p><a name="index-purge-28"></a>Removes any information about <code>function-name</code> from Screamer's
+who-calls database. 
+</p></blockquote></div>
+
+   <p><a name="Function-realpv"></a>
+
+<div class="defun">
+&mdash; Function: <b>realpv</b><var> x<a name="index-realpv-29"></a></var><br>
+<blockquote><p><a name="index-realpv-30"></a>Returns <code>t</code> if <code>x</code> is known to be real, <code>nil</code> if <code>x</code> is known to be non-real,
+and otherwise returns a new boolean variable <code>v</code>.
+
+        <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
+to <code>t</code> if and only if <code>x</code> is known to be real and <code>v</code> is equal to <code>nil</code> if and only if
+<code>x</code> is known to be non-real.
+
+          <ul>
+<li>If <code>x</code> later becomes known to be real, a noticer attached to <code>x</code> restricts <code>v</code> to
+  equal <code>t</code>. Likewise, if <code>x</code> later becomes known to be non-real, a noticer
+  attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
+
+          <li>If <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x</code>
+  to be real. Likewise, if <code>v</code> ever becomes known to equal <code>nil</code> then a noticer
+  attached to <code>v</code> restricts <code>x</code> to be non-real. 
+</ul>
+        </p></blockquote></div>
+
+   <p><a name="Function-unwedge_002dscreamer"></a>
+
+<div class="defun">
+&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-31"></a></var><br>
+<blockquote><p><a name="index-unwedge_002dscreamer-32"></a>Removes any information about all user defined functions from
+Screamer's who-calls database. 
+</p></blockquote></div>
+
+   <p><a name="Macro-all_002dvalues"></a>
+
+<div class="defun">
+&mdash; Macro: <b>all-values</b><var> &amp;body expressions<a name="index-all_002dvalues-33"></a></var><br>
+<blockquote><p><a name="index-all_002dvalues-34"></a>Evaluates <code>expressions</code> as an implicit <code>progn</code> and returns a list of all of the
+nondeterministic values returned by the last <code>expression</code>.
+
+        <p>These values are produced by repeatedly evaluating the body and backtracking
+to produce the next value, until the body fails and yields no further values.
+
+        <p>Accordingly, local side effects performed by the body while producing each
+value are undone before attempting to produce subsequent values, and all local
+side effects performed by the body are undone upon exit from <code>all-values</code>.
+
+        <p>Returns the list containing <code>nil</code> if there are no <code>expressions</code>. An <code>all-values</code>
+expression can appear in both deterministic and nondeterministic contexts. 
+Irrespective of what context the <code>all-values</code> expression appears in, the
+<code>expressions</code> are always in a nondeterministic context. An <code>all-values</code> expression
+itself is always deterministic. <code>all-values</code> is analogous to the bagof primitive
+in Prolog. 
+</p></blockquote></div>
+
+   <p><a name="Macro-assert_0021"></a>
+
+<div class="defun">
+&mdash; Macro: <b>assert!</b><var> x<a name="index-assert_0021-35"></a></var><br>
+<blockquote><p><a name="index-assert_0021-36"></a>Restricts <code>x</code> to <code>t</code>. No meaningful result is returned. The argument <code>x</code> can be
+either a variable or a non-variable.
+
+        <p>This assertion may cause other assertions to be made due to noticers attached
+to <code>x</code>.
+
+        <p>A call to <code>assert</code>! fails if <code>x</code> is known not to equal <code>t</code> prior to the assertion or
+if any of the assertions performed by the noticers result in failure.
+
+        <p>Except for the fact that one cannot write <code>#'assert</code>!, <code>assert</code>! behaves like a
+function, even though it is implemented as a macro.
+
+        <p>The reason it is implemented as a macro is to allow a number of compile time
+optimizations. Expressions like <code>(assert! (notv x))</code>, <code>(assert! (numberpv x))</code>
+and <code>(assert! (notv (numberv x))) </code>are transformed into calls to functions
+internal to Screamer which eliminate the need to create the boolean
+variable(s) normally returned by functions like <code>notv</code> and <code>numberpv</code>. Calls to
+the functions <code>numberpv</code>, <code>realpv</code>, <code>integerpv</code>, <code>memberv</code>, <code>booleanpv</code>, <code>=v</code>, <code>&lt;v</code>, <code>&lt;=v</code>,
+<code>&gt;v</code>, <code>&gt;=v</code>, <code>/=v</code>, <code>notv</code>, <code>funcallv</code>, <code>applyv</code> and <code>equalv</code> which appear directly nested
+in a call to <code>assert</code>!, or directly nested in a call to <code>notv</code> which is in turn
+directly nested in a call to <code>assert</code>!, are similarly transformed. 
+</p></blockquote></div>
+   <!-- Not cleaned up yet: -->
+<!-- @include include/macro-screamer-decide.texinfo -->
+<!-- @include include/macro-screamer-either.texinfo -->
+<!-- @include include/macro-screamer-global.texinfo -->
+<!-- @include include/macro-screamer-ith-value.texinfo -->
+<!-- @include include/macro-screamer-known?.texinfo -->
+<!-- @include include/macro-screamer-local.texinfo -->
+<!-- @include include/macro-screamer-one-value.texinfo -->
+<!-- @include include/macro-screamer-print-values.texinfo -->
+<!-- @include include/var-screamer-star-dynamic-extent?star.texinfo -->
+<!-- @include include/var-screamer-star-iscream?star.texinfo -->
+<!-- @include include/var-screamer-star-maximum-discretization-range-star.texinfo -->
+<!-- @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo -->
+<!-- @include include/var-screamer-star-screamer-version-star.texinfo -->
+<!-- @include include/var-screamer-star-strategy-star.texinfo -->
+<!-- ...and plenty more completely missing still... -->
+
+</body></html>
+
