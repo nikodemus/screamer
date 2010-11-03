@@ -385,7 +385,7 @@ there is no corresponding docstring."
                      (cons (car x) (clean (cdr x) :key t)))
                     ((cons (member &whole &environment))
                      ;; Skip these
-                     (clean (cdr x) :optional optional :key key))
+                     (clean (cddr x) :optional optional :key key))
                     ((cons (member &aux))
                      ;; Drop everything after &AUX.
                      nil)
