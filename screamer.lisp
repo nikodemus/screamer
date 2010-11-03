@@ -37,34 +37,6 @@
 ;;; proceed much faster if you first do:
 ;;; (CLRHASH SCREAMER::*FUNCTION-RECORD-TABLE*)
 
-;;; TTMTTD
-;;;  1. Manual.
-;;;  2. Should have way of having a stream of values.
-;;;  3. Kashket's constraint additions Fall90-158.
-;;;  4. Compress trail after repeated LOCAL SETF/SETQ to same variable
-;;;  5. LOCAL SETF/SETQ on symbol can use special variable binding stack
-;;;     instead of unwind-protect.
-;;;  6. (F (G (H (EITHER X Y)))) where F, G and H are deterministic can
-;;;     CPS-CONVERT to (FUNCALL #'(LAMBDA (Z) (F (G (H Z)))) (EITHER X Y)).
-;;;  7. Should give warning when it recompiles functions due to changing
-;;;     determinism status.
-;;;  8. =V <V <=V >V and >=V should do congruence/monotone closure.
-;;;  9. =V should propagate domains.
-;;; 10. BEST-VALUE
-;;; 11. Should cache VARIABLE-LOWER-BOUND/VARIABLE-UPPER-BOUND for domain
-;;;     variables.
-;;; 12. Faster version of BIND! which doesn't cons.
-;;; 13. Get DIAGNOSIS and MONTAGUE to work.
-;;; 14. Get GROW-UP and NONLINEAR examples to work.
-;;; 15. FUNCALLV and APPLYV need to assert the domains of the variable that
-;;;     they return.
-;;; 16. Check that +V, -V, *V, /V, MINV and MAXV work and do the right thing
-;;;     with type propagation.
-;;; 17. Check that PROPAGATE does the right thing with bounds of integers.
-;;; 18. MEMBERV and derivatives should support vectors.
-;;; 19. Backtracking out of INTEGER-BETWEENV and the like will yield an
-;;;     unconstrained variable since the constraints are asserted locally.
-
 ;;; Limitations
 ;;;  1. Does not handle SETF methods with multiple values for LOCAL SETF.
 ;;;  2. If you do a (SETF (SYMBOL-FUNCTION 'FOO) ...) to a nondeterministic

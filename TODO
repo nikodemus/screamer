@@ -22,6 +22,29 @@
 
 *** TODO May loop when expressions contain circular lists.
 *** TODO APPLY-NONDETERMINISTIC conses.
+* Old "TTMTTD" list from screamer.lisp
+  Things to Maybe Think Then Do? *shrug*
+*** WIP Manual.
+*** TODO Should have way of having a stream of values.
+*** TODO Kashket's constraint additions Fall90-158.
+*** TODO Compress trail after repeated LOCAL SETF/SETQ to same variable
+*** TODO LOCAL SETF/SETQ on symbol can use special variable binding stack instead of unwind-protect.
+*** TODO (F (G (H (EITHER X Y)))) where F, G and H are deterministic can
+    CPS-CONVERT to (FUNCALL #'(LAMBDA (Z) (F (G (H Z)))) (EITHER X Y)).
+*** TODO Should give warning when it recompiles functions due to changing determinism status.
+*** TODO =V <V <=V >V and >=V should do congruence/monotone closure.
+*** TODO =V should propagate domains.
+*** TODO BEST-VALUE
+*** TODO Should cache VARIABLE-LOWER-BOUND/VARIABLE-UPPER-BOUND for domain variables.
+*** TODO Faster version of BIND! which doesn't cons.
+*** TODO Get DIAGNOSIS and MONTAGUE to work.
+*** TODO Get GROW-UP and NONLINEAR examples to work.
+*** TODO FUNCALLV and APPLYV need to assert the domains of the variable that they return.
+*** TODO Check that +V, -V, *V, /V, MINV and MAXV work and do the right thing with type propagation.
+*** TODO Check that PROPAGATE does the right thing with bounds of integers.
+*** TODO MEMBERV and derivatives should support vectors.
+*** TODO Backtracking out of INTEGER-BETWEENV and the like will yield an
+    unconstrained variable since the constraints are asserted locally.
 * Future Work
 *** TODO See if it would make sense to make nondeterministic functions funcallable instances.
 
