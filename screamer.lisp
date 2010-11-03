@@ -65,18 +65,6 @@
 ;;; 19. Backtracking out of INTEGER-BETWEENV and the like will yield an
 ;;;     unconstrained variable since the constraints are asserted locally.
 
-;;; Bugs to fix
-;;;  1. LOCAL SETF does the wrong thing with GETHASH.
-;;;  2. LOCAL (SETF/SETQ X e) will signal an error if X is unbound because it
-;;;     needs to trail the previous value of X and it has none.
-;;;  3. Deterministic/nondeterministic LOCAL SETF/SETQ undone out of order.
-;;;  4. Changing determinism status can cause code from a different file to
-;;;     be included causing wierd behavior.
-;;;  5. Will signal an obscure error if FAIL is called in a deterministic
-;;;     context which is not nested in a choice point.
-;;;  6. May loop when expressions contain circular lists.
-;;;  7. APPLY-NONDETERMINISTIC conses.
-
 ;;; Limitations
 ;;;  1. Does not handle SETF methods with multiple values for LOCAL SETF.
 ;;;  2. If you do a (SETF (SYMBOL-FUNCTION 'FOO) ...) to a nondeterministic
