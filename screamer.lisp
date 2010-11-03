@@ -2959,9 +2959,9 @@
 EXPRESSIONS.
 
 EITHER takes any number of arguments. With no arguments, \(EITHER) is
-equivalent to \(FAIL) and is thus deterministic. With one argument, \(EITHER
-EXPRESSION) is equivalent to expression itself and is thus deterministic only
-when EXPRESSION is deterministic. With two or more argument it is
+equivalent to \(FAIL) and is thus deterministic. With one argument,
+\(EITHER EXPRESSION) is equivalent to expression itself and is thus deterministic
+only when EXPRESSION is deterministic. With two or more argument it is
 nondeterministic and can only appear in a nondeterministic context.
 
 It sets up a choice point and evaluates the first EXPRESSION returning its
