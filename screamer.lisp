@@ -3073,20 +3073,22 @@ ONE-VALUE is analogous to the cut primitive \(!) in Prolog."
       result)))
 
 (defmacro-compile-time all-values (&body expressions)
-  "Evaluates EXPRESSIONS \(wrapped in an implicit PROGN) and returns a
-list of all of the nondeterministic values returned by the last
-EXPRESSION. These values are produced by repeatedly evaluating the
-body and backtracking to produce the next value, until the body fails
-and yields no further values. Accordingly, local side effects
-performed by the body while producing each value are undone before
-attempting to produce subsequent values, and all local side effects
-performed by the body are undone upon exit from ALL-VALUES. Returns
-the list containing NIL if there are no EXPRESSIONS. An ALL-VALUES
-expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the ALL-VALUES expression
-appears in, the EXPRESSIONS are always in a nondeterministic context.
-An ALL-VALUES expression itself is always deterministic. ALL-VALUES is
-analogous to the bagof primitive in Prolog."
+  "Evaluates EXPRESSIONS as an implicit PROGN and returns a list of all of the
+nondeterministic values returned by the last EXPRESSION.
+
+These values are produced by repeatedly evaluating the body and backtracking
+to produce the next value, until the body fails and yields no further values.
+
+Accordingly, local side effects performed by the body while producing each
+value are undone before attempting to produce subsequent values, and all local
+side effects performed by the body are undone upon exit from ALL-VALUES.
+
+Returns the list containing NIL if there are no EXPRESSIONS. An ALL-VALUES
+expression can appear in both deterministic and nondeterministic contexts.
+Irrespective of what context the ALL-VALUES expression appears in, the
+EXPRESSIONS are always in a nondeterministic context. An ALL-VALUES expression
+itself is always deterministic. ALL-VALUES is analogous to the bagof primitive
+in Prolog."
   (let ((values (gensym "VALUES"))
         (last-value-cons (gensym "LAST-VALUE-CONS")))
     `(let ((,values '())
@@ -3249,37 +3251,30 @@ is optimized to generate inline backtracking code."
            (values-list ,values))))))
 
 (defun nondeterministic-function? (x)
-  "Returns T if X is a nondeterministic function object and NIL
-otherwise. Nondeterministic function objects can be produced in two
-ways. First, the special form \(FUNCTION FOO) \(i.e. #'FOO) will
-\(deterministically) evaluate to a nondeterministic function object if
-FOO names a nondeterministic function defined by DEFUN. Second, the
-special form \(FUNCTION \(LAMBDA \(...) ...)) \(i.e. #'\(lambda \(...)
-...)) will \(deterministically) evaluate to a nondeterministic function
-object if the body of the lambda expression contains a
-nondeterministic expression."
-  ;; FIXME: Is the above really true? What about FDEFINITION,
-  ;; SYMBOL-FUNCTION, or #'X where X is defined by FLET or LABELS?
+  "Returns T if X is a nondeterministic function and NIL otherwise."
+  ;; FIXME: screamer.ps also says things about how to you can obtain
+  ;; a nondeterministic function object, but those do not appear to
+  ;; be true anymore.
   (nondeterministic-function?-internal (value-of x)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'funcall-nondeterministic))
 
 (cl:defun funcall-nondeterministic (function &rest arguments)
-  "Analogous to the Common Lisp built-in function FUNCALL except that
-it accepts both ordinary Common Lisp \(deterministic) function objects
-as well as nondeterministic function objects for function. You must
-use FUNCALL-NONDETERMINISTIC to funcall a nondeterministic function
-object. A runtime error will be signalled if you attempt to funcall a
-nondeterministic function object with FUNCALL. You can use
-FUNCALL-NONDETERMINISTIC to funcall either a deterministic or
-nondeterministic function object though even if all of the arguments
-to FUNCALL-NONDETERMINISTIC are deterministic and FUNCTION is a
-deterministic function object, the call expression will still be
-nondeterministic \(with presumably a single value), since it is
-impossible to determine at compile time that a given call to
-FUNCALL-NONDETERMINISTIC will be passed only deterministic function
-objects for function."
+  "Analogous to CL:FUNCALL, except FUNCTION can be either a nondeterministic
+function, or an ordinary determinisitic function.
+
+You must use FUNCALL-NONDETERMINISTIC to funcall a nondeterministic function.
+An error is signalled if you attempt to funcall a nondeterministic
+function object with CL:FUNCALL.
+
+You can use FUNCALL-NONDETERMINISTIC to funcall either a deterministic or
+nondeterministic function, though even if all of the arguments to
+FUNCALL-NONDETERMINISTIC are deterministic and FUNCTION is a deterministic
+function object, the call expression will still be nondeterministic \(with
+presumably a single value), since it is impossible to determine at compile
+time that a given call to FUNCALL-NONDETERMINISTIC will be passed only
+deterministic function objects for function."
   (declare (ignore function arguments))
   (screamer-error
    "FUNCALL-NONDETERMINISTIC is a nondeterministic function. As such, it~%~
@@ -3298,20 +3293,19 @@ objects for function."
   (declare-nondeterministic 'apply-nondeterministic))
 
 (cl:defun apply-nondeterministic (function argument &rest arguments)
-  "Analogous to the Common Lisp built-in function APPLY except that it
-accepts both ordinary Common Lisp \(deterministic) function objects as
-well as nondeterministic function objects for function. You must use
-APPLY-NONDETERMINISTIC to apply a nondeterministic function object. A
-runtime error will be signalled if you attempt to apply a
-nondeterministic function object with APPLY. You can use
-APPLY-NONDETERMINISTIC to apply either a deterministic or
-nondeterministic function object though even if all of the arguments
-to APPLY-NONDETERMINISTIC are deterministic and function is a
-deterministic function object, the call expression will still be
-nondeterministic \(with presumably a single value), since it is
-impossible to determine at compile time that a given call to
-APPLY-NONDETERMINISTIC will be passed only deterministic function
-objects for function."
+  "Analogous to the CL:APPLY, except FUNCTION can be either a nondeterministic
+function, or an ordinary deterministic function.
+
+You must use APPLY-NONDETERMINISTIC to apply a nondeterministic function. An
+error is signalled a nondeterministic function object is used with CL:APPLY.
+
+You can use APPLY-NONDETERMINISTIC to apply either a deterministic or
+nondeterministic function, though even if all of the arguments to
+APPLY-NONDETERMINISTIC are deterministic and function is a deterministic
+function object, the call expression will still be nondeterministic \(with
+presumably a single value), since it is impossible to determine at compile
+time that a given call to APPLY-NONDETERMINISTIC will be passed only
+deterministic function objects for function."
   (declare (ignore function argument arguments))
   (screamer-error
    "APPLY-NONDETERMINISTIC is a nondeterministic function. As such, it must~%~
@@ -3422,10 +3416,9 @@ Screamer's who-calls database."
   (declare-nondeterministic 'an-integer-between))
 
 (cl:defun an-integer-between (low high)
-  "Nondeterministically returns an integer in the closed interval
-[LOW, HIGH]. The results are returned in ascending order. LOW and HIGH
-must be integers. Fails if the interval does not contain any
-integers."
+  "Nondeterministically returns an integer in the closed interval [LOW, HIGH].
+The results are returned in ascending order. Both LOW and HIGH must be
+integers. Fails if the interval does not contain any integers."
   (declare (ignore low high))
   (screamer-error
    "AN-INTEGER-BETWEEN is a nondeterministic function. As such, it must be~%~
@@ -3444,9 +3437,9 @@ integers."
   (declare-nondeterministic 'a-member-of))
 
 (cl:defun a-member-of (sequence)
-  "Nondeterministically returns an element of SEQUENCE. The elements
-are returned in the order that they appear in SEQUENCE. SEQUENCE must
-be either a list or a vector."
+  "Nondeterministically returns an element of SEQUENCE. The elements are
+returned in the order that they appear in SEQUENCE. The SEQUENCE must be
+either a list or a vector."
   (declare (ignore sequence))
   (screamer-error
    "A-MEMBER-OF is a nondeterministic function. As such, it must be called~%~
@@ -5134,21 +5127,23 @@ be any Lisp object."
 ;;; Lifted Type Functions
 
 (defun integerpv (x)
-  "If when INTEGERPV is called, X is known to be integer valued then
-INTEGERPV returns T. Alternatively, if when INTEGERPV is called, X is
-known to be non-integer valued then INTEGERPV returns NIL. If it is
-not known whether or not X is integer valued when INTEGERPV is called
-then INTEGERPV creates and returns a new boolean variable V. The
-values of X and V are mutually constrained via noticers so that V is
-equal to T if and only if X is known to be integer valued and V is
-equal to NIL if and only if X is known to be non-integer valued. If X
-later becomes known to be integer valued, a noticer attached to X
-restricts V to equal t. Likewise, if X later becomes known to be
-non-integer valued, a noticer attached to X restricts V to equal NIL.
-Furthermore, if V ever becomes known to equal T then a noticer
-attached to V restricts X to be integer valued. Likewise, if V ever
-becomes known to equal NIL then a noticer attached to V restricts X to
-be non-integer valued."
+  "Returns T if X is known to be integer valued, and NIL if
+X is known be non-integer value.
+
+If it is not known whether or not X is integer valued when INTEGERPV is called
+then INTEGERPV creates and returns a new boolean variable V.
+
+The values of X and V are mutually constrained via noticers so that V is equal
+to T if and only if X is known to be integer valued, and V is equal to NIL if
+and only if X is known to be non-integer valued.
+
+If X later becomes known to be integer valued, a noticer attached to X
+restricts V to equal T. Likewise, if X later becomes known to be non-integer
+valued, a noticer attached to X restricts V to equal NIL.
+
+Furthermore, if V ever becomes known to equal T then a noticer attached to V
+restricts X to be integer valued. Likewise, if V ever becomes known to equal
+NIL then a noticer attached to V restricts X to be non-integer valued."
   (cond ((known?-integerpv x) t)
         ((known?-notv-integerpv x) nil)
         (t (let ((x (variablize x))
@@ -5166,19 +5161,20 @@ be non-integer valued."
              z))))
 
 (defun realpv (x)
-  "If when REALPV is called, X is known to be real then REALPV returns
-T. Alternatively, if when REALPV is called, X is known to be non-real
-then REALPV returns NIL. If it is not known whether or not X is real
-when REALPV is called then REALPV creates and returns a new boolean
-variable V. The values of X and V are mutually constrained via
-noticers so that V is equal to T if and only if X is known to be real
-and V is equal to NIL if and only if X is known to be non-real. If X
-later becomes known to be real, a noticer attached to X restricts V to
-equal T. Likewise, if X later becomes known to be non-real, a noticer
-attached to X restricts V to equal NIL. Furthermore, if V ever becomes
-known to equal T then a noticer attached to V restricts X to be real.
-Likewise, if V ever becomes known to equal NIL then a noticer attached
-to V restricts X to be non-real."
+  "Returns T if X is known to be real, NIL if X is known to be non-real,
+and otherwise returns a new boolean variable V.
+
+The values of X and V are mutually constrained via noticers so that V is equal
+to T if and only if X is known to be real and V is equal to NIL if and only if
+X is known to be non-real.
+
+* If X later becomes known to be real, a noticer attached to X restricts V to
+  equal T. Likewise, if X later becomes known to be non-real, a noticer
+  attached to X restricts V to equal NIL.
+
+* If V ever becomes known to equal T then a noticer attached to V restricts X
+  to be real. Likewise, if V ever becomes known to equal NIL then a noticer
+  attached to V restricts X to be non-real."
   (cond ((known?-realpv x) t)
         ((known?-notv-realpv x) nil)
         (t (let ((x (variablize x))
@@ -5196,20 +5192,21 @@ to V restricts X to be non-real."
              z))))
 
 (defun numberpv (x)
-  "If when NUMBERPV is called, X is known to be numeric then NUMBERPV
-returns T. Alternatively, if when NUMBERPV is called, X is known to be
-non-numeric then NUMBERPV returns NIL. If it is not known whether or
-not X is numeric when NUMBERPV is called then NUMBERPV creates and
-returns a new boolean variable V. The values of X and V are mutually
-constrained via noticers so that V is equal to T if and only if X is
-known to be numeric and V is equal to NIL if and only if X is known to
-be non-numeric. If X later becomes known to be numeric, a noticer
-attached to X restricts V to equal T. Likewise, if X later becomes
-known to be non-numeric, a noticer attached to X restricts V to equal
-NIL. Furthermore, if V ever becomes known to equal T then a noticer
-attached to V restricts X to be numeric. Likewise, if V ever becomes
-known to equal NIL then a noticer attached to V restricts X to be
-non-numeric."
+  "Returns T if X is known to be numeric, NIL if X is known to be
+non-numeric, and otherwise returns a new boolean variable V.
+
+The values of X and V are mutually constrained via noticers so that V is equal
+to T if and only if X is known to be numeric and V is equal to NIL if and only
+if X is known to be non-numeric.
+
+* If X later becomes known to be numeric, a noticer attached to X restricts V
+  to equal T. Likewise, if X later becomes known to be non-numeric, a noticer
+  attached to X restricts V to equal NIL.
+
+* If V ever becomes known
+  to equal T then a noticer attached to V restricts X to be numeric. Likewise,
+  if V ever becomes known to equal NIL then a noticer attached to V restricts X
+  to be non-numeric."
   (cond ((known?-numberpv x) t)
         ((known?-notv-numberpv x) nil)
         (t (let ((x (variablize x))
@@ -5369,51 +5366,55 @@ non-numeric."
                            (aref y i)))
         (attach-noticer! #'(lambda () (assert!-notv-memberv-internal x y)) y))))
 
-(defun memberv (x y)
-  "The current implementation imposes two constraints on the parameter
-Y. First, Y must be bound when MEMBERV is called. Second, Y must not
-contain any unbound variables when MEMBERV is called. The value of
-parameter Y must be a sequence, i.e. either a list or a vector. If
-when MEMBERV is called, X is known to be a member of Y \(using the
-Common Lisp function EQL as a test function) then MEMBERV returns T.
-Alternatively, if when MEMBERV is called, X is known not to be a
-member of Y then MEMBERV returns NIL. If it is not known whether or
-not X is a member of Y when MEMBERV is called then MEMBERV creates and
-returns a new boolean variable V. The values of X and V are mutually
-constrained via noticers so that V is equal to T if and only if X is
-known to be a member of Y and V is equal to NIL if and only if X is
-known not to be a member of Y. If X later becomes known to be a member
-of Y, a noticer attached to X restricts v to equal T. Likewise, if X
-later becomes known not to be a member of Y, a noticer attached to X
-restricts V to equal NIL. Furthermore, if V ever becomes known to
-equal T then a noticer attached to V restricts X to be a member of Y.
-Likewise, if V ever becomes known to equal NIL then a noticer attached
-to V restricts X not to be a member of Y."
-  (cond ((known?-memberv x y) t)
-        ((known?-notv-memberv x y) nil)
+(defun memberv (x sequence)
+  "Returns T if X is known to be a member of SEQUENCE \(using the Common Lisp
+function EQL as a test function), NIL if X is known not to be a member of
+SEQUENCE, and otherwise returns a new boolean variable V.
+
+When a new variable is created, the values of X and V are mutually constrained
+via noticers so that V is equal to T if and only if X is known to be a member
+of SEQUENCE and V is equal to NIL if and only if X is known not to be a member
+of SEQUENCE.
+
+* If X later becomes known to be a member of SEQUENCE, a noticer attached to X
+  restricts v to equal T. Likewise, if X later becomes known not to be a
+  member of SEQUENCE, a noticer attached to X restricts V to equal NIL.
+
+* If V ever becomes known to equal T then a noticer attached to V restricts X
+  to be a member of SEQUENCE. Likewise, if V ever becomes known to equal NIL
+  then a noticer attached to V restricts X not to be a member of SEQUENCE.
+
+The current implementation imposes two constraints on the parameter SEQUENCE.
+First, SEQUENCE must be bound when MEMBERV is called. Second, SEQUENCE must
+not contain any unbound variables when MEMBERV is called.
+
+The value of parameter SEQUENCE must be a sequence, i.e. either a list or a
+vector."
+  (cond ((known?-memberv x sequence) t)
+        ((known?-notv-memberv x sequence) nil)
         (t (let ((x (variablize x))
                  (z (a-booleanv)))
              (attach-noticer!
               #'(lambda ()
-                  (cond ((known?-memberv x y) (restrict-true! z))
-                        ((known?-notv-memberv x y) (restrict-false! z))))
+                  (cond ((known?-memberv x sequence) (restrict-true! z))
+                        ((known?-notv-memberv x sequence) (restrict-false! z))))
               x)
-             (if (vectorp y)
-                 (dolist (element y)
+             (if (vectorp sequence)
+                 (dolist (element sequence)
                    (attach-noticer!
                     #'(lambda ()
-                        (cond ((known?-memberv x y) (restrict-true! z))
-                              ((known?-notv-memberv x y) (restrict-false! z))))
+                        (cond ((known?-memberv x sequence) (restrict-true! z))
+                              ((known?-notv-memberv x sequence) (restrict-false! z))))
                     element))
                  (attach-noticer!
                   #'(lambda ()
-                      (cond ((known?-memberv x y) (restrict-true! z))
-                            ((known?-notv-memberv x y) (restrict-false! z))))
-                  y))
+                      (cond ((known?-memberv x sequence) (restrict-true! z))
+                            ((known?-notv-memberv x sequence) (restrict-false! z))))
+                  sequence))
              (attach-noticer!
               #'(lambda ()
-                  (cond ((variable-true? z) (assert!-memberv x y))
-                        ((variable-false? z) (assert!-notv-memberv x y))))
+                  (cond ((variable-true? z) (assert!-memberv x sequence))
+                        ((variable-false? z) (assert!-notv-memberv x sequence))))
               z)
              z))))
 
@@ -6249,40 +6250,54 @@ to V restricts X not to be a member of Y."
 
 (defun =v (x &rest xs)
   "Returns a boolean value which is constrained to be T if all of the
-arguments are numerically equal and constrained to be NIL if two or more of
-the arguments numerically differ. This function takes one or more arguments.
-All of the arguments are restricted to be numeric. Returns T when called with
-one argument. A call such as \(=V X1 X2 ... Xn) with more than two arguments
-behaves like a conjunction of two argument calls:
+arguments are numerically equal, and constrained to be NIL if two or more of
+the arguments numerically differ.
+
+This function takes one or more arguments. All of the arguments are restricted
+to be numeric.
+
+Returns T when called with one argument. A call such as \(=V X1 X2 ... Xn)
+with more than two arguments behaves like a conjunction of two argument calls:
 
   \(ANDV (=V X1 X2) ... (=V Xi Xi+1) ... (=V Xn-1 Xn))
 
-Behaves as follows when called with two arguments. Returns T if X1 is known to
-be equal to X2 at the time of call. Two numeric values are known to be equal
-only when they are both bound and equal according to the Common Lisp function
-=. Returns NIL if X1 is known not to be equal to X2 at the time of call. Two
-numeric values are known not to be equal when their domains are disjoint.
-Furthermore two real values are known not to be equal when their ranges are
+When called with two arguments, returns T if X1 is known to be equal to X2 at
+the time of call, NIL if X1 is known not to be equal to X2 at the time of
+call, and a new boolean variable V if is not known if the two values are
+equal.
+
+Two numeric values are known to be equal only when they are both bound and
+equal according to the Common Lisp function =.
+
+Two numeric values are known not to be equal when their domains are disjoint.
+Furthermore, two real values are known not to be equal when their ranges are
 disjoint, i.e. the upper bound of one is greater than the lower bound of the
-other. If it is not known whether or not X1 is equal to X1 when =V is called
-then =V creates and returns a new boolean variable V. The values of X1, X2,
-and V are mutually constrained via noticers so that V is equal to T if and
-only if X1 is known to be equal to X2 and V is equal to NIL if and only if X1
-is known not to be equal to X2. If it later becomes known that X1 is equal to
-X2 noticers attached to X1 and X2 restrict V to equal T. Likewise if it later
-becomes known that X1 is not equal to X2 noticers attached to X1 and X2
-restrict V to equal NIL. Furthermore if V ever becomes known to equal T then a
-noticer attached to V restricts X1 to be equal to X2. Likewise if V ever
-becomes known to equal NIL then a noticer attached to V restricts X1 not to be
-equal to X2. Restricting two values X1 and X2 to be equal is performed by
-attaching noticers to X1 and X2. These noticers continually restrict the
-domains of X1 and X2 to be equivalent sets (using the Common Lisp function =
-as a test function) as their domains are restricted. Furthermore if X1 is
-known to be real then the noticer attached to X2 continually restrict the
-upper bound of X1 to be no higher than the upper bound of X2 and the lower
-bound of X1 to be no lower than the lower bound of X2. The noticer of X2
-performs a symmetric restriction on the bounds of X1 if it is known to be
-real. Restricting two values X1 and X2 to not be equal is also performed by
+other.
+
+When a new variable is created, the values of X1, X2, and V are mutually
+constrained via noticers so that V is equal to T if and only if X1 is known to
+be equal to X2, and V is equal to NIL if and only if X1 is known not to be
+equal to X2.
+
+* If it later becomes known that X1 is equal to X2 noticers attached to X1 and
+  X2 restrict V to equal T. Likewise if it later becomes known that X1 is not
+  equal to X2 noticers attached to X1 and X2 restrict V to equal NIL.
+
+* If V ever becomes known to equal T then a noticer attached to V restricts X1
+  to be equal to X2. Likewise if V ever becomes known to equal NIL then a
+  noticer attached to V restricts X1 not to be equal to X2.
+
+* If X1 is known to be real then the noticer attached to X2 continually
+  restrict the upper bound of X1 to be no higher than the upper bound of X2
+  and the lower bound of X1 to be no lower than the lower bound of X2.
+  Likewise for bounds of X1 if X2 is known to be real.
+
+Restricting two values x1 and x2 to be equal is performed by attaching
+noticers to x1 and x2. These noticers continually restrict the domains of x1
+and x2 to be equivalent sets (using the Common Lisp function = as a test
+function) as their domains are restricted.
+
+Restricting two values X1 and X2 to not be equal is also performed by
 attaching noticers to X1 and X2. These noticers however do not restrict the
 domains or ranges of X1 or X2. They simply monitor their continually
 restrictions and fail when any assertion causes X1 to be known to be equal to
@@ -6297,42 +6312,53 @@ X2."
 (defun <v (x &rest xs)
   "Returns a boolean value which is constrained to be T if each argument Xi is
 less than the following argument Xi+1 and constrained to be NIL if some
-argument Xi is greater than or equal to the following argument Xi+1. This
-function takes one or more arguments. All of the arguments are restricted to
-be real. Returns T when called with one argument. A call such as \(<v X1 X2
-... Xn) with more than two arguments behaves like a conjunction of two
-argument calls:
+argument Xi is greater than or equal to the following argument Xi+1.
+
+This function takes one or more arguments. All of the arguments are restricted
+to be real.
+
+Returns T when called with one argument. A call such as \(<v X1 X2 ... Xn)
+with more than two arguments behaves like a conjunction of two argument calls:
 
   \(ANDV \(<V X1 X2) ... \(<V Xi Xi+1 ) ... \(<V XNn-1 Xn))
 
-Behaves as follows when called with two arguments. Returns T if X1 is known to
-be less than X2 at the time of call. A real value X1 is known to be less than
-a real value X2 if X1 has an upper bound, X2 has a lower bound and the upper
-bound of X1 is less than the lower bound of X2. Returns NIL if X1 is known to
-be greater than or equal to X2 at the time of call. A real value X1 is known
-to be greater than or equal to a real value X2 if X1 has a lower bound, X2 has
-an upper bound and the lower bound of X1 is greater than or equal to the upper
-bound of X2. If it is not known whether or not X1 is less than X2 when <V is
-called then <V creates and returns a new boolean variable V. The values of X1,
-X2 and v are mutually constrained via noticers so that C is equal to T if and
-only if X1 is known to be less than X2 and V is equal to NIL if and only if X1
-is known to be greater than or equal to X2. If it later becomes known that X1
-is less than X2, noticers attached to X1 and X2 restrict V to equal T.
-Likewise, if it later becomes known that X1 is greater than or equal to X2,
-noticers attached to X1 and X2 restrict V to equal NIL. Furthermore, if V ever
-becomes known to equal T then a noticer attached to V restricts X1 to be less
-than X2. Likewise, if V ever becomes known to equal NIL then a noticer
-attached to V restricts X1 to be greater than or equal to X2. Restricting a
-real value X1 to be less than a real value X2 is performed by attaching
-noticers to X1 and X2. The noticer attached to X1 continually restricts the
-lower bound of X2 to be no lower than the upper bound of X1 if X1 has an upper
-bound. The noticer attached to X2 continually restricts the upper bound of X1
-to be no higher than the lower bound of X2 if X2 has a lower bound. Since
-these restrictions only guarantee that X1 be less than or equal to X2, the
-constraint that X1 be strictly less than X2 is enforced by having the noticers
-fail when both X1 and X2 become known to be equal. Restricting a real value X1
-to be greater than or equal to a real value X2 is performed by an analogous
-set of noticers without this last equality check."
+When called with two arguments, returns T if X1 is known to be less than X2 at
+the time of call, NIL if X1 is known to be greater than or equal to X2 at the
+time of call, and otherwise a new boolean variable V.
+
+A real value X1 is known to be less than a real value X2 if X1 has an upper
+bound, X2 has a lower bound and the upper bound of X1 is less than the lower
+bound of X2.
+
+A real value X1 is known to be greater than or equal to a real value X2 if X1
+has a lower bound, X2 has an upper bound and the lower bound of X1 is greater
+than or equal to the upper bound of X2.
+
+When a new variable is created, the values of X1, X2 and v are mutually
+constrained via noticers so that C is equal to T if and only if X1 is known to
+be less than X2 and V is equal to NIL if and only if X1 is known to be greater
+than or equal to X2.
+
+* If it later becomes known that X1 is less than X2, noticers attached to X1
+  and X2 restrict V to equal T. Likewise, if it later becomes known that X1 is
+  greater than or equal to X2, noticers attached to X1 and X2 restrict V to
+  equal NIL.
+
+* If V ever becomes known to equal T then a noticer attached to V restricts X1
+  to be less than X2. Likewise, if V ever becomes known to equal NIL then a
+  noticer attached to V restricts X1 to be greater than or equal to X2.
+
+Restricting a real value X1 to be less than a real value X2 is performed by
+attaching noticers to X1 and X2. The noticer attached to X1 continually
+restricts the lower bound of X2 to be no lower than the upper bound of X1 if
+X1 has an upper bound. The noticer attached to X2 continually restricts the
+upper bound of X1 to be no higher than the lower bound of X2 if X2 has a lower
+bound. Since these restrictions only guarantee that X1 be less than or equal
+to X2, the constraint that X1 be strictly less than X2 is enforced by having
+the noticers fail when both X1 and X2 become known to be equal.
+
+Restricting a real value X1 to be greater than or equal to a real value X2 is
+performed by an analogous set of noticers without this last equality check."
   (<v-internal x xs))
 
 (defun <=v-internal (x xs)
@@ -6518,24 +6544,27 @@ similarly transformed."
       (if polarity? `(assert!-true ,form) `(assert!-false ,form))))
 
 (defmacro-compile-time assert! (x)
-  "The argument X can be either a variable or a non-variable. The
-expression \(ASSERT! X) restricts X to equal T. This assertion may
-cause other assertions to be made due to noticers attached to X. A
-call to ASSERT! fails if X is known not to equal T prior to the
-assertion or if any of the assertions performed by the noticers result
-in failure. No meaningful result is returned. Except for the fact that
-one cannot write #'ASSERT!, ASSERT! behaves like a function, even
-though it is implemented as a macro. The reason it is implemented as a
-macro is to allow a number of compile time optimizations. Expressions
-like \(ASSERT! \(NOTV X)), \(ASSERT! \(NUMBERPV X)) and \(ASSERT!
-\(NOTV \(NUMBERV X))) are transformed into calls to functions internal
-to Screamer which eliminate the need to create the boolean
-variable\(s) normally returned by functions like NOTV and NUMBERPV.
-Calls to the functions NUMBERPV, REALPV, INTEGERPV, MEMBERV,
-BOOLEANPV, =V, <V, <=V, >V, >=V, /=V, NOTV, FUNCALLV, APPLYV and
-EQUALV which appear directly nested in a call to ASSERT!, or directly
-nested in a call to NOTV which is in turn directly nested in a call to
-ASSERT!, are similarly transformed."
+  "Restricts X to T. No meaningful result is returned. The argument X can be
+either a variable or a non-variable.
+
+This assertion may cause other assertions to be made due to noticers attached
+to X.
+
+A call to ASSERT! fails if X is known not to equal T prior to the assertion or
+if any of the assertions performed by the noticers result in failure.
+
+Except for the fact that one cannot write #'ASSERT!, ASSERT! behaves like a
+function, even though it is implemented as a macro.
+
+The reason it is implemented as a macro is to allow a number of compile time
+optimizations. Expressions like \(ASSERT! \(NOTV X)), \(ASSERT! \(NUMBERPV X))
+and \(ASSERT! \(NOTV \(NUMBERV X))) are transformed into calls to functions
+internal to Screamer which eliminate the need to create the boolean
+variable\(s) normally returned by functions like NOTV and NUMBERPV. Calls to
+the functions NUMBERPV, REALPV, INTEGERPV, MEMBERV, BOOLEANPV, =V, <V, <=V,
+>V, >=V, /=V, NOTV, FUNCALLV, APPLYV and EQUALV which appear directly nested
+in a call to ASSERT!, or directly nested in a call to NOTV which is in turn
+directly nested in a call to ASSERT!, are similarly transformed."
   ;; FIXME: Should probably be a function + a compiler macro.
   (transform-assert! x t))
 

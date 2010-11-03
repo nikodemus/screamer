@@ -1,0 +1,149 @@
+\input texinfo   @c -*-texinfo-*-
+@c %**start of header
+@setfilename screamer.info
+@settitle Screamer
+@c %**end of header
+
+@settitle Screamer
+
+@c for install-info
+@dircategory Software development
+@direntry
+* Screamer:           Nondeterministic Extension to Common Lisp
+@end direntry
+
+@titlepage
+
+@title Screamer
+@subtitle A Nondeterministic Extension to Common Lisp
+
+@c The following two commands start the copyright page.
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+
+@end titlepage
+
+Screamer provides a nondeterministic choise-point operator, a
+backtracking mechanism, and a forward propagation facility.
+
+Screamer was originally written by Jeffrey Mark Siskind and David
+Allen McAllester.
+
+The copy of Screamer this documentation refers to is maintained
+courtesy of @url{http://sb-studio.net/, Steel Bank Studio Ltd} by
+@email{nikodemus@@sb-studio.net, Nikodemus Siivola}.
+
+Screamer is maintained in Git:
+@example
+git clone git://github.com/nikodemus/screamer.git
+@end example
+will get you a local copy.
+@example
+ @url{http://github.com/nikodemus/screamer}
+@end example
+is the GitHub project page.
+
+@contents
+
+@ifnottex
+
+@include include/ifnottex.texinfo
+
+@end ifnottex
+
+This documentation is a work in progress. In the meanwhile you may
+wish to refer to the original
+@url{../screamer.pdf,
+@c http://nikodemus.github.com/screamer/screaming-yellow-zonkers.pdf,
+Screaming Yellow Zonkers} paper by Siskind &al, which forms the basis
+of the documentation here.
+
+@chapter Overview
+
+Screamer adds nondeterminism by providing @emph{choise-points} and a
+@emph{failure} operator.
+
+Essentially, a choise point is a point in program where more than one
+thing can happen. When a choise point is encountered, one of the
+possibilities occurs, and execution continues. Should a failure occur,
+the system backtracks to the last choise-point where multiple
+possibilities were still present, and tries again.
+
+Consider the following example:
+
+The call to @code{an-integer-between} represents a choise point
+between integers from 0 to @code{min}.
+
+We then compute the square of that number, and then use @code{assert!}
+to constrain the square to be in the desired range. If it isn't, a
+failure occurs and the system backtracks to the choise-point and tries
+with a new number.
+
+Finally @code{all-values} produces a list of all nodeterministic
+values we succesfully generate -- had we needed only one answer
+instead of an enumeration of all possible answers we could have used
+@code{one-value} instead.
+
+@lisp
+(in-package :screamer-user)
+
+;;; Square numbers are numbers produced by multiplying integer with itself.
+(defun square-numbers (min max)
+  (let* ((x (an-integer-between 0 min))
+         (square (*v x x)))
+    (assert! (<=v min square max))
+    square))
+
+(all-values (square-numbers 100 200)) ; => (100 121 144 169 186)
+@end lisp
+
+Note: postfixing operator names with V is a Screamer convention:
+loosely speaking @code{foov} is just like @code{foo}, except that it
+also deals with nondeterminism.
+
+@chapter Dictionary
+
+We're in the progress of adding docstrings to Screamer functions from
+the paper referenced above.
+
+This documentation is produced from those docstrings in turn. If
+you're lucky, the function you're wondering about may already be
+documented here -- if not, go for the paper.
+
+@include include/fun-screamer-a-member-of.texinfo
+@include include/fun-screamer-an-integer-between.texinfo
+@include include/fun-screamer-apply-nondeterministic.texinfo
+@include include/fun-screamer-booleanpv.texinfo
+@include include/fun-screamer-equals-v.texinfo
+@include include/fun-screamer-fail.texinfo
+@include include/fun-screamer-funcall-nondeterministic.texinfo
+@include include/fun-screamer-integerpv.texinfo
+@include include/fun-screamer-lt-v.texinfo
+@include include/fun-screamer-make-variable.texinfo
+@include include/fun-screamer-memberv.texinfo
+@include include/fun-screamer-nondeterministic-function?.texinfo
+@include include/fun-screamer-numberpv.texinfo
+@include include/fun-screamer-purge.texinfo
+@include include/fun-screamer-realpv.texinfo
+@include include/fun-screamer-unwedge-screamer.texinfo
+@include include/macro-screamer-all-values.texinfo
+@include include/macro-screamer-assert!.texinfo
+@c Not cleaned up yet:
+@c @include include/macro-screamer-decide.texinfo
+@c @include include/macro-screamer-either.texinfo
+@c @include include/macro-screamer-global.texinfo
+@c @include include/macro-screamer-ith-value.texinfo
+@c @include include/macro-screamer-known?.texinfo
+@c @include include/macro-screamer-local.texinfo
+@c @include include/macro-screamer-one-value.texinfo
+@c @include include/macro-screamer-print-values.texinfo
+@c @include include/var-screamer-star-dynamic-extent?star.texinfo
+@c @include include/var-screamer-star-iscream?star.texinfo
+@c @include include/var-screamer-star-maximum-discretization-range-star.texinfo
+@c @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
+@c @include include/var-screamer-star-screamer-version-star.texinfo
+@c @include include/var-screamer-star-strategy-star.texinfo
+@c ...and plenty more completely missing still...
+
+@bye
