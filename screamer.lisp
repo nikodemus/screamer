@@ -6479,28 +6479,30 @@ performed by an analogous set of noticers without this last equality check."
       (if polarity? `(known?-true ,form) `(known?-false ,form))))
 
 (defmacro-compile-time known? (x)
-  "The argument X can be either a variable or a non-variable. The
-expression \(KNOWN? X) restricts X to be boolean. This assertion may
-cause other assertions to be made due to noticers attached to X. A
-call to KNOWN? fails if X is known not to be boolean prior to the
-assertion or if any of the assertions performed by the noticers result
-in failure. Restricting X to be boolean attaches a noticer on X so
-that any subsequent assertion which restricts X to be non-boolean will
-fail. If X is equal to T after being restricted to be boolean then
-KNOWN? returns T. If X is equal to NIL or if the value of X is unknown
-then KNOWN? returns NIL. Except for the fact that one cannot write
-#'KNOWN?, KNOWN? behaves like a function, even though it is
-implemented as a macro. The reason it is implemented as a macro is to
-allow a number of compile time optimizations. Expressions like
-\(KNOWN? \(NOTV X)), \(KNOWN? \(NUMBERPV X)) and \(KNOWN? \(NOTV
-\(NUMBERPV X))) are transformed into calls to functions internal to
-Screamer which eliminate the need to create the boolean variable\(s)
-normally returned by functions like NOTV and NUMBERV. Calls to the
-functions NUMBERPV, REALPV, INTEGERPV, MEMBERV, BOOLEANPV, =V, <V,
-<=V, V, >=v, /=v, NOTV, FUNCALLV, APPLYV and EQUALV which appear
-directly nested in a call to KNOWN?, or directly nested in a call to
-NOTV which is in turn directly nested in a call to KNOWN?, are
-similarly transformed."
+  "Restricts X to be a boolean. If X is equal to T after being restricted to be boolean,
+returns T. If X is equal to NIL or if the value of X is unknown returns NIL.
+The argument X can be either a variable or a non-variable.
+
+The initial restriction to boolean may cause other assertions to be made due
+to noticers attached to X. A call to KNOWN? fails if X is known not to be
+boolean prior to the assertion or if any of the assertions performed by the
+noticers result in failure.
+
+Restricting X to be boolean attaches a noticer on X so that any subsequent
+assertion which restricts X to be non-boolean will fail.
+
+Except for the fact that one cannot write #'KNOWN?, KNOWN? behaves like a
+function, even though it is implemented as a macro.
+
+The reason it is implemented as a macro is to allow a number of compile time
+optimizations. Expressions like \(KNOWN? \(NOTV X)), \(KNOWN? \(NUMBERPV X))
+and \(KNOWN? \(NOTV \(NUMBERPV X))) are transformed into calls to functions
+internal to Screamer which eliminate the need to create the boolean
+variable\(s) normally returned by functions like NOTV and NUMBERV. Calls to
+the functions NUMBERPV, REALPV, INTEGERPV, MEMBERV, BOOLEANPV, =V, <V, <=V, V,
+>=v, /=v, NOTV, FUNCALLV, APPLYV and EQUALV which appear directly nested in a
+call to KNOWN?, or directly nested in a call to NOTV which is in turn directly
+nested in a call to KNOWN?, are similarly transformed."
   ;; FIXME: better done with a function & compiler-macro
   (transform-known? x t))
 
