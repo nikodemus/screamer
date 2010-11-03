@@ -542,13 +542,194 @@ the functions <code>numberpv</code>, <code>realpv</code>, <code>integerpv</code>
 in a call to decide, or directly nested in a call to <code>notv</code> which is in turn
 directly nested in a call to decide, are similarly transformed. 
 </p></blockquote></div>
+
+   <p><a name="Macro-either"></a>
+
+<div class="defun">
+&mdash; Macro: <b>either</b><var> &amp;body expressions<a name="index-either-39"></a></var><br>
+<blockquote><p><a name="index-either-40"></a>Nondeterministically evaluates and returns the value of one of its
+<code>expressions</code>.
+
+        <p><code>either</code> takes any number of arguments. With no arguments, <code>(either) </code>is
+equivalent to <code>(fail) </code>and is thus deterministic. With one argument, (EITHER
+EXPRESSION) is equivalent to expression itself and is thus deterministic only
+when <code>expression</code> is deterministic. With two or more argument it is
+nondeterministic and can only appear in a nondeterministic context.
+
+        <p>It sets up a choice point and evaluates the first <code>expression</code> returning its
+result. Whenever backtracking proceeds to this choice point, the next
+<code>expression</code> is evaluated and its result returned. When no more <code>expressions</code>
+remain, the current choice point is removed and backtracking continues to the
+next most recent choice point.
+
+        <p>As an optimization, the choice point created for this expression is removed
+before the evaluation of the last <code>expression</code> so that a failure during the
+evaluation of the last expression will backtrack directly to the parent choice
+point of the <code>either</code> expression.
+
+        <p><code>either</code> is a special form, not a function. It is an error for the expression
+<code>#'either</code> to appear in a program. 
+</p></blockquote></div>
+
+   <p><a name="Macro-global"></a>
+
+<div class="defun">
+&mdash; Macro: <b>global</b><var> &amp;body expressions<a name="index-global-41"></a></var><br>
+<blockquote><p><a name="index-global-42"></a>Evaluates <code>expressions</code> in the same fashion as <code>progn</code> except that all <code>setf</code> and
+<code>setq</code> expressions lexically nested in its body result in global side effects
+which are not undone upon backtracking.
+
+        <p>Note that this affects only side effects introduced explicitly via <code>setf</code> and
+<code>setq</code>. Side effects introduced by Common Lisp builtin functions such as <code>rplaca</code>
+are always global anyway.
+
+        <p>Furthermore, it affects only occurrences of <code>setf</code> and <code>setq</code> which appear
+textually nested in the body of the <code>global</code> expression <code>--</code> not those appearing
+in functions called from the body.
+
+        <p><code>local</code> and <code>global</code> expressions may be nested inside one another. The nearest
+surrounding declaration determines whether or not a given <code>setf</code> or <code>setq</code> results
+in a local or global side effect.
+
+        <p>Side effects default to be global when there is no surrounding <code>local</code> or <code>global</code>
+expression. Global side effects can appear both in deterministic as well as
+nondeterministic contexts. In nondeterministic contexts, <code>global</code> as well as
+<code>setf</code> are treated as special forms rather than macros. This should be
+completely transparent to the user. 
+</p></blockquote></div>
+
+   <p><a name="Macro-local"></a>
+
+<div class="defun">
+&mdash; Macro: <b>local</b><var> &amp;body expressions<a name="index-local-43"></a></var><br>
+<blockquote><p><a name="index-local-44"></a>Evaluates <code>expressions</code> in the same fashion as <code>progn</code> except that all
+<code>setf</code> and <code>setq</code> expressions lexically nested in its body result in local
+side effects which are undone upon backtracking.
+
+        <p>Note that this affects only side effects introduced explicitly via <code>setf</code> and
+<code>setq</code>. Side effects introduced by Common Lisp builtin in functions such as
+<code>rplaca</code> are always global.
+
+        <p>Furthermore, it affects only occurrences of <code>setf</code> and <code>setq</code> which appear
+textually nested in the body of the <code>local</code> expression <code>--</code> not those appearing in
+functions called from the body.
+
+        <p><code>local</code> and <code>global</code> expressions may be nested inside one another. The nearest
+surrounding declaration determines whether or not a given <code>setf</code> or <code>setq</code> results
+in a local or global side effect.
+
+        <p>Side effects default to be global when there is no surrounding <code>local</code> or <code>global</code>
+expression. Local side effects can appear both in deterministic as well as
+nondeterministic contexts though different techniques are used to implement
+the trailing of prior values for restoration upon backtracking. In
+nondeterministic contexts, <code>local</code> as well as <code>setf</code> are treated as special forms
+rather than macros. This should be completely transparent to the user. 
+</p></blockquote></div>
+
+   <p><a name="Macro-one_002dvalue"></a>
+
+<div class="defun">
+&mdash; Macro: <b>one-value</b><var> expression &amp;optional default-expression<a name="index-one_002dvalue-45"></a></var><br>
+<blockquote><p><a name="index-one_002dvalue-46"></a>Returns the first value of a nondeterministic expression. <code>expression</code> is
+evaluated, deterministically returning only its first nondeterministic value,
+if any.
+
+        <p>No further execution of <code>expression</code> is attempted after it successfully returns
+one value.
+
+        <p>If <code>expression</code> does not return any nondeterministic values (i.e. it fails)
+then <code>default-expression</code> is evaluated and its value returned instead. 
+<code>default-expression</code> defaults to <code>(fail) </code>if not present.
+
+        <p>Local side effects performed by <code>expression</code> are undone when <code>one-value</code> returns,
+but local side effects performed by <code>default-expression</code> are not undone when
+<code>one-value</code> returns.
+
+        <p>A <code>one-value</code> expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the <code>one-value</code> expression appears in,
+<code>expression</code> is always in a nondeterministic context, while <code>default-expression</code>
+is in whatever context the <code>one-value</code> expression appears.
+
+        <p>A <code>one-value</code> expression is nondeterministic if <code>default-expression</code> is present
+and is nondeterministic, otherwise it is deterministic.
+
+        <p>If <code>default-expression</code> is present and nondeterministic, and if <code>expression</code>
+fails, then it is possible to backtrack into the <code>default-expression</code> and for
+the <code>one-value</code> expression to nondeterministically return multiple times. 
+<code>one-value</code> is analogous to the cut primitive <code>(!) </code>in Prolog. 
+</p></blockquote></div>
+
+   <p><a name="Macro-ith_002dvalue"></a>
+
+<div class="defun">
+&mdash; Macro: <b>ith-value</b><var> i expression &amp;optional default-expression<a name="index-ith_002dvalue-47"></a></var><br>
+<blockquote><p><a name="index-ith_002dvalue-48"></a>Returns the Ith value of a nondeterministic expression. <code>expression</code> is
+evaluated, deterministically returning only its Ith nondeterministic value, if
+any. I must be an integer. The first nondeterministic value returned by
+<code>expression</code> is numbered zero, the second one, etc. The Ith value is produced by
+repeatedly evaluating <code>expression</code>, backtracking through and discarding the
+first I values and deterministically returning the next value produced.
+
+        <p>No further execution of <code>expression</code> is attempted after it successfully returns
+the desired value.
+
+        <p>If <code>expression</code> fails before returning both the I values to be discarded, as
+well as the desired Ith value, then <code>default-expression</code> is evaluated and its
+value returned instead. <code>default-expression</code> defaults to <code>(fail) </code>if not present.
+
+        <p>Local side effects performed by <code>expression</code> are undone when <code>ith-value</code> returns,
+but local side effects performed by <code>default-expression</code> and by I are not undone
+when <code>ith-value</code> returns.
+
+        <p>An <code>ith-value</code> expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the <code>ith-value</code> expression appears in,
+<code>expression</code> is always in a nondeterministic context, while <code>default-expression</code>
+and I are in whatever context the <code>ith-value</code> expression appears.
+
+        <p>An <code>ith-value</code> expression is nondeterministic if <code>default-expression</code> is present
+and is nondeterministic, or if I is nondeterministic. Otherwise it is
+deterministic.
+
+        <p>If <code>default-expression</code> is present and nondeterministic, and if <code>expression</code>
+fails, then it is possible to backtrack into the <code>default-expression</code> and for
+the <code>ith-value</code> expression to nondeterministically return multiple times.
+
+        <p>If I is nondeterministic then the <code>ith-value</code> expression operates
+nondeterministically on each value of I. In this case, backtracking for each
+value of <code>expression</code> and <code>default-expression</code> is nested in, and restarted for,
+each backtrack of I. 
+</p></blockquote></div>
+
+   <p><a name="Macro-known_003f"></a>
+
+<div class="defun">
+&mdash; Macro: <b>known?</b><var> x<a name="index-known_003f-49"></a></var><br>
+<blockquote><p><a name="index-known_003f-50"></a>Restricts <code>x</code> to be a boolean. If <code>x</code> is equal to <code>t</code> after being restricted to be boolean,
+returns <code>t</code>. If <code>x</code> is equal to <code>nil</code> or if the value of <code>x</code> is unknown returns <code>nil</code>. 
+The argument <code>x</code> can be either a variable or a non-variable.
+
+        <p>The initial restriction to boolean may cause other assertions to be made due
+to noticers attached to <code>x</code>. A call to <code>known</code>? fails if <code>x</code> is known not to be
+boolean prior to the assertion or if any of the assertions performed by the
+noticers result in failure.
+
+        <p>Restricting <code>x</code> to be boolean attaches a noticer on <code>x</code> so that any subsequent
+assertion which restricts <code>x</code> to be non-boolean will fail.
+
+        <p>Except for the fact that one cannot write <code>#'known</code>?, <code>known</code>? behaves like a
+function, even though it is implemented as a macro.
+
+        <p>The reason it is implemented as a macro is to allow a number of compile time
+optimizations. Expressions like <code>(known? (notv x))</code>, <code>(known? (numberpv x))</code>
+and <code>(known? (notv (numberpv x))) </code>are transformed into calls to functions
+internal to Screamer which eliminate the need to create the boolean
+variable(s) normally returned by functions like <code>notv</code> and <code>numberv</code>. Calls to
+the functions <code>numberpv</code>, <code>realpv</code>, <code>integerpv</code>, <code>memberv</code>, <code>booleanpv</code>, <code>=v</code>, <code>&lt;v</code>, <code>&lt;=v</code>, <code>v</code>,
+&gt;=v, /=v, <code>notv</code>, <code>funcallv</code>, <code>applyv</code> and <code>equalv</code> which appear directly nested in a
+call to <code>known</code>?, or directly nested in a call to <code>notv</code> which is in turn directly
+nested in a call to <code>known</code>?, are similarly transformed. 
+</p></blockquote></div>
    <!-- Not cleaned up yet: -->
-<!-- @include include/macro-screamer-either.texinfo -->
-<!-- @include include/macro-screamer-global.texinfo -->
-<!-- @include include/macro-screamer-ith-value.texinfo -->
-<!-- @include include/macro-screamer-known?.texinfo -->
-<!-- @include include/macro-screamer-local.texinfo -->
-<!-- @include include/macro-screamer-one-value.texinfo -->
 <!-- @include include/macro-screamer-print-values.texinfo -->
 <!-- @include include/var-screamer-star-dynamic-extent?star.texinfo -->
 <!-- @include include/var-screamer-star-iscream?star.texinfo -->
