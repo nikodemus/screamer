@@ -66,74 +66,375 @@ courtesy of <a href="http://sb-studio.net/">Steel Bank Studio Ltd</a> by
 </pre>
    <p>is the GitHub project page.
 
-   <div class="contents">
-<h2>Table of Contents</h2>
-<ul>
-<li><a name="toc_TOC0" href="#TOC0">1 Overview</a>
-<li><a name="toc_TOC1" href="#TOC1">2 Dictionary</a>
-</li></ul>
-</div>
-
    <p>This documentation is a work in progress. In the meanwhile you may
 wish to refer to the original
 <a href="http://nikodemus.github.com/screamer/screaming-yellow-zonkers.pdf">Screaming Yellow Zonkers</a> paper by Siskind &amp;al, which forms the basis
 of the documentation here.
 
-<h2 class="chapter"><a name="TOC0"></a>1 Overview</h2>
+   <div class="contents">
+<h2>Table of Contents</h2>
+<ul>
+<li><a name="toc_TOC0" href="#TOC0">1 Original Papers</a>
+<li><a name="toc_TOC1" href="#TOC1">2 Overview</a>
+<ul>
+<li><a href="#TOC2">2.1 Important Note on Packages</a>
+<li><a href="#TOC3">2.2 Choice-Points, Failure, and Backtracking</a>
+<li><a href="#TOC4">2.3 Generators</a>
+<li><a href="#TOC5">2.4 Side-Effects</a>
+<li><a href="#TOC6">2.5 Constraints</a>
+</li></ul>
+<li><a name="toc_TOC7" href="#TOC7">3 Nondetermism</a>
+<li><a name="toc_TOC8" href="#TOC8">4 Constraints</a>
+<li><a name="toc_TOC9" href="#TOC9">5 Miscellany</a>
+</li></ul>
+</div>
 
-<p>Screamer adds nondeterminism by providing <em>choice-points</em> and a
-<em>failure</em> operator.
+<h2 class="chapter"><a name="TOC0"></a>1 Original Papers</h2>
 
-   <p>Essentially, a choice point is a point in program where more than one
-thing can happen. When a choice point is encountered, one of the
-possibilities occurs, and execution continues. Should a failure occur,
+<p>Following original papers by Siskind, McAllester, &amp;al form the basis
+of this manual:
+
+   <p><a href="http://nikodemus.github.com/screamer/screaming-yellow-zonkers.pdf">Screaming Yellow Zonkers</a>, 1991.
+
+   <p><a href="http://nikodemus.github.com/screamer/nondeterministic-lisp.pdf">Nondeterministic Lisp as a Substrate for Constraint Logic Programming</a>, 1993.
+
+   <p><a href="http://nikodemus.github.com/screamer/screamer-paper.pdf">Screamer: A Portable Efficient Implementation of Nondeterministic Common Lisp</a>, 1994.
+
+<h2 class="chapter"><a name="TOC1"></a>2 Overview</h2>
+
+<h3 class="section"><a name="TOC2"></a>2.1 Important Note on Packages</h3>
+
+<p>Screamer shadows <code>defun</code>.
+
+   <p>Examples in this manual are expected to be entered in the package
+<code>SCREAMER-USER</code>, which has the correct <code>defun</code>.
+
+   <p>Packages using Screamer are best defined using
+<code>define-screamer-package</code>, which is like <code>defpackage</code> but
+does some additional shadowing imports.
+
+   <p>This is however by no means necessary: you can also explicitly use
+<code>screamer::defun</code>.
+
+<h3 class="section"><a name="TOC3"></a>2.2 Choice-Points, Failure, and Backtracking</h3>
+
+<p>Screamer adds nondeterminism by providing the <em>choice-point</em>
+operator <code>either</code> and the <em>failure</em> operator <code>fail</code>.
+
+   <p>A choice-point is a point in program where more than one thing can
+happen. When a choice point is encountered, one of the possibilities
+occurs, and execution continues. Should a failure subsequently occur,
 the system backtracks to the last choice-point where multiple
 possibilities were still present, and tries again.
 
-   <p>Consider the following example:
-
-   <p>The call to <code>an-integer-between</code> represents a choice point
-between integers from 0 to <code>min</code>.
-
-   <p>We then compute the square of that number, and then use <code>assert!</code>
-to constrain the square to be in the desired range. If it isn't, a
-failure occurs and the system backtracks to the choice-point and tries
-with a new number.
-
-   <p>Finally <code>all-values</code> produces a list of all nodeterministic
-values we succesfully generate &ndash; had we needed only one answer
-instead of an enumeration of all possible answers we could have used
-<code>one-value</code> instead.
-
-<pre class="lisp">     (in-package :screamer-user)
-     
-     ;;; Square numbers are numbers produced by multiplying integer with itself.
-     (defun square-numbers (min max)
-       (let* ((x (an-integer-between 0 min))
-              (square (*v x x)))
-         (assert! (&lt;=v min square max))
-         square))
-     
-     (all-values (square-numbers 100 200)) ; =&gt; (100 121 144 169 186)
+<pre class="lisp">     (all-values
+       (let ((x (either 1 2 3 4)))
+         (if (oddp x)
+             x
+             (fail)))) ; =&gt; (1 3)
 </pre>
-   <p>Note: postfixing operator names with V is a Screamer convention:
-loosely speaking <code>foov</code> is just like <code>foo</code>, except that it
-also deals with nondeterminism.
+   <p>At first <code>(either 1 2 3 4)</code> evaluates to 1, which is <code>oddp</code>,
+so <code>all-values</code> receives it and sets about producing the next
+value.
 
-<h2 class="chapter"><a name="TOC1"></a>2 Dictionary</h2>
+   <p>This time <code>either</code> returns 2, which isn't <code>oddp</code>. Hence
+<code>fail</code> is called causing the system to backtrack.
 
-<p>We're in the progress of adding docstrings to Screamer functions from
-the paper referenced above.
+   <p>Starting again from the choice-point 3 is produced, which is
+<code>oddp</code>, and is received by <code>all-values</code>, which in turn
+requests the next value.
 
-   <p>This documentation is produced from those docstrings in turn. If
-you're lucky, the function you're wondering about may already be
-documented here &ndash; if not, go for the paper.
+   <p>Now <code>either</code> returns 4, which again causes <code>fail</code> to backtrack.
+
+   <p>Since the only choice-point available cannot produce any more alternatives,
+control passes back to <code>all-values</code> which returns the collected values.
+
+   <p>Had we wanted only one answer instead of an enumeration of all
+possible answers we could have used <code>one-value</code> instead of
+<code>all-values</code>.
+
+   <p>If you're familiar with Prolog, <code>all-values</code> and <code>one-value</code>
+are analogous to Prolog's <code>bag-of</code> and <code>cut</code> primitives.
+
+<h3 class="section"><a name="TOC4"></a>2.3 Generators</h3>
+
+<p>Given <code>either</code> and <code>fail</code> we can write functions returning
+arbitrary sequences of nondeterministic values. Such functions are
+called <em>generators</em>, and by convention have names starting with
+<code>a-</code> or <code>an-</code>.
+
+   <p>Consider for example <code>an-integer-between</code>:
+
+<pre class="lisp">     ;;; Screamer already provides an-integer-between, so we'll
+     ;;; call this by a different name.
+     (defun an-int-between (min max)
+       (if (&gt; min max)
+           (fail)
+           (either min (an-int-between (1+ min) max))))
+     
+     (all-values (an-int-between 41 43)) ; =&gt; (41 21 43)
+</pre>
+   <p>Called with two integers, this function produces nondeterministic
+values in the given range &ndash; finally backtracking to a previous
+choice-point when possibilities have already been exhausted.
+
+   <p>Given <code>an-integer-between</code> and <code>fail</code> we can write eg. a
+generator for square numbers:
+
+<pre class="lisp">     ;;; Square numbers are numbers produced by multiplying integer with itself.
+     (defun a-square-number (min max)
+       (let* ((x (an-integer-between 0 max))
+              (square (* x x)))
+         (if (&lt;= min square max)
+             square
+             (fail))))
+     
+     (all-values (a-square-number 12 80)) ; =&gt; (16 25 36 49 64)
+</pre>
+   <p>We're not restricted to numbers, of course. Writing a generator for
+potential comedy duos works just the same:
+
+<pre class="lisp">     (defun a-comedic-actor ()
+       (list (either :tall :short) (either :thin :fat)))
+     
+     (defun a-comedy-duo ()
+       (let ((a (a-comedic-actor))
+             (b (a-comedic-actor)))
+         (if (or (eq (first a) (first b))
+                 (eq (second a) (second b)))
+             (fail)
+             (list a :and b))))
+     
+     (one-value (a-comedy-duo)) ; =&gt; ((:TALL :THIN) (:SHORT :FAT))
+</pre>
+   <h3 class="section"><a name="TOC5"></a>2.4 Side-Effects</h3>
+
+<p>What happens to side-effects when a nondeterministic function
+backtracks?
+
+   <p>By default Screamer undoes effects of <code>setf</code> and <code>setq</code>
+(including calls to user-defined setf-functions), but not calls to
+other functions with side-effects such as <code>set</code>, <code>rplaca</code>,
+or <code>sort</code>.
+
+   <p>Macros <code>local</code> and <code>global</code> can be used to turn undoing of
+side-effects of and on locally.
+
+<h3 class="section"><a name="TOC6"></a>2.5 Constraints</h3>
+
+<p>In addition to nondeterminism via backtracking as discussed so far,
+Screamer also provides for forward constraint propagation via
+<em>variables</em> constructed using <code>make-variable</code>.
+
+   <p>Screamer provides a variety of primitives for constraining variables.
+
+   <p>By convention suffix <code>v</code> is used to denote operators that accept
+(and potentially return) variables in addition to values.
+
+   <p>The operator <code>assert!</code> is the primary tool about asserting facts
+about variables.
+
+   <p>Assertions &ndash; and constraint operators in general &ndash; can cause failure
+and backtracking, in which case constraints from the last attempt are
+undone.
+
+<h2 class="chapter"><a name="TOC7"></a>3 Nondetermism</h2>
+
+<p><a name="Macro-either"></a>
+
+<div class="defun">
+&mdash; Macro: <b>either</b><var> &amp;body expressions<a name="index-either-1"></a></var><br>
+<blockquote><p><a name="index-either-2"></a>Nondeterministically evaluates and returns the value of one of its
+<code>expressions</code>.
+
+        <p><code>either</code> takes any number of arguments. With no arguments, <code>(either) </code>is
+equivalent to <code>(fail) </code>and is thus deterministic. With one argument,
+<code>(either expression) </code>is equivalent to expression itself and is thus deterministic
+only when <code>expression</code> is deterministic. With two or more argument it is
+nondeterministic and can only appear in a nondeterministic context.
+
+        <p>It sets up a choice point and evaluates the first <code>expression</code> returning its
+result. Whenever backtracking proceeds to this choice point, the next
+<code>expression</code> is evaluated and its result returned. When no more <code>expressions</code>
+remain, the current choice point is removed and backtracking continues to the
+next most recent choice point.
+
+        <p>As an optimization, the choice point created for this expression is removed
+before the evaluation of the last <code>expression</code> so that a failure during the
+evaluation of the last expression will backtrack directly to the parent choice
+point of the <code>either</code> expression.
+
+        <p><code>either</code> is a special form, not a function. It is an error for the expression
+<code>#'either</code> to appear in a program. 
+</p></blockquote></div>
+
+   <p><a name="Function-fail"></a>
+
+<div class="defun">
+&mdash; Function: <b>fail</b><var><a name="index-fail-3"></a></var><br>
+<blockquote><p><a name="index-fail-4"></a>Backtracks to the most recent choise point. Equivalent to
+<code>(either)</code>. Note that <code>fail</code> is deterministic function and thus it is
+permissible to reference <code>#'fail</code>, and write <code>(funcall #'fail) </code>or
+<code>(apply #'fail)</code>. In nondeterministic contexts, the expression <code>(fail)</code>
+is optimized to generate inline backtracking code. 
+</p></blockquote></div>
+
+   <p><a name="Macro-all_002dvalues"></a>
+
+<div class="defun">
+&mdash; Macro: <b>all-values</b><var> &amp;body expressions<a name="index-all_002dvalues-5"></a></var><br>
+<blockquote><p><a name="index-all_002dvalues-6"></a>Evaluates <code>expressions</code> as an implicit <code>progn</code> and returns a list of all of the
+nondeterministic values returned by the last <code>expression</code>.
+
+        <p>These values are produced by repeatedly evaluating the body and backtracking
+to produce the next value, until the body fails and yields no further values.
+
+        <p>Accordingly, local side effects performed by the body while producing each
+value are undone before attempting to produce subsequent values, and all local
+side effects performed by the body are undone upon exit from <code>all-values</code>.
+
+        <p>Returns the list containing <code>nil</code> if there are no <code>expressions</code>. An <code>all-values</code>
+expression can appear in both deterministic and nondeterministic contexts. 
+Irrespective of what context the <code>all-values</code> expression appears in, the
+<code>expressions</code> are always in a nondeterministic context. An <code>all-values</code> expression
+itself is always deterministic. <code>all-values</code> is analogous to the bagof primitive
+in Prolog. 
+</p></blockquote></div>
+
+   <p><a name="Macro-one_002dvalue"></a>
+
+<div class="defun">
+&mdash; Macro: <b>one-value</b><var> expression &amp;optional default-expression<a name="index-one_002dvalue-7"></a></var><br>
+<blockquote><p><a name="index-one_002dvalue-8"></a>Returns the first value of a nondeterministic expression. <code>expression</code> is
+evaluated, deterministically returning only its first nondeterministic value,
+if any.
+
+        <p>No further execution of <code>expression</code> is attempted after it successfully returns
+one value.
+
+        <p>If <code>expression</code> does not return any nondeterministic values (i.e. it fails)
+then <code>default-expression</code> is evaluated and its value returned instead. 
+<code>default-expression</code> defaults to <code>(fail) </code>if not present.
+
+        <p>Local side effects performed by <code>expression</code> are undone when <code>one-value</code> returns,
+but local side effects performed by <code>default-expression</code> are not undone when
+<code>one-value</code> returns.
+
+        <p>A <code>one-value</code> expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the <code>one-value</code> expression appears in,
+<code>expression</code> is always in a nondeterministic context, while <code>default-expression</code>
+is in whatever context the <code>one-value</code> expression appears.
+
+        <p>A <code>one-value</code> expression is nondeterministic if <code>default-expression</code> is present
+and is nondeterministic, otherwise it is deterministic.
+
+        <p>If <code>default-expression</code> is present and nondeterministic, and if <code>expression</code>
+fails, then it is possible to backtrack into the <code>default-expression</code> and for
+the <code>one-value</code> expression to nondeterministically return multiple times. 
+<code>one-value</code> is analogous to the cut primitive <code>(!) </code>in Prolog. 
+</p></blockquote></div>
+
+   <p><a name="Macro-ith_002dvalue"></a>
+
+<div class="defun">
+&mdash; Macro: <b>ith-value</b><var> i expression &amp;optional default-expression<a name="index-ith_002dvalue-9"></a></var><br>
+<blockquote><p><a name="index-ith_002dvalue-10"></a>Returns the Ith value of a nondeterministic expression. <code>expression</code> is
+evaluated, deterministically returning only its Ith nondeterministic value, if
+any. I must be an integer. The first nondeterministic value returned by
+<code>expression</code> is numbered zero, the second one, etc. The Ith value is produced by
+repeatedly evaluating <code>expression</code>, backtracking through and discarding the
+first I values and deterministically returning the next value produced.
+
+        <p>No further execution of <code>expression</code> is attempted after it successfully returns
+the desired value.
+
+        <p>If <code>expression</code> fails before returning both the I values to be discarded, as
+well as the desired Ith value, then <code>default-expression</code> is evaluated and its
+value returned instead. <code>default-expression</code> defaults to <code>(fail) </code>if not present.
+
+        <p>Local side effects performed by <code>expression</code> are undone when <code>ith-value</code> returns,
+but local side effects performed by <code>default-expression</code> and by I are not undone
+when <code>ith-value</code> returns.
+
+        <p>An <code>ith-value</code> expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the <code>ith-value</code> expression appears in,
+<code>expression</code> is always in a nondeterministic context, while <code>default-expression</code>
+and I are in whatever context the <code>ith-value</code> expression appears.
+
+        <p>An <code>ith-value</code> expression is nondeterministic if <code>default-expression</code> is present
+and is nondeterministic, or if I is nondeterministic. Otherwise it is
+deterministic.
+
+        <p>If <code>default-expression</code> is present and nondeterministic, and if <code>expression</code>
+fails, then it is possible to backtrack into the <code>default-expression</code> and for
+the <code>ith-value</code> expression to nondeterministically return multiple times.
+
+        <p>If I is nondeterministic then the <code>ith-value</code> expression operates
+nondeterministically on each value of I. In this case, backtracking for each
+value of <code>expression</code> and <code>default-expression</code> is nested in, and restarted for,
+each backtrack of I. 
+</p></blockquote></div>
+
+   <p><a name="Macro-global"></a>
+
+<div class="defun">
+&mdash; Macro: <b>global</b><var> &amp;body expressions<a name="index-global-11"></a></var><br>
+<blockquote><p><a name="index-global-12"></a>Evaluates <code>expressions</code> in the same fashion as <code>progn</code> except that all <code>setf</code> and
+<code>setq</code> expressions lexically nested in its body result in global side effects
+which are not undone upon backtracking.
+
+        <p>Note that this affects only side effects introduced explicitly via <code>setf</code> and
+<code>setq</code>. Side effects introduced by Common Lisp builtin functions such as <code>rplaca</code>
+are always global anyway.
+
+        <p>Furthermore, it affects only occurrences of <code>setf</code> and <code>setq</code> which appear
+textually nested in the body of the <code>global</code> expression <code>--</code> not those appearing
+in functions called from the body.
+
+        <p><code>local</code> and <code>global</code> expressions may be nested inside one another. The nearest
+surrounding declaration determines whether or not a given <code>setf</code> or <code>setq</code> results
+in a local or global side effect.
+
+        <p>Side effects default to be global when there is no surrounding <code>local</code> or <code>global</code>
+expression. Global side effects can appear both in deterministic as well as
+nondeterministic contexts. In nondeterministic contexts, <code>global</code> as well as
+<code>setf</code> are treated as special forms rather than macros. This should be
+completely transparent to the user. 
+</p></blockquote></div>
+
+   <p><a name="Macro-local"></a>
+
+<div class="defun">
+&mdash; Macro: <b>local</b><var> &amp;body expressions<a name="index-local-13"></a></var><br>
+<blockquote><p><a name="index-local-14"></a>Evaluates <code>expressions</code> in the same fashion as <code>progn</code> except that all
+<code>setf</code> and <code>setq</code> expressions lexically nested in its body result in local
+side effects which are undone upon backtracking.
+
+        <p>Note that this affects only side effects introduced explicitly via <code>setf</code> and
+<code>setq</code>. Side effects introduced by Common Lisp builtin in functions such as
+<code>rplaca</code> are always global.
+
+        <p>Furthermore, it affects only occurrences of <code>setf</code> and <code>setq</code> which appear
+textually nested in the body of the <code>local</code> expression <code>--</code> not those appearing in
+functions called from the body.
+
+        <p><code>local</code> and <code>global</code> expressions may be nested inside one another. The nearest
+surrounding declaration determines whether or not a given <code>setf</code> or <code>setq</code> results
+in a local or global side effect.
+
+        <p>Side effects default to be global when there is no surrounding <code>local</code> or <code>global</code>
+expression. Local side effects can appear both in deterministic as well as
+nondeterministic contexts though different techniques are used to implement
+the trailing of prior values for restoration upon backtracking. In
+nondeterministic contexts, <code>local</code> as well as <code>setf</code> are treated as special forms
+rather than macros. This should be completely transparent to the user. 
+</p></blockquote></div>
 
    <p><a name="Function-a_002dmember_002dof"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-member-of</b><var> sequence<a name="index-a_002dmember_002dof-1"></a></var><br>
-<blockquote><p><a name="index-a_002dmember_002dof-2"></a>Nondeterministically returns an element of <code>sequence</code>. The elements are
+&mdash; Function: <b>a-member-of</b><var> sequence<a name="index-a_002dmember_002dof-15"></a></var><br>
+<blockquote><p><a name="index-a_002dmember_002dof-16"></a>Nondeterministically returns an element of <code>sequence</code>. The elements are
 returned in the order that they appear in <code>sequence</code>. The <code>sequence</code> must be
 either a list or a vector. 
 </p></blockquote></div>
@@ -141,8 +442,8 @@ either a list or a vector.
    <p><a name="Function-an_002dinteger_002dbetween"></a>
 
 <div class="defun">
-&mdash; Function: <b>an-integer-between</b><var> low high<a name="index-an_002dinteger_002dbetween-3"></a></var><br>
-<blockquote><p><a name="index-an_002dinteger_002dbetween-4"></a>Nondeterministically returns an integer in the closed interval [<code>low</code>, <code>high</code>]. 
+&mdash; Function: <b>an-integer-between</b><var> low high<a name="index-an_002dinteger_002dbetween-17"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dbetween-18"></a>Nondeterministically returns an integer in the closed interval [<code>low</code>, <code>high</code>]. 
 The results are returned in ascending order. Both <code>low</code> and <code>high</code> must be
 integers. Fails if the interval does not contain any integers. 
 </p></blockquote></div>
@@ -150,8 +451,8 @@ integers. Fails if the interval does not contain any integers.
    <p><a name="Function-apply_002dnondeterministic"></a>
 
 <div class="defun">
-&mdash; Function: <b>apply-nondeterministic</b><var> function argument &amp;rest arguments<a name="index-apply_002dnondeterministic-5"></a></var><br>
-<blockquote><p><a name="index-apply_002dnondeterministic-6"></a>Analogous to the <code>cl:apply</code>, except <code>function</code> can be either a nondeterministic
+&mdash; Function: <b>apply-nondeterministic</b><var> function argument &amp;rest arguments<a name="index-apply_002dnondeterministic-19"></a></var><br>
+<blockquote><p><a name="index-apply_002dnondeterministic-20"></a>Analogous to the <code>cl:apply</code>, except <code>function</code> can be either a nondeterministic
 function, or an ordinary deterministic function.
 
         <p>You must use <code>apply-nondeterministic</code> to apply a nondeterministic function. An
@@ -166,18 +467,47 @@ time that a given call to <code>apply-nondeterministic</code> will be passed onl
 deterministic function objects for function. 
 </p></blockquote></div>
 
-   <p><a name="Function-booleanpv"></a>
+   <p><a name="Function-funcall_002dnondeterministic"></a>
 
 <div class="defun">
-&mdash; Function: <b>booleanpv</b><var> x<a name="index-booleanpv-7"></a></var><br>
-<blockquote><p><a name="index-booleanpv-8"></a>The expression <code>(booleanpv x) </code>is an abbreviation for <code>(memberv x '(t nil))</code>. 
+&mdash; Function: <b>funcall-nondeterministic</b><var> function &amp;rest arguments<a name="index-funcall_002dnondeterministic-21"></a></var><br>
+<blockquote><p><a name="index-funcall_002dnondeterministic-22"></a>Analogous to <code>cl:funcall</code>, except <code>function</code> can be either a nondeterministic
+function, or an ordinary determinisitic function.
+
+        <p>You must use <code>funcall-nondeterministic</code> to funcall a nondeterministic function. 
+An error is signalled if you attempt to funcall a nondeterministic
+function object with <code>cl:funcall</code>.
+
+        <p>You can use <code>funcall-nondeterministic</code> to funcall either a deterministic or
+nondeterministic function, though even if all of the arguments to
+<code>funcall-nondeterministic</code> are deterministic and <code>function</code> is a deterministic
+function object, the call expression will still be nondeterministic (with
+presumably a single value), since it is impossible to determine at compile
+time that a given call to <code>funcall-nondeterministic</code> will be passed only
+deterministic function objects for function. 
+</p></blockquote></div>
+
+   <p><a name="Function-nondeterministic_002dfunction_003f"></a>
+
+<div class="defun">
+&mdash; Function: <b>nondeterministic-function?</b><var> x<a name="index-nondeterministic_002dfunction_003f-23"></a></var><br>
+<blockquote><p><a name="index-nondeterministic_002dfunction_003f-24"></a>Returns <code>t</code> if <code>x</code> is a nondeterministic function and <code>nil</code> otherwise. 
+</p></blockquote></div>
+
+<h2 class="chapter"><a name="TOC8"></a>4 Constraints</h2>
+
+<p><a name="Function-booleanpv"></a>
+
+<div class="defun">
+&mdash; Function: <b>booleanpv</b><var> x<a name="index-booleanpv-25"></a></var><br>
+<blockquote><p><a name="index-booleanpv-26"></a>The expression <code>(booleanpv x) </code>is an abbreviation for <code>(memberv x '(t nil))</code>. 
 </p></blockquote></div>
 
    <p><a name="Function-_003dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>=v</b><var> x &amp;rest xs<a name="index-g_t_003dv-9"></a></var><br>
-<blockquote><p><a name="index-g_t_003dv-10"></a>Returns a boolean value which is constrained to be <code>t</code> if all of the
+&mdash; Function: <b>=v</b><var> x &amp;rest xs<a name="index-g_t_003dv-27"></a></var><br>
+<blockquote><p><a name="index-g_t_003dv-28"></a>Returns a boolean value which is constrained to be <code>t</code> if all of the
 arguments are numerically equal, and constrained to be <code>nil</code> if two or more of
 the arguments numerically differ.
 
@@ -235,42 +565,11 @@ restrictions and fail when any assertion causes <code>x1</code> to be known to b
 <code>x2</code>. 
 </p></blockquote></div>
 
-   <p><a name="Function-fail"></a>
-
-<div class="defun">
-&mdash; Function: <b>fail</b><var><a name="index-fail-11"></a></var><br>
-<blockquote><p><a name="index-fail-12"></a>Backtracks to the most recent choise point. Equivalent to
-<code>(either)</code>. Note that <code>fail</code> is deterministic function and thus it is
-permissible to reference <code>#'fail</code>, and write <code>(funcall #'fail) </code>or
-<code>(apply #'fail)</code>. In nondeterministic contexts, the expression <code>(fail)</code>
-is optimized to generate inline backtracking code. 
-</p></blockquote></div>
-
-   <p><a name="Function-funcall_002dnondeterministic"></a>
-
-<div class="defun">
-&mdash; Function: <b>funcall-nondeterministic</b><var> function &amp;rest arguments<a name="index-funcall_002dnondeterministic-13"></a></var><br>
-<blockquote><p><a name="index-funcall_002dnondeterministic-14"></a>Analogous to <code>cl:funcall</code>, except <code>function</code> can be either a nondeterministic
-function, or an ordinary determinisitic function.
-
-        <p>You must use <code>funcall-nondeterministic</code> to funcall a nondeterministic function. 
-An error is signalled if you attempt to funcall a nondeterministic
-function object with <code>cl:funcall</code>.
-
-        <p>You can use <code>funcall-nondeterministic</code> to funcall either a deterministic or
-nondeterministic function, though even if all of the arguments to
-<code>funcall-nondeterministic</code> are deterministic and <code>function</code> is a deterministic
-function object, the call expression will still be nondeterministic (with
-presumably a single value), since it is impossible to determine at compile
-time that a given call to <code>funcall-nondeterministic</code> will be passed only
-deterministic function objects for function. 
-</p></blockquote></div>
-
    <p><a name="Function-integerpv"></a>
 
 <div class="defun">
-&mdash; Function: <b>integerpv</b><var> x<a name="index-integerpv-15"></a></var><br>
-<blockquote><p><a name="index-integerpv-16"></a>Returns <code>t</code> if <code>x</code> is known to be integer valued, and <code>nil</code> if
+&mdash; Function: <b>integerpv</b><var> x<a name="index-integerpv-29"></a></var><br>
+<blockquote><p><a name="index-integerpv-30"></a>Returns <code>t</code> if <code>x</code> is known to be integer valued, and <code>nil</code> if
 <code>x</code> is known be non-integer value.
 
         <p>If it is not known whether or not <code>x</code> is integer valued when <code>integerpv</code> is called
@@ -292,8 +591,8 @@ restricts <code>x</code> to be integer valued. Likewise, if <code>v</code> ever 
    <p><a name="Function-_003cv"></a>
 
 <div class="defun">
-&mdash; Function: <b>&lt;v</b><var> x &amp;rest xs<a name="index-g_t_003cv-17"></a></var><br>
-<blockquote><p><a name="index-g_t_003cv-18"></a>Returns a boolean value which is constrained to be <code>t</code> if each argument Xi is
+&mdash; Function: <b>&lt;v</b><var> x &amp;rest xs<a name="index-g_t_003cv-31"></a></var><br>
+<blockquote><p><a name="index-g_t_003cv-32"></a>Returns a boolean value which is constrained to be <code>t</code> if each argument Xi is
 less than the following argument Xi+1 and constrained to be <code>nil</code> if some
 argument Xi is greater than or equal to the following argument Xi+1.
 
@@ -350,8 +649,8 @@ performed by an analogous set of noticers without this last equality check.
    <p><a name="Function-make_002dvariable"></a>
 
 <div class="defun">
-&mdash; Function: <b>make-variable</b><var> &amp;optional name<a name="index-make_002dvariable-19"></a></var><br>
-<blockquote><p><a name="index-make_002dvariable-20"></a>Creates and returns a new variable. Variables are assigned a name
+&mdash; Function: <b>make-variable</b><var> &amp;optional name<a name="index-make_002dvariable-33"></a></var><br>
+<blockquote><p><a name="index-make_002dvariable-34"></a>Creates and returns a new variable. Variables are assigned a name
 which is only used to identify the variable when it is printed. If the
 parameter <code>name</code> is given then it is assigned as the name of the
 variable. Otherwise, a unique name is assigned. The parameter <code>name</code> can
@@ -361,8 +660,8 @@ be any Lisp object.
    <p><a name="Function-memberv"></a>
 
 <div class="defun">
-&mdash; Function: <b>memberv</b><var> x sequence<a name="index-memberv-21"></a></var><br>
-<blockquote><p><a name="index-memberv-22"></a>Returns <code>t</code> if <code>x</code> is known to be a member of <code>sequence</code> (using the Common Lisp
+&mdash; Function: <b>memberv</b><var> x sequence<a name="index-memberv-35"></a></var><br>
+<blockquote><p><a name="index-memberv-36"></a>Returns <code>t</code> if <code>x</code> is known to be a member of <code>sequence</code> (using the Common Lisp
 function <code>eql</code> as a test function), <code>nil</code> if <code>x</code> is known not to be a member of
 <code>sequence</code>, and otherwise returns a new boolean variable <code>v</code>.
 
@@ -389,18 +688,11 @@ not contain any unbound variables when <code>memberv</code> is called.
 vector. 
 </p></blockquote></div>
 
-   <p><a name="Function-nondeterministic_002dfunction_003f"></a>
-
-<div class="defun">
-&mdash; Function: <b>nondeterministic-function?</b><var> x<a name="index-nondeterministic_002dfunction_003f-23"></a></var><br>
-<blockquote><p><a name="index-nondeterministic_002dfunction_003f-24"></a>Returns <code>t</code> if <code>x</code> is a nondeterministic function and <code>nil</code> otherwise. 
-</p></blockquote></div>
-
    <p><a name="Function-numberpv"></a>
 
 <div class="defun">
-&mdash; Function: <b>numberpv</b><var> x<a name="index-numberpv-25"></a></var><br>
-<blockquote><p><a name="index-numberpv-26"></a>Returns <code>t</code> if <code>x</code> is known to be numeric, <code>nil</code> if <code>x</code> is known to be
+&mdash; Function: <b>numberpv</b><var> x<a name="index-numberpv-37"></a></var><br>
+<blockquote><p><a name="index-numberpv-38"></a>Returns <code>t</code> if <code>x</code> is known to be numeric, <code>nil</code> if <code>x</code> is known to be
 non-numeric, and otherwise returns a new boolean variable <code>v</code>.
 
         <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
@@ -419,19 +711,11 @@ if <code>x</code> is known to be non-numeric.
 </ul>
         </p></blockquote></div>
 
-   <p><a name="Function-purge"></a>
-
-<div class="defun">
-&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-27"></a></var><br>
-<blockquote><p><a name="index-purge-28"></a>Removes any information about <code>function-name</code> from Screamer's
-who-calls database. 
-</p></blockquote></div>
-
    <p><a name="Function-realpv"></a>
 
 <div class="defun">
-&mdash; Function: <b>realpv</b><var> x<a name="index-realpv-29"></a></var><br>
-<blockquote><p><a name="index-realpv-30"></a>Returns <code>t</code> if <code>x</code> is known to be real, <code>nil</code> if <code>x</code> is known to be non-real,
+&mdash; Function: <b>realpv</b><var> x<a name="index-realpv-39"></a></var><br>
+<blockquote><p><a name="index-realpv-40"></a>Returns <code>t</code> if <code>x</code> is known to be real, <code>nil</code> if <code>x</code> is known to be non-real,
 and otherwise returns a new boolean variable <code>v</code>.
 
         <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
@@ -449,41 +733,11 @@ to <code>t</code> if and only if <code>x</code> is known to be real and <code>v<
 </ul>
         </p></blockquote></div>
 
-   <p><a name="Function-unwedge_002dscreamer"></a>
-
-<div class="defun">
-&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-31"></a></var><br>
-<blockquote><p><a name="index-unwedge_002dscreamer-32"></a>Removes any information about all user defined functions from
-Screamer's who-calls database. 
-</p></blockquote></div>
-
-   <p><a name="Macro-all_002dvalues"></a>
-
-<div class="defun">
-&mdash; Macro: <b>all-values</b><var> &amp;body expressions<a name="index-all_002dvalues-33"></a></var><br>
-<blockquote><p><a name="index-all_002dvalues-34"></a>Evaluates <code>expressions</code> as an implicit <code>progn</code> and returns a list of all of the
-nondeterministic values returned by the last <code>expression</code>.
-
-        <p>These values are produced by repeatedly evaluating the body and backtracking
-to produce the next value, until the body fails and yields no further values.
-
-        <p>Accordingly, local side effects performed by the body while producing each
-value are undone before attempting to produce subsequent values, and all local
-side effects performed by the body are undone upon exit from <code>all-values</code>.
-
-        <p>Returns the list containing <code>nil</code> if there are no <code>expressions</code>. An <code>all-values</code>
-expression can appear in both deterministic and nondeterministic contexts. 
-Irrespective of what context the <code>all-values</code> expression appears in, the
-<code>expressions</code> are always in a nondeterministic context. An <code>all-values</code> expression
-itself is always deterministic. <code>all-values</code> is analogous to the bagof primitive
-in Prolog. 
-</p></blockquote></div>
-
    <p><a name="Macro-assert_0021"></a>
 
 <div class="defun">
-&mdash; Macro: <b>assert!</b><var> x<a name="index-assert_0021-35"></a></var><br>
-<blockquote><p><a name="index-assert_0021-36"></a>Restricts <code>x</code> to <code>t</code>. No meaningful result is returned. The argument <code>x</code> can be
+&mdash; Macro: <b>assert!</b><var> x<a name="index-assert_0021-41"></a></var><br>
+<blockquote><p><a name="index-assert_0021-42"></a>Restricts <code>x</code> to <code>t</code>. No meaningful result is returned. The argument <code>x</code> can be
 either a variable or a non-variable.
 
         <p>This assertion may cause other assertions to be made due to noticers attached
@@ -509,8 +763,8 @@ directly nested in a call to <code>assert</code>!, are similarly transformed.
    <p><a name="Macro-decide"></a>
 
 <div class="defun">
-&mdash; Macro: <b>decide</b><var> x<a name="index-decide-37"></a></var><br>
-<blockquote><p><a name="index-decide-38"></a>Restricts <code>x</code> to a be boolean. After <code>x</code> is restricted a nondeterministic
+&mdash; Macro: <b>decide</b><var> x<a name="index-decide-43"></a></var><br>
+<blockquote><p><a name="index-decide-44"></a>Restricts <code>x</code> to a be boolean. After <code>x</code> is restricted a nondeterministic
 choice is made. For one branch, <code>x</code> is restricted to equal <code>t</code> and <code>(decide x)</code>
 returns <code>t</code> as a result. For the other branch, <code>x</code> is restricted to equal <code>nil</code> and
 <code>(decide x) </code>returns <code>nil</code> as a result. The argument <code>x</code> can be either a variable
@@ -543,168 +797,11 @@ in a call to decide, or directly nested in a call to <code>notv</code> which is 
 directly nested in a call to decide, are similarly transformed. 
 </p></blockquote></div>
 
-   <p><a name="Macro-either"></a>
-
-<div class="defun">
-&mdash; Macro: <b>either</b><var> &amp;body expressions<a name="index-either-39"></a></var><br>
-<blockquote><p><a name="index-either-40"></a>Nondeterministically evaluates and returns the value of one of its
-<code>expressions</code>.
-
-        <p><code>either</code> takes any number of arguments. With no arguments, <code>(either) </code>is
-equivalent to <code>(fail) </code>and is thus deterministic. With one argument,
-<code>(either expression) </code>is equivalent to expression itself and is thus deterministic
-only when <code>expression</code> is deterministic. With two or more argument it is
-nondeterministic and can only appear in a nondeterministic context.
-
-        <p>It sets up a choice point and evaluates the first <code>expression</code> returning its
-result. Whenever backtracking proceeds to this choice point, the next
-<code>expression</code> is evaluated and its result returned. When no more <code>expressions</code>
-remain, the current choice point is removed and backtracking continues to the
-next most recent choice point.
-
-        <p>As an optimization, the choice point created for this expression is removed
-before the evaluation of the last <code>expression</code> so that a failure during the
-evaluation of the last expression will backtrack directly to the parent choice
-point of the <code>either</code> expression.
-
-        <p><code>either</code> is a special form, not a function. It is an error for the expression
-<code>#'either</code> to appear in a program. 
-</p></blockquote></div>
-
-   <p><a name="Macro-global"></a>
-
-<div class="defun">
-&mdash; Macro: <b>global</b><var> &amp;body expressions<a name="index-global-41"></a></var><br>
-<blockquote><p><a name="index-global-42"></a>Evaluates <code>expressions</code> in the same fashion as <code>progn</code> except that all <code>setf</code> and
-<code>setq</code> expressions lexically nested in its body result in global side effects
-which are not undone upon backtracking.
-
-        <p>Note that this affects only side effects introduced explicitly via <code>setf</code> and
-<code>setq</code>. Side effects introduced by Common Lisp builtin functions such as <code>rplaca</code>
-are always global anyway.
-
-        <p>Furthermore, it affects only occurrences of <code>setf</code> and <code>setq</code> which appear
-textually nested in the body of the <code>global</code> expression <code>--</code> not those appearing
-in functions called from the body.
-
-        <p><code>local</code> and <code>global</code> expressions may be nested inside one another. The nearest
-surrounding declaration determines whether or not a given <code>setf</code> or <code>setq</code> results
-in a local or global side effect.
-
-        <p>Side effects default to be global when there is no surrounding <code>local</code> or <code>global</code>
-expression. Global side effects can appear both in deterministic as well as
-nondeterministic contexts. In nondeterministic contexts, <code>global</code> as well as
-<code>setf</code> are treated as special forms rather than macros. This should be
-completely transparent to the user. 
-</p></blockquote></div>
-
-   <p><a name="Macro-local"></a>
-
-<div class="defun">
-&mdash; Macro: <b>local</b><var> &amp;body expressions<a name="index-local-43"></a></var><br>
-<blockquote><p><a name="index-local-44"></a>Evaluates <code>expressions</code> in the same fashion as <code>progn</code> except that all
-<code>setf</code> and <code>setq</code> expressions lexically nested in its body result in local
-side effects which are undone upon backtracking.
-
-        <p>Note that this affects only side effects introduced explicitly via <code>setf</code> and
-<code>setq</code>. Side effects introduced by Common Lisp builtin in functions such as
-<code>rplaca</code> are always global.
-
-        <p>Furthermore, it affects only occurrences of <code>setf</code> and <code>setq</code> which appear
-textually nested in the body of the <code>local</code> expression <code>--</code> not those appearing in
-functions called from the body.
-
-        <p><code>local</code> and <code>global</code> expressions may be nested inside one another. The nearest
-surrounding declaration determines whether or not a given <code>setf</code> or <code>setq</code> results
-in a local or global side effect.
-
-        <p>Side effects default to be global when there is no surrounding <code>local</code> or <code>global</code>
-expression. Local side effects can appear both in deterministic as well as
-nondeterministic contexts though different techniques are used to implement
-the trailing of prior values for restoration upon backtracking. In
-nondeterministic contexts, <code>local</code> as well as <code>setf</code> are treated as special forms
-rather than macros. This should be completely transparent to the user. 
-</p></blockquote></div>
-
-   <p><a name="Macro-one_002dvalue"></a>
-
-<div class="defun">
-&mdash; Macro: <b>one-value</b><var> expression &amp;optional default-expression<a name="index-one_002dvalue-45"></a></var><br>
-<blockquote><p><a name="index-one_002dvalue-46"></a>Returns the first value of a nondeterministic expression. <code>expression</code> is
-evaluated, deterministically returning only its first nondeterministic value,
-if any.
-
-        <p>No further execution of <code>expression</code> is attempted after it successfully returns
-one value.
-
-        <p>If <code>expression</code> does not return any nondeterministic values (i.e. it fails)
-then <code>default-expression</code> is evaluated and its value returned instead. 
-<code>default-expression</code> defaults to <code>(fail) </code>if not present.
-
-        <p>Local side effects performed by <code>expression</code> are undone when <code>one-value</code> returns,
-but local side effects performed by <code>default-expression</code> are not undone when
-<code>one-value</code> returns.
-
-        <p>A <code>one-value</code> expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the <code>one-value</code> expression appears in,
-<code>expression</code> is always in a nondeterministic context, while <code>default-expression</code>
-is in whatever context the <code>one-value</code> expression appears.
-
-        <p>A <code>one-value</code> expression is nondeterministic if <code>default-expression</code> is present
-and is nondeterministic, otherwise it is deterministic.
-
-        <p>If <code>default-expression</code> is present and nondeterministic, and if <code>expression</code>
-fails, then it is possible to backtrack into the <code>default-expression</code> and for
-the <code>one-value</code> expression to nondeterministically return multiple times. 
-<code>one-value</code> is analogous to the cut primitive <code>(!) </code>in Prolog. 
-</p></blockquote></div>
-
-   <p><a name="Macro-ith_002dvalue"></a>
-
-<div class="defun">
-&mdash; Macro: <b>ith-value</b><var> i expression &amp;optional default-expression<a name="index-ith_002dvalue-47"></a></var><br>
-<blockquote><p><a name="index-ith_002dvalue-48"></a>Returns the Ith value of a nondeterministic expression. <code>expression</code> is
-evaluated, deterministically returning only its Ith nondeterministic value, if
-any. I must be an integer. The first nondeterministic value returned by
-<code>expression</code> is numbered zero, the second one, etc. The Ith value is produced by
-repeatedly evaluating <code>expression</code>, backtracking through and discarding the
-first I values and deterministically returning the next value produced.
-
-        <p>No further execution of <code>expression</code> is attempted after it successfully returns
-the desired value.
-
-        <p>If <code>expression</code> fails before returning both the I values to be discarded, as
-well as the desired Ith value, then <code>default-expression</code> is evaluated and its
-value returned instead. <code>default-expression</code> defaults to <code>(fail) </code>if not present.
-
-        <p>Local side effects performed by <code>expression</code> are undone when <code>ith-value</code> returns,
-but local side effects performed by <code>default-expression</code> and by I are not undone
-when <code>ith-value</code> returns.
-
-        <p>An <code>ith-value</code> expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the <code>ith-value</code> expression appears in,
-<code>expression</code> is always in a nondeterministic context, while <code>default-expression</code>
-and I are in whatever context the <code>ith-value</code> expression appears.
-
-        <p>An <code>ith-value</code> expression is nondeterministic if <code>default-expression</code> is present
-and is nondeterministic, or if I is nondeterministic. Otherwise it is
-deterministic.
-
-        <p>If <code>default-expression</code> is present and nondeterministic, and if <code>expression</code>
-fails, then it is possible to backtrack into the <code>default-expression</code> and for
-the <code>ith-value</code> expression to nondeterministically return multiple times.
-
-        <p>If I is nondeterministic then the <code>ith-value</code> expression operates
-nondeterministically on each value of I. In this case, backtracking for each
-value of <code>expression</code> and <code>default-expression</code> is nested in, and restarted for,
-each backtrack of I. 
-</p></blockquote></div>
-
    <p><a name="Macro-known_003f"></a>
 
 <div class="defun">
-&mdash; Macro: <b>known?</b><var> x<a name="index-known_003f-49"></a></var><br>
-<blockquote><p><a name="index-known_003f-50"></a>Restricts <code>x</code> to be a boolean. If <code>x</code> is equal to <code>t</code> after being restricted to be boolean,
+&mdash; Macro: <b>known?</b><var> x<a name="index-known_003f-45"></a></var><br>
+<blockquote><p><a name="index-known_003f-46"></a>Restricts <code>x</code> to be a boolean. If <code>x</code> is equal to <code>t</code> after being restricted to be boolean,
 returns <code>t</code>. If <code>x</code> is equal to <code>nil</code> or if the value of <code>x</code> is unknown returns <code>nil</code>. 
 The argument <code>x</code> can be either a variable or a non-variable.
 
@@ -729,7 +826,26 @@ the functions <code>numberpv</code>, <code>realpv</code>, <code>integerpv</code>
 call to <code>known</code>?, or directly nested in a call to <code>notv</code> which is in turn directly
 nested in a call to <code>known</code>?, are similarly transformed. 
 </p></blockquote></div>
-   <!-- Not cleaned up yet: -->
+
+<h2 class="chapter"><a name="TOC9"></a>5 Miscellany</h2>
+
+<p><a name="Function-purge"></a>
+
+<div class="defun">
+&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-47"></a></var><br>
+<blockquote><p><a name="index-purge-48"></a>Removes any information about <code>function-name</code> from Screamer's
+who-calls database. 
+</p></blockquote></div>
+
+   <p><a name="Function-unwedge_002dscreamer"></a>
+
+<div class="defun">
+&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-49"></a></var><br>
+<blockquote><p><a name="index-unwedge_002dscreamer-50"></a>Removes any information about all user defined functions from
+Screamer's who-calls database. 
+</p></blockquote></div>
+
+<!-- Not cleaned up yet: -->
 <!-- @include include/macro-screamer-print-values.texinfo -->
 <!-- @include include/var-screamer-star-dynamic-extent?star.texinfo -->
 <!-- @include include/var-screamer-star-iscream?star.texinfo -->
@@ -738,6 +854,5 @@ nested in a call to <code>known</code>?, are similarly transformed.
 <!-- @include include/var-screamer-star-screamer-version-star.texinfo -->
 <!-- @include include/var-screamer-star-strategy-star.texinfo -->
 <!-- ...and plenty more completely missing still... -->
-
 </body></html>
 
