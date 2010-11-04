@@ -44,11 +44,8 @@ will get you a local copy.
 @end example
 is the GitHub project page.
 
-This documentation is a work in progress. In the meanwhile you may
-wish to refer to the original
-@url{http://nikodemus.github.com/screamer/screaming-yellow-zonkers.pdf,
-Screaming Yellow Zonkers} paper by Siskind &al, which forms the basis
-of the documentation here.
+NOTE: This documentation is a work in progress. In the meanwhile you
+may wish to refer to the original papers below.
 
 @contents
 
@@ -58,19 +55,25 @@ of the documentation here.
 
 @end ifnottex
 
-@chapter Original Papers
+@chapter Original Publications
 
-Following original papers by Siskind, McAllester, &al form the basis
-of this manual:
+Following original publications by Siskind and McAllester form the
+basis of this manual:
 
 @url{http://nikodemus.github.com/screamer/screaming-yellow-zonkers.pdf,
-Screaming Yellow Zonkers}, 1991.
-
-@url{http://nikodemus.github.com/screamer/nondeterministic-lisp.pdf,
-Nondeterministic Lisp as a Substrate for Constraint Logic Programming}, 1993.
+Screaming Yellow Zonkers}, 1991. Old Screamer manual, doesn't always
+hold true for Screamer 3.20 on which this ``modern'' Screamer is
+based, but still probably the most complete discussion of various
+operators.
 
 @url{http://nikodemus.github.com/screamer/screamer-paper.pdf,
-Screamer: A Portable Efficient Implementation of Nondeterministic Common Lisp}, 1994.
+Screamer: A Portable Efficient Implementation of Nondeterministic
+Common Lisp}, 1993. A paper describing the fundamentals of Screamer.
+
+@url{http://nikodemus.github.com/screamer/nondeterministic-lisp.pdf,
+Nondeterministic Lisp as a Substrate for Constraint Logic
+Programming}, 1993. A paper describing the constaints propagation
+features of Screamer.
 
 @chapter Overview
 
