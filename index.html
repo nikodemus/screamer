@@ -226,21 +226,60 @@ side-effects of and on locally.
 
 <p>In addition to nondeterminism via backtracking as discussed so far,
 Screamer also provides for forward constraint propagation via
-<em>variables</em> constructed using <code>make-variable</code>.
-
-   <p>Screamer provides a variety of primitives for constraining variables.
+<em>logic variables</em> constructed using <code>make-variable</code>. 
+Screamer provides a variety of primitives for constraining variables.
 
    <p>By convention suffix <code>v</code> is used to denote operators that accept
-(and potentially return) variables in addition to values.
+(and potentially return) variables in addition to values. Any
+<code>foov</code> is generally just like <code>foo</code>, except its arguments
+can also be logic variables, and that it may assert facts about them
+and will possibly return another variable.
 
    <p>The operator <code>assert!</code> is the primary tool about asserting facts
 about variables.
 
+   <p>Expression such as <code>(foov myvar)</code> typically returns another
+variable depending on <code>myvar</code>, which can be constrained to be
+true using <code>assert!</code>.
+
+<pre class="lisp">     ;;; Make a variable
+     (defparameter *v* (make-variable "The Answer"))
+     
+     ;;; It is initially unconstrained.
+     *v* ; =&gt; ["The Answer"]
+     
+     ;;; Constrain it to be an integer.
+     (assert! (integerpv *v*))
+     
+     *v* ; =&gt; ["The Answer" integer]
+     
+     ;;; Constrain 40 to be 2 less than *v*
+     (assert! (=v 40 (-v *v* 2)))
+     
+     ;;; And we have our answer.
+     *v* ; =&gt; 42
+</pre>
    <p>Assertions &ndash; and constraint operators in general &ndash; can cause failure
 and backtracking, in which case constraints from the last attempt are
 undone.
 
-<h2 class="chapter"><a name="TOC7"></a>3 Nondetermism</h2>
+   <p>This allows us to search the solution space nondeterminisically.
+
+<pre class="lisp">     (defparameter *x* (make-variable "X"))
+     (defparameter *y* (make-variable "Y"))
+     
+     (assert! (integerpv *x*))
+     (assert! (integerpv *y*))
+     
+     (assert! (=v 0 (+v *x* *y* 42)))
+     
+     (all-values (let ((x (an-integer-between -50 -30))
+                       (y (an-integer-between 2 7)))
+                   (assert! (=v *x* x))
+                   (assert! (=v *y* y))
+                   (list x y))) ; =&gt; ((-47 5) (-46 4) (-45 3) (-44 2))
+</pre>
+   <h2 class="chapter"><a name="TOC7"></a>3 Nondetermism</h2>
 
 <p><a name="Macro-either"></a>
 
