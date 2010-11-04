@@ -150,7 +150,7 @@ Consider for example @code{an-integer-between}:
       (fail)
       (either min (an-int-between (1+ min) max))))
 
-(all-values (an-int-between 41 43)) ; => (41 21 43)
+(all-values (an-int-between 41 43)) ; => (41 42 43)
 @end lisp
 
 Called with two integers, this function produces nondeterministic
