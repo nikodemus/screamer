@@ -44,6 +44,12 @@ will get you a local copy.
 @end example
 is the GitHub project page.
 
+This documentation is a work in progress. In the meanwhile you may
+wish to refer to the original
+@url{http://nikodemus.github.com/screamer/screaming-yellow-zonkers.pdf,
+Screaming Yellow Zonkers} paper by Siskind &al, which forms the basis
+of the documentation here.
+
 @contents
 
 @ifnottex
@@ -52,89 +58,200 @@ is the GitHub project page.
 
 @end ifnottex
 
-This documentation is a work in progress. In the meanwhile you may
-wish to refer to the original
+@chapter Original Papers
+
+Following original papers by Siskind, McAllester, &al form the basis
+of this manual:
+
 @url{http://nikodemus.github.com/screamer/screaming-yellow-zonkers.pdf,
-Screaming Yellow Zonkers} paper by Siskind &al, which forms the basis
-of the documentation here.
+Screaming Yellow Zonkers}, 1991.
+
+@url{http://nikodemus.github.com/screamer/nondeterministic-lisp.pdf,
+Nondeterministic Lisp as a Substrate for Constraint Logic Programming}, 1993.
+
+@url{http://nikodemus.github.com/screamer/screamer-paper.pdf,
+Screamer: A Portable Efficient Implementation of Nondeterministic Common Lisp}, 1994.
 
 @chapter Overview
 
-Screamer adds nondeterminism by providing @emph{choice-points} and a
-@emph{failure} operator.
+@section Important Note on Packages
 
-Essentially, a choice point is a point in program where more than one
-thing can happen. When a choice point is encountered, one of the
-possibilities occurs, and execution continues. Should a failure occur,
+Screamer shadows @code{defun}.
+
+Examples in this manual are expected to be entered in the package
+@code{SCREAMER-USER}, which has the correct @code{defun}.
+
+Packages using Screamer are best defined using
+@code{define-screamer-package}, which is like @code{defpackage} but
+does some additional shadowing imports.
+
+This is however by no means necessary: you can also explicitly use
+@code{screamer::defun}.
+
+@section Choice-Points, Failure, and Backtracking
+
+Screamer adds nondeterminism by providing the @emph{choice-point}
+operator @code{either} and the @emph{failure} operator @code{fail}.
+
+A choice-point is a point in program where more than one thing can
+happen. When a choice point is encountered, one of the possibilities
+occurs, and execution continues. Should a failure subsequently occur,
 the system backtracks to the last choice-point where multiple
 possibilities were still present, and tries again.
 
-Consider the following example:
-
-The call to @code{an-integer-between} represents a choice point
-between integers from 0 to @code{min}.
-
-We then compute the square of that number, and then use @code{assert!}
-to constrain the square to be in the desired range. If it isn't, a
-failure occurs and the system backtracks to the choice-point and tries
-with a new number.
-
-Finally @code{all-values} produces a list of all nodeterministic
-values we succesfully generate -- had we needed only one answer
-instead of an enumeration of all possible answers we could have used
-@code{one-value} instead.
-
 @lisp
-(in-package :screamer-user)
-
-;;; Square numbers are numbers produced by multiplying integer with itself.
-(defun square-numbers (min max)
-  (let* ((x (an-integer-between 0 min))
-         (square (*v x x)))
-    (assert! (<=v min square max))
-    square))
-
-(all-values (square-numbers 100 200)) ; => (100 121 144 169 186)
+(all-values
+  (let ((x (either 1 2 3 4)))
+    (if (oddp x)
+        x
+        (fail)))) ; => (1 3)
 @end lisp
 
-Note: postfixing operator names with V is a Screamer convention:
-loosely speaking @code{foov} is just like @code{foo}, except that it
-also deals with nondeterminism.
+At first @code{(either 1 2 3 4)} evaluates to 1, which is @code{oddp},
+so @code{all-values} receives it and sets about producing the next
+value.
 
-@chapter Dictionary
+This time @code{either} returns 2, which isn't @code{oddp}. Hence
+@code{fail} is called causing the system to backtrack.
 
-We're in the progress of adding docstrings to Screamer functions from
-the paper referenced above.
+Starting again from the choice-point 3 is produced, which is
+@code{oddp}, and is received by @code{all-values}, which in turn
+requests the next value.
 
-This documentation is produced from those docstrings in turn. If
-you're lucky, the function you're wondering about may already be
-documented here -- if not, go for the paper.
+Now @code{either} returns 4, which again causes @code{fail} to backtrack.
 
+Since the only choice-point available cannot produce any more alternatives,
+control passes back to @code{all-values} which returns the collected values.
+
+Had we wanted only one answer instead of an enumeration of all
+possible answers we could have used @code{one-value} instead of
+@code{all-values}.
+
+If you're familiar with Prolog, @code{all-values} and @code{one-value}
+are analogous to Prolog's @code{bag-of} and @code{cut} primitives.
+
+@section Generators
+
+Given @code{either} and @code{fail} we can write functions returning
+arbitrary sequences of nondeterministic values. Such functions are
+called @emph{generators}, and by convention have names starting with
+@code{a-} or @code{an-}.
+
+Consider for example @code{an-integer-between}:
+
+@lisp
+;;; Screamer already provides an-integer-between, so we'll
+;;; call this by a different name.
+(defun an-int-between (min max)
+  (if (> min max)
+      (fail)
+      (either min (an-int-between (1+ min) max))))
+
+(all-values (an-int-between 41 43)) ; => (41 21 43)
+@end lisp
+
+Called with two integers, this function produces nondeterministic
+values in the given range -- finally backtracking to a previous
+choice-point when possibilities have already been exhausted.
+
+Given @code{an-integer-between} and @code{fail} we can write eg. a
+generator for square numbers:
+
+@lisp
+;;; Square numbers are numbers produced by multiplying integer with itself.
+(defun a-square-number (min max)
+  (let* ((x (an-integer-between 0 max))
+         (square (* x x)))
+    (if (<= min square max)
+        square
+        (fail))))
+
+(all-values (a-square-number 12 80)) ; => (16 25 36 49 64)
+@end lisp
+
+We're not restricted to numbers, of course. Writing a generator for
+potential comedy duos works just the same:
+
+@lisp
+(defun a-comedic-actor ()
+  (list (either :tall :short) (either :thin :fat)))
+
+(defun a-comedy-duo ()
+  (let ((a (a-comedic-actor))
+        (b (a-comedic-actor)))
+    (if (or (eq (first a) (first b))
+            (eq (second a) (second b)))
+        (fail)
+        (list a :and b))))
+
+(one-value (a-comedy-duo)) ; => ((:TALL :THIN) (:SHORT :FAT))
+@end lisp
+
+@section Side-Effects
+
+What happens to side-effects when a nondeterministic function
+backtracks?
+
+By default Screamer undoes effects of @code{setf} and @code{setq}
+(including calls to user-defined setf-functions), but not calls to
+other functions with side-effects such as @code{set}, @code{rplaca},
+or @code{sort}.
+
+Macros @code{local} and @code{global} can be used to turn undoing of
+side-effects of and on locally.
+
+@section Constraints
+
+In addition to nondeterminism via backtracking as discussed so far,
+Screamer also provides for forward constraint propagation via
+@emph{variables} constructed using @code{make-variable}.
+
+Screamer provides a variety of primitives for constraining variables.
+
+By convention suffix @code{v} is used to denote operators that accept
+(and potentially return) variables in addition to values.
+
+The operator @code{assert!} is the primary tool about asserting facts
+about variables.
+
+Assertions -- and constraint operators in general -- can cause failure
+and backtracking, in which case constraints from the last attempt are
+undone.
+
+@chapter Nondetermism
+
+@include include/macro-screamer-either.texinfo
+@include include/fun-screamer-fail.texinfo
+@include include/macro-screamer-all-values.texinfo
+@include include/macro-screamer-one-value.texinfo
+@include include/macro-screamer-ith-value.texinfo
+@include include/macro-screamer-global.texinfo
+@include include/macro-screamer-local.texinfo
 @include include/fun-screamer-a-member-of.texinfo
 @include include/fun-screamer-an-integer-between.texinfo
 @include include/fun-screamer-apply-nondeterministic.texinfo
+@include include/fun-screamer-funcall-nondeterministic.texinfo
+@include include/fun-screamer-nondeterministic-function?.texinfo
+
+@chapter Constraints
+
 @include include/fun-screamer-booleanpv.texinfo
 @include include/fun-screamer-equals-v.texinfo
-@include include/fun-screamer-fail.texinfo
-@include include/fun-screamer-funcall-nondeterministic.texinfo
 @include include/fun-screamer-integerpv.texinfo
 @include include/fun-screamer-lt-v.texinfo
 @include include/fun-screamer-make-variable.texinfo
 @include include/fun-screamer-memberv.texinfo
-@include include/fun-screamer-nondeterministic-function?.texinfo
 @include include/fun-screamer-numberpv.texinfo
-@include include/fun-screamer-purge.texinfo
 @include include/fun-screamer-realpv.texinfo
-@include include/fun-screamer-unwedge-screamer.texinfo
-@include include/macro-screamer-all-values.texinfo
 @include include/macro-screamer-assert!.texinfo
 @include include/macro-screamer-decide.texinfo
-@include include/macro-screamer-either.texinfo
-@include include/macro-screamer-global.texinfo
-@include include/macro-screamer-local.texinfo
-@include include/macro-screamer-one-value.texinfo
-@include include/macro-screamer-ith-value.texinfo
 @include include/macro-screamer-known?.texinfo
+
+@chapter Miscellany
+
+@include include/fun-screamer-purge.texinfo
+@include include/fun-screamer-unwedge-screamer.texinfo
+
 @c Not cleaned up yet:
 @c @include include/macro-screamer-print-values.texinfo
 @c @include include/var-screamer-star-dynamic-extent?star.texinfo
