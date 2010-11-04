@@ -54,11 +54,13 @@
 ;;;  6. Doesn't handle most CommonLisp special forms.
 ;;;     Currently handles:
 ;;;       BLOCK
+;;;       EVAL-WHEN
 ;;;       FUNCTION
 ;;;       GO
 ;;;       IF
 ;;;       LET
 ;;;       LET*
+;;;       LOCALLY
 ;;;       MULTIPLE-VALUE-CALL
 ;;;       MULTIPLE-VALUE-PROG1
 ;;;       PROGN
@@ -78,7 +80,6 @@
 ;;;       UNWIND-PROTECT
 ;;;    ANSI CL additions:
 ;;;       LOAD-TIME-VALUE
-;;;       LOCALLY
 ;;;       SYMBOL-MACROLET
 
 (in-package :screamer)

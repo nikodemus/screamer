@@ -22,7 +22,7 @@
 ***** TODO THROW
 ***** TODO UNWIND-PROTECT
 ***** DONE LOAD-TIME-VALUE - not supported, should be easy to fix though
-***** TODO LOCALLY
+***** DONE LOCALLY -- supported
 ***** TODO SYMBOL-MACROLET
 * Old "Bugs to fix" list from screamer.lisp
   These haven't been verified or anything, just moved here.
