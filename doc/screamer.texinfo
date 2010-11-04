@@ -246,7 +246,7 @@ Assertions -- and constraint operators in general -- can cause failure
 and backtracking, in which case constraints from the last attempt are
 undone.
 
-This allows us to search the solution space nondeterminisically.
+This allows us to search the solution space using backtracking:
 
 @lisp
 (defparameter *x* (make-variable "X"))
@@ -258,11 +258,26 @@ This allows us to search the solution space nondeterminisically.
 (assert! (=v 0 (+v *x* *y* 42)))
 
 (all-values (let ((x (an-integer-between -50 -30))
-                  (y (an-integer-between 2 7)))
+                  (y (an-integer-between 2 5)))
               (assert! (=v *x* x))
               (assert! (=v *y* y))
               (list x y))) ; => ((-47 5) (-46 4) (-45 3) (-44 2))
 @end lisp
+
+A possibly less intuitive, but usually more efficient method is to
+assert range constraints as variables instead of nondeterministic
+values, and force a solution:
+
+@lisp
+(all-values
+  (assert! (=v *x* (an-integer-betweenv -50 -30)))
+  (assert! (=v *y* (an-integer-betweenv 2 5)))
+  (solution (list *x* *y*)
+            (static-ordering #'linear-force))) => ((-47 5) (-46 4) (-45 3) (-44 2))
+@end lisp
+
+In this case backtracking occurs only over @code{solution}, whereas in the first
+one we backtracked over the entire @code{let}.
 
 @chapter Nondetermism
 
