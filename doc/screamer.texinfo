@@ -228,6 +228,7 @@ undone.
 @include include/macro-screamer-all-values.texinfo
 @include include/macro-screamer-one-value.texinfo
 @include include/macro-screamer-ith-value.texinfo
+@include include/macro-screamer-print-values.texinfo
 @include include/macro-screamer-global.texinfo
 @include include/macro-screamer-local.texinfo
 @include include/fun-screamer-a-member-of.texinfo
@@ -256,7 +257,6 @@ undone.
 @include include/fun-screamer-unwedge-screamer.texinfo
 
 @c Not cleaned up yet:
-@c @include include/macro-screamer-print-values.texinfo
 @c @include include/var-screamer-star-dynamic-extent?star.texinfo
 @c @include include/var-screamer-star-iscream?star.texinfo
 @c @include include/var-screamer-star-maximum-discretization-range-star.texinfo
