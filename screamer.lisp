@@ -3069,15 +3069,15 @@ either a list or a vector."
 
 (defvar *minimum-shrink-ratio* 1e-2
   "Ignore propagations which reduce the range of a variable by less than this
-   ratio.")
+ratio.")
 
 (defvar *maximum-discretization-range* 20
   "Discretize integer variables whose range is not greater than this number.
-   Discretize all integer variables if NIL.
-   Must be an integer or NIL.")
+Discretize all integer variables if NIL. Must be an integer or NIL.")
 
 (defvar *strategy* :gfc
-  "Strategy to use for FUNCALLV and APPLYV: either :GFC or :AC")
+  "Strategy to use for FUNCALLV and APPLYV. Either :GFC for Generalized
+Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 
 ;;; note: Enable this to use CLOS instead of DEFSTRUCT for variables.
 #+(or)

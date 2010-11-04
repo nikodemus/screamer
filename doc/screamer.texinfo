@@ -250,6 +250,9 @@ undone.
 @include include/macro-screamer-assert!.texinfo
 @include include/macro-screamer-decide.texinfo
 @include include/macro-screamer-known?.texinfo
+@include include/var-screamer-star-maximum-discretization-range-star.texinfo
+@include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
+@include include/var-screamer-star-strategy-star.texinfo
 
 @chapter Miscellany
 
@@ -257,12 +260,6 @@ undone.
 @include include/fun-screamer-unwedge-screamer.texinfo
 @include include/var-screamer-star-dynamic-extent?star.texinfo
 @include include/var-screamer-star-screamer-version-star.texinfo
-
-@c Not cleaned up yet:
-@c @include include/var-screamer-star-iscream?star.texinfo
-@c @include include/var-screamer-star-maximum-discretization-range-star.texinfo
-@c @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
-@c @include include/var-screamer-star-strategy-star.texinfo
-@c ...and plenty more completely missing still...
+@include include/var-screamer-star-iscream?star.texinfo
 
 @bye
