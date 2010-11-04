@@ -211,18 +211,41 @@ potential comedy duos works just the same:
 </pre>
    <h3 class="section"><a name="TOC5"></a>2.4 Side-Effects</h3>
 
-<p>What happens to side-effects when a nondeterministic function
-backtracks?
+<p>What should happen to side-effects when a nondeterministic function
+backtracks? It depends. Some side-effects should be retained, and
+some undone &ndash; and it is impossible for the system to know in
+general what is the right choice in a given case.
 
-   <p>By default Screamer undoes effects of <code>setf</code> and <code>setq</code>
-(including calls to user-defined setf-functions), but not calls to
-other functions with side-effects such as <code>set</code>, <code>rplaca</code>,
-or <code>sort</code>.
+   <p>Screamer is able to undo effects of <code>setf</code> and <code>setq</code>
+(including calls to user-defined setf-functions), but cannot undo
+calls to other functions with side-effects such as <code>set</code>,
+<code>rplaca</code>, or <code>sort</code>.
 
+   <p>By default most side-effects are retained:
+
+<pre class="lisp">     (let ((n 0))
+       (list :numbers
+             (all-values (let ((x (an-integer-between 0 3)))
+                           (incf n)
+                           x))
+             :n n)) ; =&gt; (:NUMBERS (0 1 2 3) :N 4)
+</pre>
    <p>Macros <code>local</code> and <code>global</code> can be used to turn undoing of
-side-effects of and on locally.
+side-effects on and off lexically.
 
-<h3 class="section"><a name="TOC6"></a>2.5 Constraints</h3>
+<pre class="lisp">     (let ((m 0)
+           (n 0))
+       (list :numbers
+             (all-values (let ((x (an-integer-between 0 3)))
+                           (local
+                             (incf n)
+                             (global
+                               (incf m)))
+                           x))
+             :m m
+             :n n)) ; =&gt; (:NUMBERS (0 1 2 3) :M 4 :N 0)
+</pre>
+   <h3 class="section"><a name="TOC6"></a>2.5 Constraints</h3>
 
 <p>In addition to nondeterminism via backtracking as discussed so far,
 Screamer also provides for forward constraint propagation via
