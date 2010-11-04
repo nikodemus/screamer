@@ -161,7 +161,7 @@ Given @code{an-integer-between} and @code{fail} we can write eg. a
 generator for square numbers:
 
 @lisp
-;;; Square numbers are numbers produced by multiplying integer with itself.
+;;; Square numbers are numbers produced by multiplying an integer with itself.
 (defun a-square-number (min max)
   (let* ((x (an-integer-between 0 max))
          (square (* x x)))
