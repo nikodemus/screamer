@@ -2593,6 +2593,11 @@ completely transparent to the user."
                expressions))))
 
 (defmacro-compile-time for-effects (&body forms &environment environment)
+  "Evaluates FORMS as an implicit PROGN in a nondeterministic context and
+returns NIL.
+
+The body is repeatedly backtracked to its first choice-point until the body
+fails."
   `(choice-point
     ,(let ((*nondeterministic-context?* t))
           (cps-convert-progn forms '#'fail nil nil environment))))
