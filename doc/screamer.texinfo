@@ -192,16 +192,43 @@ potential comedy duos works just the same:
 
 @section Side-Effects
 
-What happens to side-effects when a nondeterministic function
-backtracks?
+What should happen to side-effects when a nondeterministic function
+backtracks? It depends. Some side-effects should be retained, and
+some undone -- and it is impossible for the system to know in
+general what is the right choice in a given case.
 
-By default Screamer undoes effects of @code{setf} and @code{setq}
-(including calls to user-defined setf-functions), but not calls to
-other functions with side-effects such as @code{set}, @code{rplaca},
-or @code{sort}.
+Screamer is able to undo effects of @code{setf} and @code{setq}
+(including calls to user-defined setf-functions), but cannot undo
+calls to other functions with side-effects such as @code{set},
+@code{rplaca}, or @code{sort}.
+
+By default most side-effects are retained:
+
+@lisp
+(let ((n 0))
+  (list :numbers
+        (all-values (let ((x (an-integer-between 0 3)))
+                      (incf n)
+                      x))
+        :n n)) ; => (:NUMBERS (0 1 2 3) :N 4)
+@end lisp
 
 Macros @code{local} and @code{global} can be used to turn undoing of
-side-effects of and on locally.
+side-effects on and off lexically.
+
+@lisp
+(let ((m 0)
+      (n 0))
+  (list :numbers
+        (all-values (let ((x (an-integer-between 0 3)))
+                      (local
+                        (incf n)
+                        (global
+                          (incf m)))
+                      x))
+        :m m
+        :n n)) ; => (:NUMBERS (0 1 2 3) :M 4 :N 0)
+@end lisp
 
 @section Constraints
 
