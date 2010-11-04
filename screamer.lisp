@@ -3,7 +3,7 @@
 ;;; LaHaShem HaAretz U'Mloah
 
 ;;; Screamer
-;;; A portable efficient implementation of nondeterministic CommonLisp
+;;; A portable efficient implementation of nondeterministic Common Lisp
 ;;; Version 3.20
 ;;;
 ;;; Written by:
@@ -51,7 +51,7 @@
 ;;;     function as a nondeterministic one. A wizard might want to do this to
 ;;;     take advantage of the fact that a LOCAL SETF/SETQ in a nondeterministic
 ;;;     function does not cons up closures.
-;;;  6. Doesn't handle most CommonLisp special forms.
+;;;  6. Doesn't handle most Common Lisp special forms.
 ;;;     Currently handles:
 ;;;       BLOCK
 ;;;       EVAL-WHEN
@@ -2008,7 +2008,7 @@
           (other-arguments (gensym "OTHER-")))
       ;; needs work: The closures created by LABELS functions aren't declared to
       ;;             have DYNAMIC-EXTENT since I don't know how to do this in
-      ;;             CommonLisp.
+      ;;             Common Lisp.
       `(labels ,(mapcar
                  #'(lambda (segment)
                      (let ((next (rest (member segment segments :test #'eq))))
@@ -2327,7 +2327,7 @@
         nil))
 
 (defun-compile-time compute-callees (body environment)
-  ;; note: What bogosity in CommonLisp! UNION should allow zero arguments and
+  ;; note: What bogosity in Common Lisp! UNION should allow zero arguments and
   ;;       return NIL as the identity element for use by REDUCE.
   (reduce
    #'union
@@ -4375,7 +4375,7 @@ be any Lisp object."
 (defun +v2 (x y)
   (assert!-numberpv x)
   (assert!-numberpv y)
-  ;; needs work: The first two optimizations below violate CommonLisp type
+  ;; needs work: The first two optimizations below violate Common Lisp type
   ;;             propagation conventions.
   (cond ((and (bound? x) (zerop (value-of x))) (value-of y))
         ((and (bound? y) (zerop (value-of y))) (value-of x))
@@ -4394,7 +4394,7 @@ be any Lisp object."
 (defun -v2 (x y)
   (assert!-numberpv x)
   (assert!-numberpv y)
-  ;; needs work: The first optimization below violates CommonLisp type
+  ;; needs work: The first optimization below violates Common Lisp type
   ;;             propagation conventions.
   (cond ((and (bound? y) (zerop (value-of y))) (value-of x))
         ((and (bound? x) (bound? y)) (- (value-of x) (value-of y)))
@@ -4412,7 +4412,7 @@ be any Lisp object."
 (defun *v2 (x y)
   (assert!-numberpv x)
   (assert!-numberpv y)
-  ;; needs work: The first four optimizations below violate CommonLisp type
+  ;; needs work: The first four optimizations below violate Common Lisp type
   ;;             propagation conventions.
   (cond ((and (bound? x) (zerop (value-of x))) 0)
         ((and (bound? y) (zerop (value-of y))) 0)
@@ -4433,7 +4433,7 @@ be any Lisp object."
 (defun /v2 (x y)
   (assert!-numberpv x)
   (assert!-numberpv y)
-  ;; needs work: The first three optimizations below violate CommonLisp type
+  ;; needs work: The first three optimizations below violate Common Lisp type
   ;;             propagation conventions.
   (cond ((and (bound? x) (zerop (value-of x))) 0)
         ((and (bound? y) (zerop (value-of y))) (fail))
