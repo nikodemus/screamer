@@ -858,46 +858,71 @@ call to <code>known</code>?, or directly nested in a call to <code>notv</code> w
 nested in a call to <code>known</code>?, are similarly transformed. 
 </p></blockquote></div>
 
+   <p><a name="Variable-_002amaximum_002ddiscretization_002drange_002a"></a>
+
+<div class="defun">
+&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-49"></a></var><br>
+<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-50"></a>Discretize integer variables whose range is not greater than this number. 
+Discretize all integer variables if <code>nil</code>. Must be an integer or <code>nil</code>. 
+</p></blockquote></div>
+
+   <p><a name="Variable-_002aminimum_002dshrink_002dratio_002a"></a>
+
+<div class="defun">
+&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-51"></a></var><br>
+<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-52"></a>Ignore propagations which reduce the range of a variable by less than this
+ratio. 
+</p></blockquote></div>
+
+   <p><a name="Variable-_002astrategy_002a"></a>
+
+<div class="defun">
+&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-53"></a></var><br>
+<blockquote><p><a name="index-g_t_002astrategy_002a-54"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
+Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
+</p></blockquote></div>
+
 <h2 class="chapter"><a name="TOC9"></a>5 Miscellany</h2>
 
 <p><a name="Function-purge"></a>
 
 <div class="defun">
-&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-49"></a></var><br>
-<blockquote><p><a name="index-purge-50"></a>Removes any information about <code>function-name</code> from Screamer's
+&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-55"></a></var><br>
+<blockquote><p><a name="index-purge-56"></a>Removes any information about <code>function-name</code> from Screamer's
 who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Function-unwedge_002dscreamer"></a>
 
 <div class="defun">
-&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-51"></a></var><br>
-<blockquote><p><a name="index-unwedge_002dscreamer-52"></a>Removes any information about all user defined functions from
+&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-57"></a></var><br>
+<blockquote><p><a name="index-unwedge_002dscreamer-58"></a>Removes any information about all user defined functions from
 Screamer's who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002adynamic_002dextent_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-53"></a></var><br>
-<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-54"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
+&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-59"></a></var><br>
+<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-60"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
 disable it. Default is platform dependent. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002ascreamer_002dversion_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-55"></a></var><br>
-<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-56"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
+&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-61"></a></var><br>
+<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-62"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
 while we're considering how to express versions for this copy of Screamer in
 the future. 
 </p></blockquote></div>
 
-<!-- Not cleaned up yet: -->
-<!-- @include include/var-screamer-star-iscream?star.texinfo -->
-<!-- @include include/var-screamer-star-maximum-discretization-range-star.texinfo -->
-<!-- @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo -->
-<!-- @include include/var-screamer-star-strategy-star.texinfo -->
-<!-- ...and plenty more completely missing still... -->
+   <p><a name="Variable-_002aiscream_003f_002a"></a>
+
+<div class="defun">
+&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-63"></a></var><br>
+<blockquote><p><a name="index-g_t_002aiscream_003f_002a-64"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
+</p></blockquote></div>
+
 </body></html>
 
