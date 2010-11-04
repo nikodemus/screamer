@@ -34,8 +34,10 @@
    (:file "screamer")))
 
 (defsystem :screamer-tests
-  :depends-on (:screamer :hu.dwim.stefil)
-  :components ((:file "tests")))
+  :serial t
+  :depends-on (:screamer :iterate :hu.dwim.stefil)
+  :components ((:file "primordial")
+               (:file "tests")))
 
 (defmethod perform ((o test-op) (c (eql (find-system :screamer))))
   (load-system :screamer-tests)
