@@ -183,7 +183,7 @@ choice-point when possibilities have already been exhausted.
    <p>Given <code>an-integer-between</code> and <code>fail</code> we can write eg. a
 generator for square numbers:
 
-<pre class="lisp">     ;;; Square numbers are numbers produced by multiplying integer with itself.
+<pre class="lisp">     ;;; Square numbers are numbers produced by multiplying an integer with itself.
      (defun a-square-number (min max)
        (let* ((x (an-integer-between 0 max))
               (square (* x x)))
@@ -263,7 +263,7 @@ true using <code>assert!</code>.
 and backtracking, in which case constraints from the last attempt are
 undone.
 
-   <p>This allows us to search the solution space nondeterminisically.
+   <p>This allows us to search the solution space using backtracking:
 
 <pre class="lisp">     (defparameter *x* (make-variable "X"))
      (defparameter *y* (make-variable "Y"))
@@ -274,12 +274,25 @@ undone.
      (assert! (=v 0 (+v *x* *y* 42)))
      
      (all-values (let ((x (an-integer-between -50 -30))
-                       (y (an-integer-between 2 7)))
+                       (y (an-integer-between 2 5)))
                    (assert! (=v *x* x))
                    (assert! (=v *y* y))
                    (list x y))) ; =&gt; ((-47 5) (-46 4) (-45 3) (-44 2))
 </pre>
-   <h2 class="chapter"><a name="TOC7"></a>3 Nondetermism</h2>
+   <p>A possibly less intuitive, but usually more efficient method is to
+assert range constraints as variables instead of nondeterministic
+values, and force a solution:
+
+<pre class="lisp">     (all-values
+       (assert! (=v *x* (an-integer-betweenv -50 -30)))
+       (assert! (=v *y* (an-integer-betweenv 2 5)))
+       (solution (list *x* *y*)
+                 (static-ordering #'linear-force))) =&gt; ((-47 5) (-46 4) (-45 3) (-44 2))
+</pre>
+   <p>In this case backtracking occurs only over <code>solution</code>, whereas in the first
+one we backtracked over the entire <code>let</code>.
+
+<h2 class="chapter"><a name="TOC7"></a>3 Nondetermism</h2>
 
 <p><a name="Macro-either"></a>
 
