@@ -17,3 +17,5 @@ web: doc
 	sbcl --script doc/splice-analytics.lisp < doc/screamer.html > tmp.html
 	git checkout gh-pages
 	mv tmp.html index.html
+	git commit -a -c master
+	git checkout -f master
