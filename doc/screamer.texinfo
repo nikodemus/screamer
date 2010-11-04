@@ -187,7 +187,7 @@ potential comedy duos works just the same:
         (fail)
         (list a :and b))))
 
-(one-value (a-comedy-duo)) ; => ((:TALL :THIN) (:SHORT :FAT))
+(one-value (a-comedy-duo)) ; => ((:TALL :THIN) :AND (:SHORT :FAT))
 @end lisp
 
 @section Side-Effects
