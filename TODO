@@ -12,6 +12,12 @@
     Most of the DEFUN-COMPILE-TIME functions should probably go
     to a file of their own, loaded before the main screamer code
     is compiled.
+*** TODO primordial.lisp has bunch of tests commented out with the note:
+    Tests 3 through 6 are commented out since they all contain
+    nondeterministc DOTIMES and DOLIST which don't work under CMU
+    Common Lisp and I don't have time to figure out why.
+
+    Sort it out.
 *** WIP Review the list of limitations and move it to documentation once sure it's correct
 ***** DONE CATCH - not supported
 ***** TODO DECLARE
