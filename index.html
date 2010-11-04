@@ -174,7 +174,7 @@ called <em>generators</em>, and by convention have names starting with
            (fail)
            (either min (an-int-between (1+ min) max))))
      
-     (all-values (an-int-between 41 43)) ; =&gt; (41 21 43)
+     (all-values (an-int-between 41 43)) ; =&gt; (41 42 43)
 </pre>
    <p>Called with two integers, this function produces nondeterministic
 values in the given range &ndash; finally backtracking to a previous
