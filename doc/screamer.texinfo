@@ -207,19 +207,62 @@ side-effects of and on locally.
 
 In addition to nondeterminism via backtracking as discussed so far,
 Screamer also provides for forward constraint propagation via
-@emph{variables} constructed using @code{make-variable}.
-
+@emph{logic variables} constructed using @code{make-variable}.
 Screamer provides a variety of primitives for constraining variables.
 
 By convention suffix @code{v} is used to denote operators that accept
-(and potentially return) variables in addition to values.
+(and potentially return) variables in addition to values. Any
+@code{foov} is generally just like @code{foo}, except its arguments
+can also be logic variables, and that it may assert facts about them
+and will possibly return another variable.
 
 The operator @code{assert!} is the primary tool about asserting facts
 about variables.
 
+Expression such as @code{(foov myvar)} typically returns another
+variable depending on @code{myvar}, which can be constrained to be
+true using @code{assert!}.
+
+@lisp
+;;; Make a variable
+(defparameter *v* (make-variable "The Answer"))
+
+;;; It is initially unconstrained.
+*v* ; => ["The Answer"]
+
+;;; Constrain it to be an integer.
+(assert! (integerpv *v*))
+
+*v* ; => ["The Answer" integer]
+
+;;; Constrain 40 to be 2 less than *v*
+(assert! (=v 40 (-v *v* 2)))
+
+;;; And we have our answer.
+*v* ; => 42
+@end lisp
+
 Assertions -- and constraint operators in general -- can cause failure
 and backtracking, in which case constraints from the last attempt are
 undone.
+
+This allows us to search the solution space nondeterminisically.
+
+@lisp
+(defparameter *x* (make-variable "X"))
+(defparameter *y* (make-variable "Y"))
+
+(assert! (integerpv *x*))
+(assert! (integerpv *y*))
+
+(assert! (=v 0 (+v *x* *y* 42)))
+
+(all-values (let ((x (an-integer-between -50 -30))
+                  (y (an-integer-between 2 7)))
+              (assert! (=v *x* x))
+              (assert! (=v *y* y))
+              (list x y))) ; => ((-47 5) (-46 4) (-45 3) (-44 2))
+@end lisp
 
 @chapter Nondetermism
 
