@@ -115,7 +115,9 @@
      (defmacro ,function-name ,lambda-list ,@body)))
 
 (defparameter *screamer-version* "3.20"
-  "The version of Screamer which is loaded.")
+  "The version of Screamer which is loaded. This is currently still 3.20,
+while we're considering how to express versions for this copy of Screamer in
+the future.")
 
 (defvar-compile-time *dynamic-extent?*
     ;; SBCL cannot stack-allocate LET-bound lambdas that screamer
@@ -123,7 +125,8 @@
     ;; generate compiler notes about it inability to do so.
     #-sbcl t
     #+sbcl nil
-  "T to enable the dynamic extent optimization.")
+    "Set to T to enable the dynamic extent optimization, NIL to
+disable it. Default is platform dependent.")
 
 (defvar *iscream?* nil
   "T if Screamer is running under ILisp/GNUEmacs with iscream.el loaded.")

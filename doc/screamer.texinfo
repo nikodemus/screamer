@@ -255,13 +255,13 @@ undone.
 
 @include include/fun-screamer-purge.texinfo
 @include include/fun-screamer-unwedge-screamer.texinfo
+@include include/var-screamer-star-dynamic-extent?star.texinfo
+@include include/var-screamer-star-screamer-version-star.texinfo
 
 @c Not cleaned up yet:
-@c @include include/var-screamer-star-dynamic-extent?star.texinfo
 @c @include include/var-screamer-star-iscream?star.texinfo
 @c @include include/var-screamer-star-maximum-discretization-range-star.texinfo
 @c @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
-@c @include include/var-screamer-star-screamer-version-star.texinfo
 @c @include include/var-screamer-star-strategy-star.texinfo
 @c ...and plenty more completely missing still...
 
