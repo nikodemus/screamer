@@ -2845,10 +2845,15 @@ is optimized to generate inline backtracking code."
            (values-list ,values))))))
 
 (defun nondeterministic-function? (x)
-  "Returns T if X is a nondeterministic function and NIL otherwise."
-  ;; FIXME: screamer.ps also says things about how to you can obtain
-  ;; a nondeterministic function object, but those do not appear to
-  ;; be true anymore.
+  "Returns T if X is a nondeterministic function and NIL otherwise.
+
+You can obtain a nondeterministic function object constructing a LAMBDA
+containing nondeterministic code in a nondeterministic context \(eg. inside a
+SCREAMER::DEFUN.)
+
+Functions defined by SCREAMER::DEFUN themselves do not currently appear as
+nondeterministic functions to NONDETERMINISTIC-FUNCTION?, but this may change
+in the future."
   (nondeterministic-function?-internal (value-of x)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)

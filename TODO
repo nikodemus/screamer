@@ -19,16 +19,16 @@
     implemntation of LOOP that is well-behaved when it comes to LOCAL.
 *** WIP Review the list of limitations and move it to documentation once sure it's correct
 ***** DONE CATCH - not supported
-***** DONE DECLARE - supported
-***** DONE FLET - bodies of FLET functions are not in nondeterministic context
-***** DONE LABELS - bodies of FLET functions are not in nondeterministic context
+***** DONE FLET - bodies of functions are not in nondeterministic context
+      But walker doesn't complain or warn.
+***** DONE LABELS - bodies of functions are not in nondeterministic context
+      But walker doesn't complain or warn.
 ***** TODO MACROLET
 ***** TODO PROGV
 ***** TODO THROW
 ***** TODO UNWIND-PROTECT
-***** DONE LOAD-TIME-VALUE - not supported, should be easy to fix though
-***** DONE LOCALLY -- supported
-***** TODO SYMBOL-MACROLET
+***** DONE LOAD-TIME-VALUE - not supported
+***** DONE SYMBOL-MACROLET -- walker signals an error
 * Old "Bugs to fix" list from screamer.lisp
   These haven't been verified or anything, just moved here.
 *** TODO LOCAL SETF does the wrong thing with GETHASH.
@@ -74,3 +74,5 @@
     Or maybe DEFUN-NONDETERMINISTIC?
 *** TODO Lock package on SBCL.
 *** TODO Add FLET and LABELS support. Should not be too hard.
+    Since LAMBDA _does_ work right, FLET in particular looks really easy.
+*** TODO Add LOAD-TIME-VALUE support. Should be nearly trivial.
