@@ -312,6 +312,7 @@ one we backtracked over the entire @code{let}.
 @include include/fun-screamer-fail.texinfo
 @include include/macro-screamer-all-values.texinfo
 @include include/macro-screamer-one-value.texinfo
+@include include/macro-screamer-for-effects.texinfo
 @include include/macro-screamer-ith-value.texinfo
 @include include/macro-screamer-print-values.texinfo
 @include include/macro-screamer-global.texinfo
