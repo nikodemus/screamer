@@ -4,8 +4,6 @@
 ******* Some docstrings talk of EXPRESSIONS, some of FORMS.
 ******* "Yields" vs "returns" a value.
 ***** Still missing exported symbols:
-******* possibly?
-******* necessarily?
 ******* unwind-trail
 ******* local-output
 ******* a-boolean

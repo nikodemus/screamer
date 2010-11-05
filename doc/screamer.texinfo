@@ -315,6 +315,8 @@ one we backtracked over the entire @code{let}.
 @include include/macro-screamer-for-effects.texinfo
 @include include/macro-screamer-ith-value.texinfo
 @include include/macro-screamer-print-values.texinfo
+@include include/macro-screamer-possibly?.texinfo
+@include include/macro-screamer-necessarily?.texinfo
 @include include/macro-screamer-global.texinfo
 @include include/macro-screamer-local.texinfo
 @include include/fun-screamer-a-member-of.texinfo

@@ -2646,9 +2646,37 @@ ONE-VALUE is analogous to the cut primitive \(!) in Prolog."
      ,default-expression))
 
 (defmacro-compile-time possibly? (&body forms)
+  "Evaluates FORMS as an implicit PROGN in nondeterministic context,
+returning true if the body ever yields true.
+
+The body is repeatedly backtracked as long as it yields NIL. Returns
+the first true value yielded by the body, or NIL if body fails before
+yielding true.
+
+Local side effects performed by the body are undone when POSSIBLY? returns.
+
+A POSSIBLY? expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the POSSIBLY? expression appears in,
+its body is always in a nondeterministic context.
+
+A POSSIBLY? expression is always deterministic."
   `(one-value (let ((value (progn ,@forms))) (unless value (fail)) value) nil))
 
 (defmacro-compile-time necessarily? (&body forms)
+  "Evaluates FORMS as an implicit PROGN in nondeterministic context,
+returning true if the body never yields false.
+
+The body is repeatedly backtracked as long as it yields true. Returns the last
+true value yielded by the body if it fails before yielding NIL, otherwise
+returns NIL.
+
+Local side effects performed by the body are undone when NECESSARILY? returns.
+
+A NECESSARILY? expression can appear in both deterministic and
+nondeterministic contexts. Irrespective of what context the NECESSARILY?
+expression appears in, its body is always in a nondeterministic context.
+
+A NECESSARILY? expression is always deterministic."
   `(let ((result t))
      (one-value
       (let ((value (progn ,@forms)))
