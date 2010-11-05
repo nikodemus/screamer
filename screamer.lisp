@@ -2754,7 +2754,7 @@ each backtrack of I."
     `(block ith-value
        (let ((,counter (value-of ,i)))
          (for-effects (let ((value ,expression))
-                        (if (zerop ,counter) 
+                        (if (zerop ,counter)
                             (return-from ith-value value)
                             (decf ,counter))))
          ,default-expression))))
@@ -6370,7 +6370,7 @@ directly nested in a call to decide, are similarly transformed."
   ;; FIXME: Sounds like this should be a function + compiler-macro.
   (cl:multiple-value-bind (arguments true false)
       (transform-decide x t)
-    `(let ,arguments 
+    `(let ,arguments
        (either (progn ,true t) (progn ,false nil)))))
 
 ;;; Lifted Generators
