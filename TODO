@@ -70,9 +70,4 @@
 ***** peal-off-documentation-string-and-declarations -> alexandria:parse-body
 * Future Work
 *** TODO See if it would make sense to make nondeterministic functions funcallable instances.
-*** TODO Provide DEFINE-SCREAMER-FUNCTION as an alias to SCREAMER::DEFUN for less magic.
-    Or maybe DEFUN-NONDETERMINISTIC?
 *** TODO Lock package on SBCL.
-*** TODO Add FLET and LABELS support. Should not be too hard.
-    Since LAMBDA _does_ work right, FLET in particular looks really easy.
-*** TODO Add LOAD-TIME-VALUE support. Should be nearly trivial.
