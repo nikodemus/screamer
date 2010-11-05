@@ -576,20 +576,21 @@ integers. Fails if the interval does not contain any integers.
    <p><a name="Function-apply_002dnondeterministic"></a>
 
 <div class="defun">
-&mdash; Function: <b>apply-nondeterministic</b><var> function argument &amp;rest arguments<a name="index-apply_002dnondeterministic-23"></a></var><br>
+&mdash; Function: <b>apply-nondeterministic</b><var> function &amp;rest arguments<a name="index-apply_002dnondeterministic-23"></a></var><br>
 <blockquote><p><a name="index-apply_002dnondeterministic-24"></a>Analogous to the <code>cl:apply</code>, except <code>function</code> can be either a nondeterministic
 function, or an ordinary deterministic function.
 
         <p>You must use <code>apply-nondeterministic</code> to apply a nondeterministic function. An
-error is signalled a nondeterministic function object is used with <code>cl:apply</code>.
+error is signalled if a nondeterministic function object is used with
+<code>cl:apply</code>.
 
         <p>You can use <code>apply-nondeterministic</code> to apply either a deterministic or
-nondeterministic function, though even if all of the arguments to
-<code>apply-nondeterministic</code> are deterministic and function is a deterministic
-function object, the call expression will still be nondeterministic (with
-presumably a single value), since it is impossible to determine at compile
-time that a given call to <code>apply-nondeterministic</code> will be passed only
-deterministic function objects for function. 
+nondeterministic function, though even if all of the <code>arguments</code> are
+deterministic and <code>function</code> is a deterministic function object, the call
+expression will still be nondeterministic (with presumably a single value),
+since it is impossible to determine at compile time that a given call to
+<code>apply-nondeterministic</code> will be passed only deterministic function objects for
+function. 
 </p></blockquote></div>
 
    <p><a name="Function-funcall_002dnondeterministic"></a>
@@ -604,19 +605,39 @@ An error is signalled if you attempt to funcall a nondeterministic
 function object with <code>cl:funcall</code>.
 
         <p>You can use <code>funcall-nondeterministic</code> to funcall either a deterministic or
-nondeterministic function, though even if all of the arguments to
-<code>funcall-nondeterministic</code> are deterministic and <code>function</code> is a deterministic
+nondeterministic function, though even if all of the <code>arguments</code> are
+deterministic and <code>function</code> is a deterministic function object, the call
+expression will still be nondeterministic (with presumably a single value),
+since it is impossible to determine at compile time that a given call to
+<code>funcall-nondeterministic</code> will be passed only deterministic function objects
+for function. 
+</p></blockquote></div>
+
+   <p><a name="Macro-multiple_002dvalue_002dcall_002dnondeterministic"></a>
+
+<div class="defun">
+&mdash; Macro: <b>multiple-value-call-nondeterministic</b><var> function-form &amp;rest values-forms<a name="index-multiple_002dvalue_002dcall_002dnondeterministic-27"></a></var><br>
+<blockquote><p><a name="index-multiple_002dvalue_002dcall_002dnondeterministic-28"></a>Analogous to the <code>cl:multiple-value-call</code>, except <code>function-form</code> can evaluate
+to either a nondeterministic function, or an ordinary deterministic function.
+
+        <p>You must use <code>multiple-value-call-nondeterministic</code> to multiple-value-call a
+nondeterministic function. An error is signalled if a nondeterministic function
+object is used with <code>cl:multiple-value-call</code>.
+
+        <p>You can use <code>multiple-value-call-nondeterministic</code> to call either a
+deterministic or nondeterministic function, though even if all of the
+<code>values-forms</code> are deterministic and <code>function-form</code> evaluates to a deterministic
 function object, the call expression will still be nondeterministic (with
 presumably a single value), since it is impossible to determine at compile
-time that a given call to <code>funcall-nondeterministic</code> will be passed only
-deterministic function objects for function. 
+time that a given call to <code>multiple-value-call-nondeterministic</code> will be passed
+only deterministic function objects for function. 
 </p></blockquote></div>
 
    <p><a name="Function-nondeterministic_002dfunction_003f"></a>
 
 <div class="defun">
-&mdash; Function: <b>nondeterministic-function?</b><var> x<a name="index-nondeterministic_002dfunction_003f-27"></a></var><br>
-<blockquote><p><a name="index-nondeterministic_002dfunction_003f-28"></a>Returns <code>t</code> if <code>x</code> is a nondeterministic function and <code>nil</code> otherwise.
+&mdash; Function: <b>nondeterministic-function?</b><var> x<a name="index-nondeterministic_002dfunction_003f-29"></a></var><br>
+<blockquote><p><a name="index-nondeterministic_002dfunction_003f-30"></a>Returns <code>t</code> if <code>x</code> is a nondeterministic function and <code>nil</code> otherwise.
 
         <p><code>#'foo</code> returns a nondeterministic function object iff it is used in nondeterminisitc
 context and <code>foo</code> is either a nondeterministic <code>lambda</code> form, or the name of a
@@ -633,15 +654,15 @@ an error at runtime.
 <p><a name="Function-booleanpv"></a>
 
 <div class="defun">
-&mdash; Function: <b>booleanpv</b><var> x<a name="index-booleanpv-29"></a></var><br>
-<blockquote><p><a name="index-booleanpv-30"></a>The expression <code>(booleanpv x) </code>is an abbreviation for <code>(memberv x '(t nil))</code>. 
+&mdash; Function: <b>booleanpv</b><var> x<a name="index-booleanpv-31"></a></var><br>
+<blockquote><p><a name="index-booleanpv-32"></a>The expression <code>(booleanpv x) </code>is an abbreviation for <code>(memberv x '(t nil))</code>. 
 </p></blockquote></div>
 
    <p><a name="Function-_003dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>=v</b><var> x &amp;rest xs<a name="index-g_t_003dv-31"></a></var><br>
-<blockquote><p><a name="index-g_t_003dv-32"></a>Returns a boolean value which is constrained to be <code>t</code> if all of the
+&mdash; Function: <b>=v</b><var> x &amp;rest xs<a name="index-g_t_003dv-33"></a></var><br>
+<blockquote><p><a name="index-g_t_003dv-34"></a>Returns a boolean value which is constrained to be <code>t</code> if all of the
 arguments are numerically equal, and constrained to be <code>nil</code> if two or more of
 the arguments numerically differ.
 
@@ -702,8 +723,8 @@ restrictions and fail when any assertion causes <code>x1</code> to be known to b
    <p><a name="Function-integerpv"></a>
 
 <div class="defun">
-&mdash; Function: <b>integerpv</b><var> x<a name="index-integerpv-33"></a></var><br>
-<blockquote><p><a name="index-integerpv-34"></a>Returns <code>t</code> if <code>x</code> is known to be integer valued, and <code>nil</code> if
+&mdash; Function: <b>integerpv</b><var> x<a name="index-integerpv-35"></a></var><br>
+<blockquote><p><a name="index-integerpv-36"></a>Returns <code>t</code> if <code>x</code> is known to be integer valued, and <code>nil</code> if
 <code>x</code> is known be non-integer value.
 
         <p>If it is not known whether or not <code>x</code> is integer valued when <code>integerpv</code> is called
@@ -725,8 +746,8 @@ restricts <code>x</code> to be integer valued. Likewise, if <code>v</code> ever 
    <p><a name="Function-_003cv"></a>
 
 <div class="defun">
-&mdash; Function: <b>&lt;v</b><var> x &amp;rest xs<a name="index-g_t_003cv-35"></a></var><br>
-<blockquote><p><a name="index-g_t_003cv-36"></a>Returns a boolean value which is constrained to be <code>t</code> if each argument Xi is
+&mdash; Function: <b>&lt;v</b><var> x &amp;rest xs<a name="index-g_t_003cv-37"></a></var><br>
+<blockquote><p><a name="index-g_t_003cv-38"></a>Returns a boolean value which is constrained to be <code>t</code> if each argument Xi is
 less than the following argument Xi+1 and constrained to be <code>nil</code> if some
 argument Xi is greater than or equal to the following argument Xi+1.
 
@@ -783,8 +804,8 @@ performed by an analogous set of noticers without this last equality check.
    <p><a name="Function-make_002dvariable"></a>
 
 <div class="defun">
-&mdash; Function: <b>make-variable</b><var> &amp;optional name<a name="index-make_002dvariable-37"></a></var><br>
-<blockquote><p><a name="index-make_002dvariable-38"></a>Creates and returns a new variable. Variables are assigned a name
+&mdash; Function: <b>make-variable</b><var> &amp;optional name<a name="index-make_002dvariable-39"></a></var><br>
+<blockquote><p><a name="index-make_002dvariable-40"></a>Creates and returns a new variable. Variables are assigned a name
 which is only used to identify the variable when it is printed. If the
 parameter <code>name</code> is given then it is assigned as the name of the
 variable. Otherwise, a unique name is assigned. The parameter <code>name</code> can
@@ -794,8 +815,8 @@ be any Lisp object.
    <p><a name="Function-memberv"></a>
 
 <div class="defun">
-&mdash; Function: <b>memberv</b><var> x sequence<a name="index-memberv-39"></a></var><br>
-<blockquote><p><a name="index-memberv-40"></a>Returns <code>t</code> if <code>x</code> is known to be a member of <code>sequence</code> (using the Common Lisp
+&mdash; Function: <b>memberv</b><var> x sequence<a name="index-memberv-41"></a></var><br>
+<blockquote><p><a name="index-memberv-42"></a>Returns <code>t</code> if <code>x</code> is known to be a member of <code>sequence</code> (using the Common Lisp
 function <code>eql</code> as a test function), <code>nil</code> if <code>x</code> is known not to be a member of
 <code>sequence</code>, and otherwise returns a new boolean variable <code>v</code>.
 
@@ -825,8 +846,8 @@ vector.
    <p><a name="Function-numberpv"></a>
 
 <div class="defun">
-&mdash; Function: <b>numberpv</b><var> x<a name="index-numberpv-41"></a></var><br>
-<blockquote><p><a name="index-numberpv-42"></a>Returns <code>t</code> if <code>x</code> is known to be numeric, <code>nil</code> if <code>x</code> is known to be
+&mdash; Function: <b>numberpv</b><var> x<a name="index-numberpv-43"></a></var><br>
+<blockquote><p><a name="index-numberpv-44"></a>Returns <code>t</code> if <code>x</code> is known to be numeric, <code>nil</code> if <code>x</code> is known to be
 non-numeric, and otherwise returns a new boolean variable <code>v</code>.
 
         <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
@@ -848,8 +869,8 @@ if <code>x</code> is known to be non-numeric.
    <p><a name="Function-realpv"></a>
 
 <div class="defun">
-&mdash; Function: <b>realpv</b><var> x<a name="index-realpv-43"></a></var><br>
-<blockquote><p><a name="index-realpv-44"></a>Returns <code>t</code> if <code>x</code> is known to be real, <code>nil</code> if <code>x</code> is known to be non-real,
+&mdash; Function: <b>realpv</b><var> x<a name="index-realpv-45"></a></var><br>
+<blockquote><p><a name="index-realpv-46"></a>Returns <code>t</code> if <code>x</code> is known to be real, <code>nil</code> if <code>x</code> is known to be non-real,
 and otherwise returns a new boolean variable <code>v</code>.
 
         <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
@@ -870,8 +891,8 @@ to <code>t</code> if and only if <code>x</code> is known to be real and <code>v<
    <p><a name="Macro-assert_0021"></a>
 
 <div class="defun">
-&mdash; Macro: <b>assert!</b><var> x<a name="index-assert_0021-45"></a></var><br>
-<blockquote><p><a name="index-assert_0021-46"></a>Restricts <code>x</code> to <code>t</code>. No meaningful result is returned. The argument <code>x</code> can be
+&mdash; Macro: <b>assert!</b><var> x<a name="index-assert_0021-47"></a></var><br>
+<blockquote><p><a name="index-assert_0021-48"></a>Restricts <code>x</code> to <code>t</code>. No meaningful result is returned. The argument <code>x</code> can be
 either a variable or a non-variable.
 
         <p>This assertion may cause other assertions to be made due to noticers attached
@@ -897,8 +918,8 @@ directly nested in a call to <code>assert</code>!, are similarly transformed.
    <p><a name="Macro-decide"></a>
 
 <div class="defun">
-&mdash; Macro: <b>decide</b><var> x<a name="index-decide-47"></a></var><br>
-<blockquote><p><a name="index-decide-48"></a>Restricts <code>x</code> to a be boolean. After <code>x</code> is restricted a nondeterministic
+&mdash; Macro: <b>decide</b><var> x<a name="index-decide-49"></a></var><br>
+<blockquote><p><a name="index-decide-50"></a>Restricts <code>x</code> to a be boolean. After <code>x</code> is restricted a nondeterministic
 choice is made. For one branch, <code>x</code> is restricted to equal <code>t</code> and <code>(decide x)</code>
 returns <code>t</code> as a result. For the other branch, <code>x</code> is restricted to equal <code>nil</code> and
 <code>(decide x) </code>returns <code>nil</code> as a result. The argument <code>x</code> can be either a variable
@@ -934,8 +955,8 @@ directly nested in a call to decide, are similarly transformed.
    <p><a name="Macro-known_003f"></a>
 
 <div class="defun">
-&mdash; Macro: <b>known?</b><var> x<a name="index-known_003f-49"></a></var><br>
-<blockquote><p><a name="index-known_003f-50"></a>Restricts <code>x</code> to be a boolean. If <code>x</code> is equal to <code>t</code> after being restricted to be boolean,
+&mdash; Macro: <b>known?</b><var> x<a name="index-known_003f-51"></a></var><br>
+<blockquote><p><a name="index-known_003f-52"></a>Restricts <code>x</code> to be a boolean. If <code>x</code> is equal to <code>t</code> after being restricted to be boolean,
 returns <code>t</code>. If <code>x</code> is equal to <code>nil</code> or if the value of <code>x</code> is unknown returns <code>nil</code>. 
 The argument <code>x</code> can be either a variable or a non-variable.
 
@@ -964,24 +985,24 @@ nested in a call to <code>known</code>?, are similarly transformed.
    <p><a name="Variable-_002amaximum_002ddiscretization_002drange_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-51"></a></var><br>
-<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-52"></a>Discretize integer variables whose range is not greater than this number. 
+&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-53"></a></var><br>
+<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-54"></a>Discretize integer variables whose range is not greater than this number. 
 Discretize all integer variables if <code>nil</code>. Must be an integer or <code>nil</code>. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002aminimum_002dshrink_002dratio_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-53"></a></var><br>
-<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-54"></a>Ignore propagations which reduce the range of a variable by less than this
+&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-55"></a></var><br>
+<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-56"></a>Ignore propagations which reduce the range of a variable by less than this
 ratio. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002astrategy_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-55"></a></var><br>
-<blockquote><p><a name="index-g_t_002astrategy_002a-56"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
+&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-57"></a></var><br>
+<blockquote><p><a name="index-g_t_002astrategy_002a-58"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
 Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
 </p></blockquote></div>
 
@@ -990,32 +1011,32 @@ Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc
 <p><a name="Function-purge"></a>
 
 <div class="defun">
-&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-57"></a></var><br>
-<blockquote><p><a name="index-purge-58"></a>Removes any information about <code>function-name</code> from Screamer's
+&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-59"></a></var><br>
+<blockquote><p><a name="index-purge-60"></a>Removes any information about <code>function-name</code> from Screamer's
 who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Function-unwedge_002dscreamer"></a>
 
 <div class="defun">
-&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-59"></a></var><br>
-<blockquote><p><a name="index-unwedge_002dscreamer-60"></a>Removes any information about all user defined functions from
+&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-61"></a></var><br>
+<blockquote><p><a name="index-unwedge_002dscreamer-62"></a>Removes any information about all user defined functions from
 Screamer's who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002adynamic_002dextent_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-61"></a></var><br>
-<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-62"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
+&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-63"></a></var><br>
+<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-64"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
 disable it. Default is platform dependent. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002ascreamer_002dversion_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-63"></a></var><br>
-<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-64"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
+&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-65"></a></var><br>
+<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-66"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
 while we're considering how to express versions for this copy of Screamer in
 the future. 
 </p></blockquote></div>
@@ -1023,8 +1044,8 @@ the future.
    <p><a name="Variable-_002aiscream_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-65"></a></var><br>
-<blockquote><p><a name="index-g_t_002aiscream_003f_002a-66"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
+&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-67"></a></var><br>
+<blockquote><p><a name="index-g_t_002aiscream_003f_002a-68"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
 </p></blockquote></div>
 
 </body></html>
