@@ -42,48 +42,36 @@
 ;;; note: DOLIST and DOTIMES work nondeterministically because PUSH doesn't
 ;;;       destructively modify the list that is being collected so each list
 ;;;       returned as a nondeterministic value is available after backtracking.
-;;; note: Tests 3 through 6 are commented out since they all contain
-;;;       nondeterministc DOTIMES and DOLIST which don't work under CMU
-;;;       Common Lisp and I don't have time to figure out why.
-
-#+comment
 (defun test3-internal (n)
  (local
   (let (collection)
    (dotimes (i n) (push (either 0 1) collection))
    collection)))
 
-#+comment
 (defun test3 ()
  (equal-set? (all-values (test3-internal 2)) '((0 0) (1 0) (0 1) (1 1))))
 
-#+comment
 (defun test4-internal (n)
  (local (let (collection)
 	 (dotimes (i n) (push (a-bit) collection))
 	 collection)))
 
-#+comment
 (defun test4 ()
  (equal-set? (all-values (test3-internal 2)) '((0 0) (1 0) (0 1) (1 1))))
 
-#+comment
 (defun test5-internal (list)
  (local (let (collection)
 	 (dolist (e list) (push (either 0 1) collection))
 	 collection)))
 
-#+comment
 (defun test5 ()
  (equal-set? (all-values (test3-internal 2)) '((0 0) (1 0) (0 1) (1 1))))
 
-#+comment
 (defun test6-internal (list)
  (local (let (collection)
 	 (dolist (e list) (push (a-bit) collection))
 	 collection)))
 
-#+comment
 (defun test6 ()
  (equal-set? (all-values (test3-internal 2)) '((0 0) (1 0) (0 1) (1 1))))
 
@@ -885,10 +873,16 @@
        (y (a-member-ofv '(8 10))))
   (known? (notv (applyv #'(lambda (w x y z) (> w x y z)) w x (list y 11))))))
 
+;;; This is the classic Screamer test entry point.
+;;; screamer-tests::prime-ordeal runs the same tests under Stefil.
 (defun prime-ordeal ()
  (let ((bug? nil))
   (unless (test1) (format t "~% Test 1 failed") (setf bug? t))
   (unless (test2) (format t "~% Test 2 failed") (setf bug? t))
+  (unless (test3) (format t "~% Test 3 failed") (setf bug? t))
+  (unless (test4) (format t "~% Test 4 failed") (setf bug? t))
+  (unless (test5) (format t "~% Test 5 failed") (setf bug? t))
+  (unless (test6) (format t "~% Test 6 failed") (setf bug? t))
   (unless (test11) (format t "~% Test 11 failed") (setf bug? t))
   (unless (test12) (format t "~% Test 12 failed") (setf bug? t))
   (unless (test13) (format t "~% Test 13 failed") (setf bug? t))
