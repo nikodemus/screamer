@@ -17,7 +17,7 @@ which can be compiled by the underlying Common Lisp system. Many competing
 implementations of nondeterministic Lisp are interpreters and thus are far
 less efficient than Screamer. Second, the backtracking primitives require
 fairly low overhead in Screamer. Finally, this overhead to support
-backtracking is only paid for those portions of the program which use the
+backtracking is only paid for by those portions of the program which use the
 backtracking primitives. Deterministic portions of user programs pass through
 the Screamer-to-Common-Lisp transformation unchanged. Since in practise, only
 small portions of typical programs utilize the backtracking primitives,
