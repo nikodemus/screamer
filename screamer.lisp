@@ -2940,7 +2940,7 @@ function."
    "APPLY-NONDETERMINISTIC is a nondeterministic function. As such, it must~%~
    be called only from a nondeterministic context."))
 
-(defun multiple-value-call-nondeterministic (function-form &rest values-forms)
+(cl:defun multiple-value-call-nondeterministic (function-form &rest values-forms)
   "Analogous to the CL:MULTIPLE-VALUE-CALL, except FUNCTION-FORM can evaluate
 to either a nondeterministic function, or an ordinary deterministic function.
 
