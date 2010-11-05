@@ -2869,12 +2869,12 @@ An error is signalled if you attempt to funcall a nondeterministic
 function object with CL:FUNCALL.
 
 You can use FUNCALL-NONDETERMINISTIC to funcall either a deterministic or
-nondeterministic function, though even if all of the arguments to
-FUNCALL-NONDETERMINISTIC are deterministic and FUNCTION is a deterministic
-function object, the call expression will still be nondeterministic \(with
-presumably a single value), since it is impossible to determine at compile
-time that a given call to FUNCALL-NONDETERMINISTIC will be passed only
-deterministic function objects for function."
+nondeterministic function, though even if all of the ARGUMENTS are
+deterministic and FUNCTION is a deterministic function object, the call
+expression will still be nondeterministic \(with presumably a single value),
+since it is impossible to determine at compile time that a given call to
+FUNCALL-NONDETERMINISTIC will be passed only deterministic function objects
+for function."
   (declare (ignore function arguments))
   (screamer-error
    "FUNCALL-NONDETERMINISTIC is a nondeterministic function. As such, it~%~
@@ -2892,34 +2892,47 @@ deterministic function objects for function."
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'apply-nondeterministic))
 
-(cl:defun apply-nondeterministic (function argument &rest arguments)
+(cl:defun apply-nondeterministic (function &rest arguments)
   "Analogous to the CL:APPLY, except FUNCTION can be either a nondeterministic
 function, or an ordinary deterministic function.
 
 You must use APPLY-NONDETERMINISTIC to apply a nondeterministic function. An
-error is signalled a nondeterministic function object is used with CL:APPLY.
+error is signalled if a nondeterministic function object is used with
+CL:APPLY.
 
 You can use APPLY-NONDETERMINISTIC to apply either a deterministic or
-nondeterministic function, though even if all of the arguments to
-APPLY-NONDETERMINISTIC are deterministic and function is a deterministic
-function object, the call expression will still be nondeterministic \(with
-presumably a single value), since it is impossible to determine at compile
-time that a given call to APPLY-NONDETERMINISTIC will be passed only
-deterministic function objects for function."
-  (declare (ignore function argument arguments))
+nondeterministic function, though even if all of the ARGUMENTS are
+deterministic and FUNCTION is a deterministic function object, the call
+expression will still be nondeterministic \(with presumably a single value),
+since it is impossible to determine at compile time that a given call to
+APPLY-NONDETERMINISTIC will be passed only deterministic function objects for
+function."
+  (declare (ignore function arguments))
   (screamer-error
    "APPLY-NONDETERMINISTIC is a nondeterministic function. As such, it must~%~
    be called only from a nondeterministic context."))
 
-(cl:defun apply-nondeterministic-nondeterministic
-    (continuation function argument &rest arguments)
-  (let ((function (value-of function)))
-    (if (nondeterministic-function? function)
-        ;; note: I don't know how to avoid the consing here.
-        (apply (nondeterministic-function-function function)
-               continuation
-               (apply #'list* (cons argument arguments)))
-        (funcall continuation (apply function argument arguments)))))
+;;; The code-walker checks for MULTIPLE-VALUE-CALL-NONDETERMINISTIC before
+;;; expanding macros, so this works out fine.
+(defmacro multiple-value-call-nondeterministic (function-form &rest values-forms)
+  "Analogous to the CL:MULTIPLE-VALUE-CALL, except FUNCTION-FORM can evaluate
+to either a nondeterministic function, or an ordinary deterministic function.
+
+You must use MULTIPLE-VALUE-CALL-NONDETERMINISTIC to multiple-value-call a
+nondeterministic function. An error is signalled if a nondeterministic function
+object is used with CL:MULTIPLE-VALUE-CALL.
+
+You can use MULTIPLE-VALUE-CALL-NONDETERMINISTIC to call either a
+deterministic or nondeterministic function, though even if all of the
+VALUES-FORMS are deterministic and FUNCTION-FORM evaluates to a deterministic
+function object, the call expression will still be nondeterministic \(with
+presumably a single value), since it is impossible to determine at compile
+time that a given call to MULTIPLE-VALUE-CALL-NONDETERMINISTIC will be passed
+only deterministic function objects for function."
+  (declare (ignore function-form values-forms))
+  (screamer-error
+   "MULTIPLE-VALUE-CALL-NONDETERMINISTIC is a nondeterministic special form. As such,~%~
+    it must be called only from a nondeterministic context."))
 
 (defmacro-compile-time multiple-value-bind
     (variables form &body body &environment environment)
