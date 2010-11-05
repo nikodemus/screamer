@@ -2940,9 +2940,7 @@ function."
    "APPLY-NONDETERMINISTIC is a nondeterministic function. As such, it must~%~
    be called only from a nondeterministic context."))
 
-;;; The code-walker checks for MULTIPLE-VALUE-CALL-NONDETERMINISTIC before
-;;; expanding macros, so this works out fine.
-(defmacro multiple-value-call-nondeterministic (function-form &rest values-forms)
+(defun multiple-value-call-nondeterministic (function-form &rest values-forms)
   "Analogous to the CL:MULTIPLE-VALUE-CALL, except FUNCTION-FORM can evaluate
 to either a nondeterministic function, or an ordinary deterministic function.
 
@@ -2956,7 +2954,11 @@ VALUES-FORMS are deterministic and FUNCTION-FORM evaluates to a deterministic
 function object, the call expression will still be nondeterministic \(with
 presumably a single value), since it is impossible to determine at compile
 time that a given call to MULTIPLE-VALUE-CALL-NONDETERMINISTIC will be passed
-only deterministic function objects for function."
+only deterministic function objects for function.
+
+While MULTIPLE-VALUE-CALL-NONDETERMINISTIC appears to be a function, it
+is really a special-operator implemented by the code-walkers processing
+nondeterministic source contexts."
   (declare (ignore function-form values-forms))
   (screamer-error
    "MULTIPLE-VALUE-CALL-NONDETERMINISTIC is a nondeterministic special form. As such,~%~

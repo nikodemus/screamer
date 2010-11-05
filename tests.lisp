@@ -54,6 +54,22 @@
   (is (equal '(t t) (all-values (eval-when/lt))))
   (is (equal '(:a :b) (all-values (eval-when/ex)))))
 
+(defmacro evil-ding (form &environment env)
+  (let ((exp (macroexpand form env)))
+    `(or ,exp 'ding)))
+
+(defun multiple-value-call-nondeterministic.ding ()
+  (let ((bar (lambda (cont &rest args)
+               (if args
+                   (either (car args) (apply-nondeterministic cont cont (cdr args)))
+                   (fail)))))
+    (evil-ding
+     (multiple-value-call-nondeterministic bar bar (values 1 nil 2) (values 4 nil 5)))))
+
+(deftest multiple-value-call-nondeterministic.1 ()
+  (is (equal '(1 ding 2 4 ding 5)
+             (all-values (multiple-value-call-nondeterministic.ding)))))
+
 (deftest prime-ordeal ()
   (is (primordial::test1))
   (is (primordial::test2))
