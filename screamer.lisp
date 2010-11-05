@@ -198,16 +198,20 @@ disable it. Default is platform dependent.")
    (concatenate
     'string
     header
-    "~%There are eight types of nondeterministic contexts: the body of a~%~
-    function defined with DEFUN, the body of a call to the FOR-EFFECTS~%~
-    macro, the first argument of a call to the ONE-VALUE macro, the body of~%~
-    a call to the POSSIBLY? macro, the body of a call to the NECESSARILY?~%~
-    macro, the body of a call to the ALL-VALUES macro, the second argument~%~
-    of a call to the ITH-VALUE macro and the body of a call to the~%~
-    PRINT-VALUES macro. Note that, the default forms of &OPTIONAL and &KEY~%~
-    arguments and the initialization forms of &AUX variables, are always~%~
-    deterministic contexts even though they may appear inside a DEFUN.")
-   args))
+    "~2%There are eight types of nondeterministic contexts:
+
+  1. the body of a function defined with SCREAMER::DEFUN
+  2. the body of a FOR-EFFECTS macro invocation
+  3. the body of an ALL-VALUES macro invocation
+  4. the the first argument a ONE-VALUE macro invocation
+  5. the body of a PRINT-VALUES macro invocation
+  6. the second argument an ITH-VALUE macro invocation
+  7. the body of a POSSIBLY? macro invocation
+  8. the body of a NECESSARILY? macro invocation.
+
+Note that, the default forms of &OPTIONAL and &KEY arguments and the
+initialization forms of &AUX variables, are always deterministic
+contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 
 (defun-compile-time get-function-record (function-name)
   (let ((function-record (gethash function-name *function-record-table*)))
