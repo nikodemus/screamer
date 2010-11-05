@@ -2600,7 +2600,15 @@ completely transparent to the user."
 returns NIL.
 
 The body is repeatedly backtracked to its first choice-point until the body
-fails."
+fails.
+
+Local side effects performed by FORMS are undone when FOR-EFFECTS returns.
+
+A FOR-EFFECTS expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the FOR-EFFECTS expression appears in,
+FORMS are always in a nondeterministic context.
+
+A FOR-EFFECTS expression is is always deterministic."
   `(choice-point
     ,(let ((*nondeterministic-context?* t))
           (cps-convert-progn forms '#'fail nil nil environment))))
