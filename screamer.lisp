@@ -2847,13 +2847,14 @@ is optimized to generate inline backtracking code."
 (defun nondeterministic-function? (x)
   "Returns T if X is a nondeterministic function and NIL otherwise.
 
-You can obtain a nondeterministic function object constructing a LAMBDA
-containing nondeterministic code in a nondeterministic context \(eg. inside a
-SCREAMER::DEFUN.)
+#'FOO returns a nondeterministic function object iff it is used in nondeterminisitc
+context and FOO is either a nondeterministic LAMBDA form, or the name of a
+nondeterministic function defined using SCREAMER::DEFUN.
 
-Functions defined by SCREAMER::DEFUN themselves do not currently appear as
-nondeterministic functions to NONDETERMINISTIC-FUNCTION?, but this may change
-in the future."
+Currently, if FOO is a nondeterministic function defined using
+SCREAMER::DEFUN, #'FOO and \(SYMBOL-FUNCTION 'FOO) in deterministic context
+will return an ordinary deterministic Common Lisp function, which will signal
+an error at runtime."
   (nondeterministic-function?-internal (value-of x)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
