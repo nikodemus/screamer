@@ -653,10 +653,10 @@ since it is impossible to determine at compile time that a given call to
 for function. 
 </p></blockquote></div>
 
-   <p><a name="Macro-multiple_002dvalue_002dcall_002dnondeterministic"></a>
+   <p><a name="Function-multiple_002dvalue_002dcall_002dnondeterministic"></a>
 
 <div class="defun">
-&mdash; Macro: <b>multiple-value-call-nondeterministic</b><var> function-form &amp;rest values-forms<a name="index-multiple_002dvalue_002dcall_002dnondeterministic-31"></a></var><br>
+&mdash; Function: <b>multiple-value-call-nondeterministic</b><var> function-form &amp;rest values-forms<a name="index-multiple_002dvalue_002dcall_002dnondeterministic-31"></a></var><br>
 <blockquote><p><a name="index-multiple_002dvalue_002dcall_002dnondeterministic-32"></a>Analogous to the <code>cl:multiple-value-call</code>, except <code>function-form</code> can evaluate
 to either a nondeterministic function, or an ordinary deterministic function.
 
@@ -670,7 +670,11 @@ deterministic or nondeterministic function, though even if all of the
 function object, the call expression will still be nondeterministic (with
 presumably a single value), since it is impossible to determine at compile
 time that a given call to <code>multiple-value-call-nondeterministic</code> will be passed
-only deterministic function objects for function. 
+only deterministic function objects for function.
+
+        <p>While <code>multiple-value-call-nondeterministic</code> appears to be a function, it
+is really a special-operator implemented by the code-walkers processing
+nondeterministic source contexts. 
 </p></blockquote></div>
 
    <p><a name="Function-nondeterministic_002dfunction_003f"></a>
