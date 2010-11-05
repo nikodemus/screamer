@@ -1,3 +1,17 @@
+* Battle Plan
+*** Release 3.21.
+***** Complete manual
+      All exported symbols documented, not everything needs to be
+      super-polished, but the information should be there.
+***** Fix those bugs you come across
+***** No functional changes except for bugfixes.
+***** Possibly release as something else than 3.21, but that's the spiritual label :)
+*** Release 4.0
+    These are just some ideas of the kind of scope I think looks about right.
+***** Support at least some of the currently missing special forms.
+***** Add DEFINE-SCREAMER-FUNCTION or similar as an alias to SCREAMER::DEFUN.
+***** Identify some performance issues and see if anything can be done.
+***** Try to improve debuggability of Screamer generated code.
 * Documentation
 *** WIP A web-friendly manual
 ***** Unify language
