@@ -2940,6 +2940,16 @@ function."
    "APPLY-NONDETERMINISTIC is a nondeterministic function. As such, it must~%~
    be called only from a nondeterministic context."))
 
+(cl:defun apply-nondeterministic-nondeterministic
+    (continuation function argument &rest arguments)
+  (let ((function (value-of function)))
+    (if (nondeterministic-function? function)
+        ;; note: I don't know how to avoid the consing here.
+        (apply (nondeterministic-function-function function)
+               continuation
+               (apply #'list* (cons argument arguments)))
+        (funcall continuation (apply function argument arguments)))))
+
 (cl:defun multiple-value-call-nondeterministic (function-form &rest values-forms)
   "Analogous to the CL:MULTIPLE-VALUE-CALL, except FUNCTION-FORM can evaluate
 to either a nondeterministic function, or an ordinary deterministic function.
