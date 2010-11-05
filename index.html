@@ -616,7 +616,15 @@ deterministic function objects for function.
 
 <div class="defun">
 &mdash; Function: <b>nondeterministic-function?</b><var> x<a name="index-nondeterministic_002dfunction_003f-27"></a></var><br>
-<blockquote><p><a name="index-nondeterministic_002dfunction_003f-28"></a>Returns <code>t</code> if <code>x</code> is a nondeterministic function and <code>nil</code> otherwise. 
+<blockquote><p><a name="index-nondeterministic_002dfunction_003f-28"></a>Returns <code>t</code> if <code>x</code> is a nondeterministic function and <code>nil</code> otherwise.
+
+        <p>You can obtain a nondeterministic function object constructing a <code>lambda</code>
+containing nondeterministic code in a nondeterministic context (eg. inside a
+<code>screamer::defun</code>.)
+
+        <p>Functions defined by <code>screamer::defun</code> themselves do not currently appear as
+nondeterministic functions to <code>nondeterministic-function</code>?, but this may change
+in the future. 
 </p></blockquote></div>
 
 <h2 class="chapter"><a name="TOC8"></a>4 Constraints</h2>
