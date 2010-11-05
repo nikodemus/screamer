@@ -71,7 +71,6 @@
 ;;;       THE
 ;;;     Probably will never handle:
 ;;;       CATCH
-;;;       DECLARE
 ;;;       FLET
 ;;;       LABELS
 ;;;       MACROLET

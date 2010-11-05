@@ -19,9 +19,9 @@
     implemntation of LOOP that is well-behaved when it comes to LOCAL.
 *** WIP Review the list of limitations and move it to documentation once sure it's correct
 ***** DONE CATCH - not supported
-***** TODO DECLARE
-***** TODO FLET
-***** TODO LABELS
+***** DONE DECLARE - supported
+***** DONE FLET - bodies of FLET functions are not in nondeterministic context
+***** DONE LABELS - bodies of FLET functions are not in nondeterministic context
 ***** TODO MACROLET
 ***** TODO PROGV
 ***** TODO THROW
@@ -73,4 +73,4 @@
 *** TODO Provide DEFINE-SCREAMER-FUNCTION as an alias to SCREAMER::DEFUN for less magic.
     Or maybe DEFUN-NONDETERMINISTIC?
 *** TODO Lock package on SBCL.
-*** TODO Add FLET support. Should not be too hard.
+*** TODO Add FLET and LABELS support. Should not be too hard.
