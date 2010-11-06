@@ -14,5 +14,8 @@ include:
 	--eval '(sb-texinfo:generate-includes "include/" (list :screamer) :base-package :screamer)' \
 	--eval '(quit)'
 
-html: include
+screamer.html: screamer.texinfo style.css docstrings.lisp ../*.lisp ../*.asd
+	make include
 	makeinfo --html --no-split --css=style.css screamer.texinfo
+
+html: screamer.html

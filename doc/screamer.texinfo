@@ -306,6 +306,16 @@ values, and force a solution:
 In this case backtracking occurs only over @code{solution}, whereas in the first
 one we backtracked over the entire @code{let}.
 
+@chapter Examples
+
+@section Einstein's Riddle
+
+Solving the ``Einstein's Riddle'', aka ``The Zebra Puzzle'' using
+nondeterministic features of Screamer, ie. backtracking search.
+
+[ @url{einstein.html, HTML} ]
+[ @url{einstein.lisp, Source} ]
+
 @chapter Nondetermism
 
 @include include/macro-screamer-either.texinfo
@@ -350,5 +360,15 @@ one we backtracked over the entire @code{let}.
 @include include/var-screamer-star-dynamic-extent?star.texinfo
 @include include/var-screamer-star-screamer-version-star.texinfo
 @include include/var-screamer-star-iscream?star.texinfo
+
+@chapter Examples
+
+@section Einstein's Riddle
+
+Solving the ``Einstein's Riddle'', aka ``The Zebra Puzzle'' using
+nondeterministic features of Screamer, ie. backtracking search.
+
+[ @url{http://nikodemus.github.com/screamer/examples/einstein.html, HTML} ]
+[ @url{http://nikodemus.github.com/screamer/examples/einstein.lisp, Source} ]
 
 @bye
