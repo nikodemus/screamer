@@ -22,7 +22,7 @@
 ;;;;   14. The Norwegian lives next to the blue house
 ;;;;   15. The person who smokes Marlboro has a neigbor who drinks water
 ;;;;
-;;;; Question: Who ones the fish?
+;;;; Question: Who owns the fish?
 
 (in-package :screamer-user)
 
@@ -78,13 +78,13 @@
 ;;;;
 ;;;; 2. Change the property generators to accept a required value.
 ;;;;    Then instead of
-;;;;      (A-OWNER OTHERS)
+;;;;      (AN-OWNER OTHERS)
 ;;;;    we would have
-;;;;      (A-OWNER OTHERS (WHEN (ZEROP POSITION) :NORWEGIAN))
+;;;;      (AN-OWNER OTHERS (WHEN (ZEROP POSITION) :NORWEGIAN))
 ;;;;    etc.
 
 (defun a-house (position &rest others)
-  (let ((owner (a-owner others))
+  (let ((owner (an-owner others))
         (color (a-color others)))
     ;; 1.
     (and! (eq :brit owner) (eq :red color))
