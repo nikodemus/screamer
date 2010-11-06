@@ -24,6 +24,9 @@
 ;;;;
 ;;;; Question: Who owns the fish?
 
+(eval-when (:compile-toplevel :load-toplevel)
+  (require :screamer))
+
 (in-package :screamer-user)
 
 ;;;; Asserting things, failing when they don't hold.
@@ -48,7 +51,7 @@
   owner
   pet
   drink
-  smoke
+  cigarette
   position)
 
 ;;;; Generators for house properties. Each element is unique, so if it has
@@ -67,13 +70,13 @@
   (def owner an-owner :brit :swede :dane :norwegian :german)
   (def pet a-pet :dog :bird :cat :horse :fish)
   (def drink a-drink :tea :coffee :milk :beer :water)
-  (def smoke a-smoke :pallmall :dunhill :marlboro :winfield :rothmans))
+  (def cigarette a-cigarette :pallmall :dunhill :marlboro :winfield :rothmans))
 
 ;;;; Generator for houses. Immediately checks facts about the house.
 ;;;; We could optimize here in two ways:
 ;;;;
 ;;;; 1. Order the asserts so that we assert as much as possible
-;;;;    before entering a choise-point. Eg. #9 would be better done
+;;;;    before entering a choice-point. Eg. #9 would be better done
 ;;;;    immediately after generating the owner.
 ;;;;
 ;;;; 2. Change the property generators to accept a required value.
@@ -82,6 +85,22 @@
 ;;;;    we would have
 ;;;;      (AN-OWNER OTHERS (WHEN (ZEROP POSITION) :NORWEGIAN))
 ;;;;    etc.
+;;;;
+;;;; ...but even keeping the order of assertions the same as in the puzzle we
+;;;; win big by asserting as many of them as possible before generating new
+;;;; house properties.
+;;;;
+;;;;   (let ((owner (an-owner others))
+;;;;         (color (a-color others))
+;;;;         (pet (a-pet others))
+;;;;         (drink (a-drink others))
+;;;;         (cigarette (a-cigarette others)))
+;;;;     ...all the assertions...
+;;;;     (make-house ...))
+;;;;
+;;;; would be pretty catastrophic, since most assertions would then need to
+;;;; backtrack over almost the entire search-space, as opposed to a tiny
+;;;; subset of it.
 
 (defun a-house (position &rest others)
   (let ((owner (an-owner others))
@@ -94,27 +113,27 @@
       (let ((drink (a-drink others)))
         ;; 3.
         (and! (eq :dane owner) (eq :tea drink))
-        ;; 8.
-        (and! (= 2 position) (eq :milk drink))
         ;; 5.
         (and! (eq :green color) (eq :coffee drink))
-        (let ((smoke (a-smoke others)))
+        (let ((cigarette (a-cigarette others)))
           ;; 6.
-          (and! (eq :pallmall smoke) (eq :bird pet))
+          (and! (eq :pallmall cigarette) (eq :bird pet))
           ;; 7.
-          (and! (eq :dunhill smoke) (eq :yellow color))
+          (and! (eq :dunhill cigarette) (eq :yellow color))
+          ;; 8.
+          (and! (= 2 position) (eq :milk drink))
           ;; 9.
           (and! (= 0 position) (eq :norwegian owner))
           ;; 12.
-          (and! (eq :winfield smoke) (eq :beer drink))
+          (and! (eq :winfield cigarette) (eq :beer drink))
           ;; 13.
-          (and! (eq :rothmans smoke) (eq :german owner))
+          (and! (eq :rothmans cigarette) (eq :german owner))
           ;; OK!
           (make-house :color color
                       :owner owner
                       :pet pet
                       :drink drink
-                      :smoke smoke
+                      :cigarette cigarette
                       :position position))))))
 
 ;;;; Street generator: pass already created houses to generators so that
@@ -128,9 +147,9 @@
          (e (a-house 4 a b c d)))
     (list a b c d e)))
 
-;;;; Anaproric macro for picking a house based on a property.
+;;;; Anaproric macro for picking a house based on a property. Captures HOUSES.
 
-(defmacro select (key value)
+(defmacro house (key value)
   `(or (car (member ,value houses :key #',(intern (format nil "HOUSE-~A" key))
                     :test #'eq))
        (error "No ~S ~S!" ,key ,value)))
@@ -141,21 +160,21 @@
 
 (defun riddle ()
   (let ((houses (a-street)))
-    (let ((left-of-white (1- (house-position (select :color :white))))
-          (green (select :color :green)))
+    (let ((left-of-white (1- (house-position (house :color :white))))
+          (green (house :color :green)))
       ;; 4.
       (fact! (= left-of-white (house-position green))))
-    (let ((marlboro (house-position (select :smoke :marlboro)))
-          (cat (house-position (select :pet :cat))))
+    (let ((marlboro (house-position (house :cigarette :marlboro)))
+          (cat (house-position (house :pet :cat))))
       ;; 10.
       (fact! (= 1 (abs (- marlboro cat))))
-      (let ((horses (house-position (select :pet :horse)))
-            (dunhill (house-position (select :smoke :dunhill))))
+      (let ((horses (house-position (house :pet :horse)))
+            (dunhill (house-position (house :cigarette :dunhill))))
         ;; 11.
         (fact! (= 1 (abs (- horses dunhill)))))
       ;; 14.
-      (let ((norwegian (select :owner :norwegian))
-            (blue (select :color :blue)))
+      (let ((norwegian (house :owner :norwegian))
+            (blue (house :color :blue)))
         (fact! (= 1 (abs (- (house-position norwegian) (house-position blue))))))
       ;; 15.
       (let* ((left (when (plusp marlboro)
@@ -163,7 +182,7 @@
              (right (when (< marlboro (1- (length houses)))
                       (house-drink (elt houses (1+ marlboro))))))
         (fact! (or (eq :water left) (eq :water right)))))
-    (select :pet :fish)))
+    (house :pet :fish)))
 
 #+nil
 (time (one-value (riddle)))
