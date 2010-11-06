@@ -4,32 +4,32 @@ set -e
 
 BASE=`dirname $0```
 
-$BASE/htmlize.sh/htmlize.sh $1 $2.tmp
+$BASE/htmlize.sh/htmlize.sh $1 $2.body
 
 cat > $2 <<EOF
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
 <html>
   <head>
+    <title>$3</title>
+    <link rel="stylesheet" href="style.css" type="text/css">
 EOF
 
-echo "    <title>"`basename $1`"</title>" >> $2
+cat $BASE/analytics.script >> $2
 
 cat >> $2 <<EOF
-    <link rel="stylesheet" href="style.css" type="text/css">
   </head>
   <body>
+    <pre>
 EOF
 
-printf "    <pre>" >> $2
-
-cat $2.tmp >> $2
+cat $2.body >> $2
 
 cat >> $2 <<EOF
-</pre>
+    </pre>
   </body>
 </html>
 EOF
 
-rm $2.tmp
+rm $2.body
 
 echo "$2 built"
