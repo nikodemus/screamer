@@ -81,9 +81,17 @@ may wish to refer to the original papers below.
 <li><a href="#TOC5">2.4 Side-Effects</a>
 <li><a href="#TOC6">2.5 Constraints</a>
 </li></ul>
-<li><a name="toc_TOC7" href="#TOC7">3 Nondetermism</a>
-<li><a name="toc_TOC8" href="#TOC8">4 Constraints</a>
-<li><a name="toc_TOC9" href="#TOC9">5 Miscellany</a>
+<li><a name="toc_TOC7" href="#TOC7">3 Examples</a>
+<ul>
+<li><a href="#TOC8">3.1 Einstein's Riddle</a>
+</li></ul>
+<li><a name="toc_TOC9" href="#TOC9">4 Nondetermism</a>
+<li><a name="toc_TOC10" href="#TOC10">5 Constraints</a>
+<li><a name="toc_TOC11" href="#TOC11">6 Miscellany</a>
+<li><a name="toc_TOC12" href="#TOC12">7 Examples</a>
+<ul>
+<li><a href="#TOC13">7.1 Einstein's Riddle</a>
+</li></ul>
 </li></ul>
 </div>
 
@@ -315,7 +323,17 @@ values, and force a solution:
    <p>In this case backtracking occurs only over <code>solution</code>, whereas in the first
 one we backtracked over the entire <code>let</code>.
 
-<h2 class="chapter"><a name="TOC7"></a>3 Nondetermism</h2>
+<h2 class="chapter"><a name="TOC7"></a>3 Examples</h2>
+
+<h3 class="section"><a name="TOC8"></a>3.1 Einstein's Riddle</h3>
+
+<p>Solving the &ldquo;Einstein's Riddle&rdquo;, aka &ldquo;The Zebra Puzzle&rdquo; using
+nondeterministic features of Screamer, ie. backtracking search.
+
+   <p>[ <a href="einstein.html">HTML</a> ]
+[ <a href="einstein.lisp">Source</a> ]
+
+<h2 class="chapter"><a name="TOC9"></a>4 Nondetermism</h2>
 
 <p><a name="Macro-either"></a>
 
@@ -693,7 +711,7 @@ will return an ordinary deterministic Common Lisp function, which will signal
 an error at runtime. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC8"></a>4 Constraints</h2>
+<h2 class="chapter"><a name="TOC10"></a>5 Constraints</h2>
 
 <p><a name="Function-booleanpv"></a>
 
@@ -1050,7 +1068,7 @@ ratio.
 Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC9"></a>5 Miscellany</h2>
+<h2 class="chapter"><a name="TOC11"></a>6 Miscellany</h2>
 
 <p><a name="Function-purge"></a>
 
@@ -1091,6 +1109,16 @@ the future.
 &mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-71"></a></var><br>
 <blockquote><p><a name="index-g_t_002aiscream_003f_002a-72"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
 </p></blockquote></div>
+
+<h2 class="chapter"><a name="TOC12"></a>7 Examples</h2>
+
+<h3 class="section"><a name="TOC13"></a>7.1 Einstein's Riddle</h3>
+
+<p>Solving the &ldquo;Einstein's Riddle&rdquo;, aka &ldquo;The Zebra Puzzle&rdquo; using
+nondeterministic features of Screamer, ie. backtracking search.
+
+   <p>[ <a href="http://nikodemus.github.com/screamer/examples/einstein.html">HTML</a> ]
+[ <a href="http://nikodemus.github.com/screamer/examples/einstein.lisp">Source</a> ]
 
 </body></html>
 

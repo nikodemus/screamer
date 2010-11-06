@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+  <head>
+    <title>einstein.lisp</title>
+    <link rel="stylesheet" href="style.css" type="text/css">
+  </head>
+  <body>
+    <pre><span class="comment-delimiter">;;;; </span><span class="comment">Example: "The Einstein's Riddle", aka "The Zebra Puzzle"
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">There are five houses in a row, each of different color.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">Each has an owner of a different nationality.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">Each owner has a unique favorite drink, type of cigarette, and a pet.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">1. The Brit lives in the red house
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">2. The Swede keeps dogs as pets
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">3. The Dane drinks tea
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">4. The green house is on the left of the white house
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">5. The green house's owner drinks coffee
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">6. The person who smokes Pall Mall rears birds
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">7. The owner of the yellow house smokes Dunhill
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">8. The man living in the centre house drinks milk
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">9. The Norwegian lives in the first house
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">10. The person who smokes Marlboro lives next to the one who keeps cats
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">11. The person who keeps horses lives next to the person who smokes Dunhill
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">12. The person who smokes Winfield drinks beer
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">13. The German smokes Rothmans
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">14. The Norwegian lives next to the blue house
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">15. The person who smokes Marlboro has a neigbor who drinks water
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">Question: Who owns the fish?
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_eval_w.htm">eval-when</a></span> (<span class="builtin">:compile-toplevel</span> <span class="builtin">:load-toplevel</span>)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_provid.htm">require</a></span> <span class="constant">:screamer</span>))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_in_pkg.htm">in-package</a></span> <span class="builtin">:screamer-user</span>)
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Asserting things, failing when they don't hold.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">fact!</span> (bool)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_when_.htm">unless</a></span> bool
+    (fail)))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">not!</span> (bool)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_when_.htm">when</a></span> bool
+    (fail)))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">and!</span> (fact1 fact2)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_or.htm">or</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_and.htm">and</a></span> fact1 fact2)
+      (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_and.htm">and</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_not.htm">not</a></span> fact1) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_not.htm">not</a></span> fact2))
+      (fail)))
+
+<span class="comment-delimiter">;;;; </span><span class="comment">A house.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defstr.htm">defstruct</a></span> <span class="type">house</span>
+  color
+  owner
+  pet
+  drink
+  cigarette
+  <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_pos_p.htm">position</a></span>)
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Generators for house properties. Each element is unique, so if it has
+</span><span class="comment-delimiter">;;;; </span><span class="comment">been generated before we immediately backtrack -- that's what the OTHERS
+</span><span class="comment-delimiter">;;;; </span><span class="comment">argument is for.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_flet_.htm">macrolet</a></span> ((def (slot name <span class="type"><a href="http://www.lispworks.com/reference/HyperSpec/Body/03_da.htm">&amp;rest</a></span> options)
+             (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_assert.htm">assert</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq_sle.htm">=</a></span> 5 (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_length.htm">length</a></span> options)))
+             `(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> ,name (others)
+                (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((this (either ,@options)))
+                  (not! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_member.htm">member</a></span> this others
+                                <span class="builtin">:key</span> #',(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_intern.htm">intern</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_format.htm">format</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_nil.htm">nil</a></span> <span class="string">"HOUSE-~A"</span> slot))
+                                <span class="builtin">:test</span> #'<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span>))
+                  this))))
+  (def color a-color <span class="builtin">:red</span> <span class="builtin">:green</span> <span class="builtin">:white</span> <span class="builtin">:yellow</span> <span class="builtin">:blue</span>)
+  (def owner an-owner <span class="builtin">:brit</span> <span class="builtin">:swede</span> <span class="builtin">:dane</span> <span class="builtin">:norwegian</span> <span class="builtin">:german</span>)
+  (def pet a-pet <span class="builtin">:dog</span> <span class="builtin">:bird</span> <span class="builtin">:cat</span> <span class="builtin">:horse</span> <span class="builtin">:fish</span>)
+  (def drink a-drink <span class="builtin">:tea</span> <span class="builtin">:coffee</span> <span class="builtin">:milk</span> <span class="builtin">:beer</span> <span class="builtin">:water</span>)
+  (def cigarette a-cigarette <span class="builtin">:pallmall</span> <span class="builtin">:dunhill</span> <span class="builtin">:marlboro</span> <span class="builtin">:winfield</span> <span class="builtin">:rothmans</span>))
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Generator for houses. Immediately checks facts about the house.
+</span><span class="comment-delimiter">;;;; </span><span class="comment">We could optimize here in two ways:
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">1. Order the asserts so that we assert as much as possible
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">before entering a choice-point. Eg. #9 would be better done
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">immediately after generating the owner.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">2. Change the property generators to accept a required value.
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">Then instead of
+</span><span class="comment-delimiter">;;;;      </span><span class="comment">(AN-OWNER OTHERS)
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">we would have
+</span><span class="comment-delimiter">;;;;      </span><span class="comment">(AN-OWNER OTHERS (WHEN (ZEROP POSITION) :NORWEGIAN))
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">etc.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">...but even keeping the order of assertions the same as in the puzzle we
+</span><span class="comment-delimiter">;;;; </span><span class="comment">win big by asserting as many of them as possible before generating new
+</span><span class="comment-delimiter">;;;; </span><span class="comment">house properties.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">(let ((owner (an-owner others))
+</span><span class="comment-delimiter">;;;;         </span><span class="comment">(color (a-color others))
+</span><span class="comment-delimiter">;;;;         </span><span class="comment">(pet (a-pet others))
+</span><span class="comment-delimiter">;;;;         </span><span class="comment">(drink (a-drink others))
+</span><span class="comment-delimiter">;;;;         </span><span class="comment">(cigarette (a-cigarette others)))
+</span><span class="comment-delimiter">;;;;     </span><span class="comment">...all the assertions...
+</span><span class="comment-delimiter">;;;;     </span><span class="comment">(make-house ...))
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">would be pretty catastrophic, since most assertions would then need to
+</span><span class="comment-delimiter">;;;; </span><span class="comment">backtrack over almost the entire search-space, as opposed to a tiny
+</span><span class="comment-delimiter">;;;; </span><span class="comment">subset of it.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">a-house</span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_pos_p.htm">position</a></span> <span class="type"><a href="http://www.lispworks.com/reference/HyperSpec/Body/03_da.htm">&amp;rest</a></span> others)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((owner (an-owner others))
+        (color (a-color others)))
+    <span class="comment-delimiter">;; </span><span class="comment">1.
+</span>    (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:brit</span> owner) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:red</span> color))
+    (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((pet (a-pet others)))
+      <span class="comment-delimiter">;; </span><span class="comment">2.
+</span>      (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:swede</span> owner) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:dog</span> pet))
+      (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((drink (a-drink others)))
+        <span class="comment-delimiter">;; </span><span class="comment">3.
+</span>        (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:dane</span> owner) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:tea</span> drink))
+        <span class="comment-delimiter">;; </span><span class="comment">5.
+</span>        (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:green</span> color) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:coffee</span> drink))
+        (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((cigarette (a-cigarette others)))
+          <span class="comment-delimiter">;; </span><span class="comment">6.
+</span>          (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:pallmall</span> cigarette) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:bird</span> pet))
+          <span class="comment-delimiter">;; </span><span class="comment">7.
+</span>          (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:dunhill</span> cigarette) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:yellow</span> color))
+          <span class="comment-delimiter">;; </span><span class="comment">8.
+</span>          (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq_sle.htm">=</a></span> 2 <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_pos_p.htm">position</a></span>) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:milk</span> drink))
+          <span class="comment-delimiter">;; </span><span class="comment">9.
+</span>          (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq_sle.htm">=</a></span> 0 <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_pos_p.htm">position</a></span>) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:norwegian</span> owner))
+          <span class="comment-delimiter">;; </span><span class="comment">12.
+</span>          (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:winfield</span> cigarette) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:beer</span> drink))
+          <span class="comment-delimiter">;; </span><span class="comment">13.
+</span>          (and! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:rothmans</span> cigarette) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:german</span> owner))
+          <span class="comment-delimiter">;; </span><span class="comment">OK!
+</span>          (make-house <span class="builtin">:color</span> color
+                      <span class="builtin">:owner</span> owner
+                      <span class="builtin">:pet</span> pet
+                      <span class="builtin">:drink</span> drink
+                      <span class="builtin">:cigarette</span> cigarette
+                      <span class="builtin">:position</span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_pos_p.htm">position</a></span>))))))
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Street generator: pass already created houses to generators so that
+</span><span class="comment-delimiter">;;;; </span><span class="comment">we get unique properties.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">a-street</span> ()
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let*</a></span> ((a (a-house 0))
+         (b (a-house 1 a))
+         (c (a-house 2 a b))
+         (d (a-house 3 a b c))
+         (e (a-house 4 a b c d)))
+    (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> a b c d e)))
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Anaproric macro for picking a house based on a property. Captures HOUSES.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defmac.htm">defmacro</a></span> <span class="function-name">house</span> (key value)
+  `(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_or.htm">or</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">car</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_member.htm">member</a></span> ,value houses <span class="builtin">:key</span> #',(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_intern.htm">intern</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_format.htm">format</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_nil.htm">nil</a></span> <span class="string">"HOUSE-~A"</span> key))
+                    <span class="builtin">:test</span> #'<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span>))
+       (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_error.htm">error</a></span> <span class="string">"No ~S ~S!"</span> ,key ,value)))
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Solving the whole riddle: generate the street, then assert relationships
+</span><span class="comment-delimiter">;;;; </span><span class="comment">between houses. Here changing the order of asserts wouldn't really
+</span><span class="comment-delimiter">;;;; </span><span class="comment">help, since there are no choice-points after A-STREET.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">riddle</span> ()
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((houses (a-street)))
+    (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((left-of-white (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_1pl_1_.htm">1-</a></span> (house-position (house <span class="builtin">:color</span> <span class="builtin">:white</span>))))
+          (green (house <span class="builtin">:color</span> <span class="builtin">:green</span>)))
+      <span class="comment-delimiter">;; </span><span class="comment">4.
+</span>      (fact! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq_sle.htm">=</a></span> left-of-white (house-position green))))
+    (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((marlboro (house-position (house <span class="builtin">:cigarette</span> <span class="builtin">:marlboro</span>)))
+          (cat (house-position (house <span class="builtin">:pet</span> <span class="builtin">:cat</span>))))
+      <span class="comment-delimiter">;; </span><span class="comment">10.
+</span>      (fact! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq_sle.htm">=</a></span> 1 (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_abs.htm">abs</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a__.htm">-</a></span> marlboro cat))))
+      (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((horses (house-position (house <span class="builtin">:pet</span> <span class="builtin">:horse</span>)))
+            (dunhill (house-position (house <span class="builtin">:cigarette</span> <span class="builtin">:dunhill</span>))))
+        <span class="comment-delimiter">;; </span><span class="comment">11.
+</span>        (fact! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq_sle.htm">=</a></span> 1 (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_abs.htm">abs</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a__.htm">-</a></span> horses dunhill)))))
+      <span class="comment-delimiter">;; </span><span class="comment">14.
+</span>      (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((norwegian (house <span class="builtin">:owner</span> <span class="builtin">:norwegian</span>))
+            (blue (house <span class="builtin">:color</span> <span class="builtin">:blue</span>)))
+        (fact! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq_sle.htm">=</a></span> 1 (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_abs.htm">abs</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a__.htm">-</a></span> (house-position norwegian) (house-position blue))))))
+      <span class="comment-delimiter">;; </span><span class="comment">15.
+</span>      (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let*</a></span> ((left (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_when_.htm">when</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_minusp.htm">plusp</a></span> marlboro)
+                     (house-drink (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_elt.htm">elt</a></span> houses (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_1pl_1_.htm">1-</a></span> marlboro)))))
+             (right (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_when_.htm">when</a></span> (<span class="builtin">&lt;</span> marlboro (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_1pl_1_.htm">1-</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_length.htm">length</a></span> houses)))
+                      (house-drink (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_elt.htm">elt</a></span> houses (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_1pl_1_.htm">1+</a></span> marlboro))))))
+        (fact! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_or.htm">or</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:water</span> left) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq.htm">eq</a></span> <span class="builtin">:water</span> right)))))
+    (house <span class="builtin">:pet</span> <span class="builtin">:fish</span>)))
+
+#+nil
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_time.htm">time</a></span> (one-value (riddle)))
+</pre>
+  </body>
+</html>
