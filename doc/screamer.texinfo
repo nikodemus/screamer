@@ -313,7 +313,7 @@ one we backtracked over the entire @code{let}.
 Solving the ``Einstein's Riddle'', aka ``The Zebra Puzzle'' using
 nondeterministic features of Screamer, ie. backtracking search.
 
-[ @url{einstein.html, HTML} ]
+[ @url{einstein.lisp.html, HTML} ]
 [ @url{einstein.lisp, Source} ]
 
 @chapter Nondetermism
