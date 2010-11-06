@@ -21,7 +21,10 @@ web:
 	make -C web
 
 gh-pages: web
+	rm -rf web-tmp
+	mv web web-tmp
 	git checkout gh-pages
-	cp web/* .
+	cp web-tmp/* .
 	git commit -a -c master
+	mv web-tmp web
 	git checkout -f master
