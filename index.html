@@ -840,8 +840,8 @@ restrictions and fail when any assertion causes <code>x1</code> to be known to b
 
 <div class="defun">
 &mdash; Function: <b>integerpv</b><var> x<a name="index-integerpv-39"></a></var><br>
-<blockquote><p><a name="index-integerpv-40"></a>Returns <code>t</code> if <code>x</code> is known to be integer valued, and <code>nil</code> if
-<code>x</code> is known be non-integer value.
+<blockquote><p><a name="index-integerpv-40"></a>Returns <code>t</code> if <code>x</code> is known to be integer valued, and <code>nil</code> if <code>x</code> is known be
+non-integer value.
 
         <p>If it is not known whether or not <code>x</code> is integer valued when <code>integerpv</code> is called
 then <code>integerpv</code> creates and returns a new boolean variable <code>v</code>.
@@ -870,7 +870,7 @@ argument Xi is greater than or equal to the following argument Xi+1.
         <p>This function takes one or more arguments. All of the arguments are restricted
 to be real.
 
-        <p>Returns <code>t</code> when called with one argument. A call such as (&lt;v <code>x1</code> <code>x2</code> ... Xn)
+        <p>Returns <code>t</code> when called with one argument. A call such as <code>(&lt;v x1 x2 ... xn)</code>
 with more than two arguments behaves like a conjunction of two argument calls:
 
      <pre class="lisp">          
@@ -889,7 +889,7 @@ has a lower bound, <code>x2</code> has an upper bound and the lower bound of <co
 than or equal to the upper bound of <code>x2</code>.
 
         <p>When a new variable is created, the values of <code>x1</code>, <code>x2</code> and v are mutually
-constrained via noticers so that <code>c</code> is equal to <code>t</code> if and only if <code>x1</code> is known to
+constrained via noticers so that <code>v</code> is equal to <code>t</code> if and only if <code>x1</code> is known to
 be less than <code>x2</code> and <code>v</code> is equal to <code>nil</code> if and only if <code>x1</code> is known to be greater
 than or equal to <code>x2</code>.
 
@@ -917,11 +917,76 @@ the noticers fail when both <code>x1</code> and <code>x2</code> become known to 
 performed by an analogous set of noticers without this last equality check. 
 </p></blockquote></div>
 
+   <p><a name="Function-_002f_003dv"></a>
+
+<div class="defun">
+&mdash; Function: <b>/=v</b><var> x &amp;rest xs<a name="index-g_t_002f_003dv-43"></a></var><br>
+<blockquote><p><a name="index-g_t_002f_003dv-44"></a>Returns a boolean value which is constrained to be <code>t</code> if no two arguments
+are numerically equal, and constrained to be <code>nil</code> if any two or more arguments
+are numerically equal.
+
+        <p>This function takes one or more arguments. All of the arguments are restricted
+to be numeric.
+
+        <p>Returns <code>t</code> when called with one argument. A call such as <code>(/=v x1 x2 ... xn)</code>
+with more than two arguments behaves like a conjunction of two argument calls:
+
+     <pre class="lisp">          
+            (ANDV (/=V X1 X2) ... (/=V X1 Xn)
+                  (/=V X2 X3) ... (/=V X2 Xn)
+                  ...
+                  (/=V Xi Xi+1 ... (/=V Xi Xn)
+                  ...
+                  (/=V Xn-1 xn))
+     </pre>
+        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is known not to be equal to <code>x2</code>
+at the time of call, <code>nil</code> if <code>x1</code> is known to be equal to <code>x2</code> at the time of
+call, and otherwise a new boolean variable <code>v</code>.
+
+        <p>Two numeric values are known not to be equal when their domains are disjoint.
+
+        <p>Two real values are known not to be equal when their ranges are disjoint, i.e. 
+the upper bound of one is greater than the lower bound of the other.
+
+        <p>Two numeric values are known to be equal only when they are both bound and
+equal according to the Common Lisp function <code>=</code>.
+
+        <p>When a new variable is created, the values of <code>x1</code>, <code>x2</code> and <code>v</code> are mutually
+constrained via noticers so that <code>v</code> is equal to <code>t</code> if and only if <code>x1</code> is known
+not to be equal to <code>x2</code> and <code>v</code> is equal to <code>nil</code> if and only if <code>x1</code> is known to be
+equal to <code>x2</code>.
+
+          <ul>
+<li>If it later becomes known that <code>x1</code> is not equal to <code>x2</code>, noticers attached to
+  <code>x1</code> and <code>x2</code> restrict <code>v</code> to equal <code>t</code>. Likewise, if it later becomes known that <code>x1</code>
+  is equal to <code>x2</code>, noticers attached to <code>x1</code> and <code>x2</code> restrict <code>v</code> to equal <code>nil</code>.
+
+          <li>If <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x1</code>
+  to not be equal to <code>x2</code>. Likewise, if <code>v</code> ever becomes known to equal <code>nil</code> then a
+  noticer attached to <code>v</code> restricts <code>x1</code> to be equal to <code>x2</code>.
+
+        </ul>
+        Restricting two values <code>x1</code> and <code>x2</code> to be equal is performed by attaching
+noticers to <code>x1</code> and <code>x2</code>. These noticers continually restrict the domains of <code>x1</code>
+and <code>x2</code> to be equivalent sets (using the Common Lisp function <code>=</code> as a test
+function) as their domains are restricted. Furthermore, if <code>x1</code> is known to be
+real then the noticer attached to <code>x2</code> continually restrict the upper bound of
+<code>x1</code> to be no higher than the upper bound of <code>x2</code> and the lower bound of <code>x1</code> to be
+no lower than the lower bound of <code>x2</code>. The noticer of <code>x2</code> performs a symmetric
+restriction on the bounds of <code>x1</code> if it is known to be real.
+
+        <p>Restricting two values <code>x1</code> and <code>x2</code> to not be equal is also performed by
+attaching noticers to <code>x1</code> and <code>x2</code>. These noticers however, do not restrict the
+domains or ranges of <code>x1</code> or <code>x2</code>. They simply monitor their continually
+restrictions and fail when any assertion causes <code>x1</code> to be known to be equal to
+<code>x2</code>. 
+</p></blockquote></div>
+
    <p><a name="Function-make_002dvariable"></a>
 
 <div class="defun">
-&mdash; Function: <b>make-variable</b><var> &amp;optional name<a name="index-make_002dvariable-43"></a></var><br>
-<blockquote><p><a name="index-make_002dvariable-44"></a>Creates and returns a new variable. Variables are assigned a name
+&mdash; Function: <b>make-variable</b><var> &amp;optional name<a name="index-make_002dvariable-45"></a></var><br>
+<blockquote><p><a name="index-make_002dvariable-46"></a>Creates and returns a new variable. Variables are assigned a name
 which is only used to identify the variable when it is printed. If the
 parameter <code>name</code> is given then it is assigned as the name of the
 variable. Otherwise, a unique name is assigned. The parameter <code>name</code> can
@@ -931,8 +996,8 @@ be any Lisp object.
    <p><a name="Function-memberv"></a>
 
 <div class="defun">
-&mdash; Function: <b>memberv</b><var> x sequence<a name="index-memberv-45"></a></var><br>
-<blockquote><p><a name="index-memberv-46"></a>Returns <code>t</code> if <code>x</code> is known to be a member of <code>sequence</code> (using the Common Lisp
+&mdash; Function: <b>memberv</b><var> x sequence<a name="index-memberv-47"></a></var><br>
+<blockquote><p><a name="index-memberv-48"></a>Returns <code>t</code> if <code>x</code> is known to be a member of <code>sequence</code> (using the Common Lisp
 function <code>eql</code> as a test function), <code>nil</code> if <code>x</code> is known not to be a member of
 <code>sequence</code>, and otherwise returns a new boolean variable <code>v</code>.
 
@@ -962,8 +1027,8 @@ vector.
    <p><a name="Function-numberpv"></a>
 
 <div class="defun">
-&mdash; Function: <b>numberpv</b><var> x<a name="index-numberpv-47"></a></var><br>
-<blockquote><p><a name="index-numberpv-48"></a>Returns <code>t</code> if <code>x</code> is known to be numeric, <code>nil</code> if <code>x</code> is known to be
+&mdash; Function: <b>numberpv</b><var> x<a name="index-numberpv-49"></a></var><br>
+<blockquote><p><a name="index-numberpv-50"></a>Returns <code>t</code> if <code>x</code> is known to be numeric, <code>nil</code> if <code>x</code> is known to be
 non-numeric, and otherwise returns a new boolean variable <code>v</code>.
 
         <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
@@ -985,8 +1050,8 @@ if <code>x</code> is known to be non-numeric.
    <p><a name="Function-realpv"></a>
 
 <div class="defun">
-&mdash; Function: <b>realpv</b><var> x<a name="index-realpv-49"></a></var><br>
-<blockquote><p><a name="index-realpv-50"></a>Returns <code>t</code> if <code>x</code> is known to be real, <code>nil</code> if <code>x</code> is known to be non-real,
+&mdash; Function: <b>realpv</b><var> x<a name="index-realpv-51"></a></var><br>
+<blockquote><p><a name="index-realpv-52"></a>Returns <code>t</code> if <code>x</code> is known to be real, <code>nil</code> if <code>x</code> is known to be non-real,
 and otherwise returns a new boolean variable <code>v</code>.
 
         <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
@@ -1004,11 +1069,102 @@ to <code>t</code> if and only if <code>x</code> is known to be real and <code>v<
 </ul>
         </p></blockquote></div>
 
+   <p><a name="Function-a_002dbooleanv"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-booleanv</b><var> &amp;optional name<a name="index-a_002dbooleanv-53"></a></var><br>
+<blockquote><p><a name="index-a_002dbooleanv-54"></a>Returns a boolean variable. 
+</p></blockquote></div>
+
+   <p><a name="Function-a_002drealv"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-realv</b><var> &amp;optional name<a name="index-a_002drealv-55"></a></var><br>
+<blockquote><p><a name="index-a_002drealv-56"></a>Returns a real variable. 
+</p></blockquote></div>
+
+   <p><a name="Function-a_002dreal_002dabovev"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-real-abovev</b><var> low &amp;optional name<a name="index-a_002dreal_002dabovev-57"></a></var><br>
+<blockquote><p><a name="index-a_002dreal_002dabovev-58"></a>Returns a real variable whose value is constrained to be greater than or equal to <code>low</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-a_002dreal_002dbelowv"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-real-belowv</b><var> high &amp;optional name<a name="index-a_002dreal_002dbelowv-59"></a></var><br>
+<blockquote><p><a name="index-a_002dreal_002dbelowv-60"></a>Returns a real variable whose value is constrained to be less than or equal to <code>high</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-a_002dreal_002dbetweenv"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-real-betweenv</b><var> low high &amp;optional name<a name="index-a_002dreal_002dbetweenv-61"></a></var><br>
+<blockquote><p><a name="index-a_002dreal_002dbetweenv-62"></a>Returns a real variable whose value is constrained to be greater than or
+equal to low and less than or equal to high. If the resulting real variable is
+bound, its value is returned instead. Fails if it is known that low is greater
+than high at the time of call.
+
+        <p>The expression <code>(a-real-betweenv low high) </code>is an abbreviation for:
+
+     <pre class="lisp">          
+           (LET ((V (MAKE-VARIABLE)))
+              (ASSERT! (REALPV V))
+              (ASSERT! (&gt;=V V LOW))
+              (ASSERT! (&lt;=V V HIGH))
+              (VALUE-OF V))
+     </pre>
+        </blockquote></div>
+
+   <p><a name="Function-an_002dintegerv"></a>
+
+<div class="defun">
+&mdash; Function: <b>an-integerv</b><var> &amp;optional name<a name="index-an_002dintegerv-63"></a></var><br>
+<blockquote><p><a name="index-an_002dintegerv-64"></a>Returns an integer variable. 
+</p></blockquote></div>
+
+   <p><a name="Function-an_002dinteger_002dabovev"></a>
+
+<div class="defun">
+&mdash; Function: <b>an-integer-abovev</b><var> low &amp;optional name<a name="index-an_002dinteger_002dabovev-65"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dabovev-66"></a>Returns an integer variable whose value is constrained to be greater than
+or equal to <code>low</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-an_002dinteger_002dbelowv"></a>
+
+<div class="defun">
+&mdash; Function: <b>an-integer-belowv</b><var> high &amp;optional name<a name="index-an_002dinteger_002dbelowv-67"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dbelowv-68"></a>Returns an integer variable whose value is constrained to be less than or
+equal to <code>high</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-an_002dinteger_002dbetweenv"></a>
+
+<div class="defun">
+&mdash; Function: <b>an-integer-betweenv</b><var> low high &amp;optional name<a name="index-an_002dinteger_002dbetweenv-69"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dbetweenv-70"></a>Returns an integer variable whose value is constrained to be greater than
+or equal to <code>low</code> and less than or equal to <code>high</code>. If the resulting integer
+variable is bound, its value is returned instead. Fails if it is known that
+there is no integer between <code>low</code> and <code>high</code> at the time of call.
+
+        <p>The expression <code>(an-integer-betweenv low high) </code>is an abbreviation for:
+
+     <pre class="lisp">          
+           (LET ((V (MAKE-VARIABLE)))
+              (ASSERT! (INTEGERPV V))
+              (ASSERT! (&gt;=V V LOW))
+              (ASSERT! (&lt;=V V HIGH))
+              (VALUE-OF v))
+     </pre>
+        </blockquote></div>
+
    <p><a name="Macro-assert_0021"></a>
 
 <div class="defun">
-&mdash; Macro: <b>assert!</b><var> x<a name="index-assert_0021-51"></a></var><br>
-<blockquote><p><a name="index-assert_0021-52"></a>Restricts <code>x</code> to <code>t</code>. No meaningful result is returned. The argument <code>x</code> can be
+&mdash; Macro: <b>assert!</b><var> x<a name="index-assert_0021-71"></a></var><br>
+<blockquote><p><a name="index-assert_0021-72"></a>Restricts <code>x</code> to <code>t</code>. No meaningful result is returned. The argument <code>x</code> can be
 either a variable or a non-variable.
 
         <p>This assertion may cause other assertions to be made due to noticers attached
@@ -1034,8 +1190,8 @@ directly nested in a call to <code>assert</code>!, are similarly transformed.
    <p><a name="Macro-decide"></a>
 
 <div class="defun">
-&mdash; Macro: <b>decide</b><var> x<a name="index-decide-53"></a></var><br>
-<blockquote><p><a name="index-decide-54"></a>Restricts <code>x</code> to a be boolean. After <code>x</code> is restricted a nondeterministic
+&mdash; Macro: <b>decide</b><var> x<a name="index-decide-73"></a></var><br>
+<blockquote><p><a name="index-decide-74"></a>Restricts <code>x</code> to a be boolean. After <code>x</code> is restricted a nondeterministic
 choice is made. For one branch, <code>x</code> is restricted to equal <code>t</code> and <code>(decide x)</code>
 returns <code>t</code> as a result. For the other branch, <code>x</code> is restricted to equal <code>nil</code> and
 <code>(decide x) </code>returns <code>nil</code> as a result. The argument <code>x</code> can be either a variable
@@ -1071,8 +1227,8 @@ directly nested in a call to decide, are similarly transformed.
    <p><a name="Macro-known_003f"></a>
 
 <div class="defun">
-&mdash; Macro: <b>known?</b><var> x<a name="index-known_003f-55"></a></var><br>
-<blockquote><p><a name="index-known_003f-56"></a>Restricts <code>x</code> to be a boolean. If <code>x</code> is equal to <code>t</code> after being restricted to be boolean,
+&mdash; Macro: <b>known?</b><var> x<a name="index-known_003f-75"></a></var><br>
+<blockquote><p><a name="index-known_003f-76"></a>Restricts <code>x</code> to be a boolean. If <code>x</code> is equal to <code>t</code> after being restricted to be boolean,
 returns <code>t</code>. If <code>x</code> is equal to <code>nil</code> or if the value of <code>x</code> is unknown returns <code>nil</code>. 
 The argument <code>x</code> can be either a variable or a non-variable.
 
@@ -1101,24 +1257,24 @@ nested in a call to <code>known</code>?, are similarly transformed.
    <p><a name="Variable-_002amaximum_002ddiscretization_002drange_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-57"></a></var><br>
-<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-58"></a>Discretize integer variables whose range is not greater than this number. 
+&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-77"></a></var><br>
+<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-78"></a>Discretize integer variables whose range is not greater than this number. 
 Discretize all integer variables if <code>nil</code>. Must be an integer or <code>nil</code>. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002aminimum_002dshrink_002dratio_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-59"></a></var><br>
-<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-60"></a>Ignore propagations which reduce the range of a variable by less than this
+&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-79"></a></var><br>
+<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-80"></a>Ignore propagations which reduce the range of a variable by less than this
 ratio. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002astrategy_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-61"></a></var><br>
-<blockquote><p><a name="index-g_t_002astrategy_002a-62"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
+&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-81"></a></var><br>
+<blockquote><p><a name="index-g_t_002astrategy_002a-82"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
 Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
 </p></blockquote></div>
 
@@ -1127,32 +1283,32 @@ Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc
 <p><a name="Function-purge"></a>
 
 <div class="defun">
-&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-63"></a></var><br>
-<blockquote><p><a name="index-purge-64"></a>Removes any information about <code>function-name</code> from Screamer's
+&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-83"></a></var><br>
+<blockquote><p><a name="index-purge-84"></a>Removes any information about <code>function-name</code> from Screamer's
 who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Function-unwedge_002dscreamer"></a>
 
 <div class="defun">
-&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-65"></a></var><br>
-<blockquote><p><a name="index-unwedge_002dscreamer-66"></a>Removes any information about all user defined functions from
+&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-85"></a></var><br>
+<blockquote><p><a name="index-unwedge_002dscreamer-86"></a>Removes any information about all user defined functions from
 Screamer's who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002adynamic_002dextent_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-67"></a></var><br>
-<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-68"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
+&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-87"></a></var><br>
+<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-88"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
 disable it. Default is platform dependent. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002ascreamer_002dversion_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-69"></a></var><br>
-<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-70"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
+&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-89"></a></var><br>
+<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-90"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
 while we're considering how to express versions for this copy of Screamer in
 the future. 
 </p></blockquote></div>
@@ -1160,8 +1316,8 @@ the future.
    <p><a name="Variable-_002aiscream_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-71"></a></var><br>
-<blockquote><p><a name="index-g_t_002aiscream_003f_002a-72"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
+&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-91"></a></var><br>
+<blockquote><p><a name="index-g_t_002aiscream_003f_002a-92"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
 </p></blockquote></div>
 
 <h2 class="chapter"><a name="TOC16"></a>7 Examples</h2>
