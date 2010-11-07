@@ -399,6 +399,15 @@ solution is very different.)
 @include include/fun-screamer-memberv.texinfo
 @include include/fun-screamer-numberpv.texinfo
 @include include/fun-screamer-realpv.texinfo
+@include include/fun-screamer-a-booleanv.texinfo
+@include include/fun-screamer-a-realv.texinfo
+@include include/fun-screamer-a-real-abovev.texinfo
+@include include/fun-screamer-a-real-belowv.texinfo
+@include include/fun-screamer-a-real-betweenv.texinfo
+@include include/fun-screamer-an-integerv.texinfo
+@include include/fun-screamer-an-integer-abovev.texinfo
+@include include/fun-screamer-an-integer-belowv.texinfo
+@include include/fun-screamer-an-integer-betweenv.texinfo
 @include include/macro-screamer-assert!.texinfo
 @include include/macro-screamer-decide.texinfo
 @include include/macro-screamer-known?.texinfo

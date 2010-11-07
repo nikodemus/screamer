@@ -4750,8 +4750,8 @@ be any Lisp object."
 ;;; Lifted Type Functions
 
 (defun integerpv (x)
-  "Returns T if X is known to be integer valued, and NIL if
-X is known be non-integer value.
+  "Returns T if X is known to be integer valued, and NIL if X is known be
+non-integer value.
 
 If it is not known whether or not X is integer valued when INTEGERPV is called
 then INTEGERPV creates and returns a new boolean variable V.
@@ -6405,46 +6405,81 @@ directly nested in a call to decide, are similarly transformed."
 ;;;       cases.
 
 (defun a-booleanv (&optional (name nil name?))
+  "Returns a boolean variable."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (booleanpv v))
     v))
 
 (defun an-integerv (&optional (name nil name?))
+  "Returns an integer variable."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (integerpv v))
     v))
 
 (defun an-integer-abovev (low &optional (name nil name?))
+  "Returns an integer variable whose value is constrained to be greater than
+or equal to LOW."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (integerpv v) (>=v v low)))
     v))
 
 (defun an-integer-belowv (high &optional (name nil name?))
+  "Returns an integer variable whose value is constrained to be less than or
+equal to HIGH."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (integerpv v) (<=v v high)))
     v))
 
 (defun an-integer-betweenv (low high &optional (name nil name?))
+  "Returns an integer variable whose value is constrained to be greater than
+or equal to LOW and less than or equal to HIGH. If the resulting integer
+variable is bound, its value is returned instead. Fails if it is known that
+there is no integer between LOW and HIGH at the time of call.
+
+The expression \(AN-INTEGER-BETWEENV LOW HIGH) is an abbreviation for:
+
+ \(LET ((V (MAKE-VARIABLE)))
+    \(ASSERT! (INTEGERPV V))
+    \(ASSERT! (>=V V LOW))
+    \(ASSERT! (<=V V HIGH))
+    \(VALUE-OF v))
+"
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (integerpv v) (>=v v low) (<=v v high)))
     (value-of v)))
 
 (defun a-realv (&optional (name nil name?))
+  "Returns a real variable."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (realpv v))
     v))
 
 (defun a-real-abovev (low &optional (name nil name?))
+  "Returns a real variable whose value is constrained to be greater than or equal to LOW."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (realpv v) (>=v v low)))
     v))
 
 (defun a-real-belowv (high &optional (name nil name?))
+  "Returns a real variable whose value is constrained to be less than or equal to HIGH."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (realpv v) (<=v v high)))
     v))
 
 (defun a-real-betweenv (low high &optional (name nil name?))
+  "Returns a real variable whose value is constrained to be greater than or
+equal to low and less than or equal to high. If the resulting real variable is
+bound, its value is returned instead. Fails if it is known that low is greater
+than high at the time of call.
+
+The expression \(A-REAL-BETWEENV LOW HIGH) is an abbreviation for:
+
+ \(LET ((V (MAKE-VARIABLE)))
+    \(ASSERT! (REALPV V))
+    \(ASSERT! (>=V V LOW))
+    \(ASSERT! (<=V V HIGH))
+    \(VALUE-OF V))
+"
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (realpv v) (>=v v low) (<=v v high)))
     v))
