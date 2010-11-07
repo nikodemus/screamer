@@ -402,6 +402,7 @@ solution is very different.)
 @include include/fun-screamer-a-booleanv.texinfo
 @include include/fun-screamer-a-realv.texinfo
 @include include/fun-screamer-a-real-abovev.texinfo
+@include include/fun-screamer-a-real-belowv.texinfo
 @include include/fun-screamer-an-integerv.texinfo
 @include include/fun-screamer-an-integer-abovev.texinfo
 @include include/fun-screamer-an-integer-belowv.texinfo
