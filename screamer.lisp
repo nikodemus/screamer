@@ -2793,6 +2793,7 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
   (declare-nondeterministic 'a-boolean))
 
 (cl:defun a-boolean ()
+  "Equivalent to \(EITHER T NIL)."
   (screamer-error
    "A-BOOLEAN is a nondeterministic function. As such, it must be called only~%~
    from a nondeterministic context."))
