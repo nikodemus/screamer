@@ -302,15 +302,17 @@ assert range constraints as variables instead of nondeterministic
 values, and force a solution:
 
 @lisp
+(assert! (=v *x* (an-integer-betweenv -50 -30)))
+(assert! (=v *y* (an-integer-betweenv 2 5)))
+
 (all-values
-  (assert! (=v *x* (an-integer-betweenv -50 -30)))
-  (assert! (=v *y* (an-integer-betweenv 2 5)))
   (solution (list *x* *y*)
             (static-ordering #'linear-force))) => ((-47 5) (-46 4) (-45 3) (-44 2))
 @end lisp
 
-In this case backtracking occurs only over @code{solution}, whereas in the first
-one we backtracked over the entire @code{let}.
+In this case backtracking occurs only inside @code{solution}, when the
+system is trying to apply different solution to the given constraints,
+whereas in the first one we backtracked over the entire @code{let}.
 
 @section Current Limitations
 
