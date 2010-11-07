@@ -4459,7 +4459,21 @@ Otherwise returns the value of X."
   ;; note: Got rid of the nondeterministic version of /=-RULE.
   (let ((x (value-of x))
         (y (value-of y)))
-    (if (and (not (variable? x)) (not (variable? y)) (= x y)) (fail))))
+    (flet ((restrict-int! (var value)
+             ;; FIXME: It seems to me we should be able to also frob
+             ;; enumerated domain / antidomain.
+             (let ((low (variable-lower-bound var)))
+               (when (and low (= low value))
+                 (restrict-lower-bound! var (1+ low))))
+             (let ((upper (variable-upper-bound var)))
+               (when (and upper (= upper value))
+                 (restrict-upper-bound! var (1- upper))))))
+      (cond ((and (not (variable? x)) (not (variable? y)) (= x y))
+             (fail))
+            ((and (variable? x) (variable-integer? x) (numberp y))
+             (restrict-int! x y))
+            ((and (variable? y) (variable-integer? y) (numberp x))
+             (restrict-int! y x))))))
 
 ;;; Lifted Arithmetic Functions (Two argument optimized)
 
@@ -6504,10 +6518,10 @@ no lower than the lower bound of X2. The noticer of X2 performs a symmetric
 restriction on the bounds of X1 if it is known to be real.
 
 Restricting two values X1 and X2 to not be equal is also performed by
-attaching noticers to X1 and X2. These noticers however, do not restrict the
-domains or ranges of X1 or X2. They simply monitor their continually
-restrictions and fail when any assertion causes X1 to be known to be equal to
-X2."
+attaching noticers to X1 and X2. These noticers fail when any assertion causes
+X1 to be known to be equal to X2. They additionally restrict the ranges of X1
+and X2 when either becomes a bound integer equal to the current upper or lower
+bound of the other, also known to be an integer."
   (/=v-internal x xs))
 
 ;;; The Optimizer Macros for ASSERT!, KNOWN? and DECIDE
