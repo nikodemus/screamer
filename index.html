@@ -21,7 +21,6 @@
   .menu { visibility:hidden; height: 0px; }
   .chapter { background-color:#e4bbff; padding: 0.2em; }
   .section { background-color:#e4bbff; padding: 0.2em; }
-  .subsection { background-color:#e4bbff; }
   .settitle { background-color:#e4bbff; }
   .contents { border: 2px solid black;
               margin: 1cm 1cm 1cm 1cm;
@@ -80,17 +79,22 @@ may wish to refer to the original papers below.
 <li><a href="#TOC4">2.3 Generators</a>
 <li><a href="#TOC5">2.4 Side-Effects</a>
 <li><a href="#TOC6">2.5 Constraints</a>
-</li></ul>
-<li><a name="toc_TOC7" href="#TOC7">3 Examples</a>
+<li><a href="#TOC7">2.6 Current Limitations</a>
 <ul>
-<li><a href="#TOC8">3.1 Einstein's Riddle</a>
+<li><a href="#TOC8">2.6.1 Not Supported At All</a>
+<li><a href="#TOC9">2.6.2 Limited Support</a>
 </li></ul>
-<li><a name="toc_TOC9" href="#TOC9">4 Nondetermism</a>
-<li><a name="toc_TOC10" href="#TOC10">5 Constraints</a>
-<li><a name="toc_TOC11" href="#TOC11">6 Miscellany</a>
-<li><a name="toc_TOC12" href="#TOC12">7 Examples</a>
+</li></ul>
+<li><a name="toc_TOC10" href="#TOC10">3 Examples</a>
 <ul>
-<li><a href="#TOC13">7.1 Einstein's Riddle</a>
+<li><a href="#TOC11">3.1 Einstein's Riddle</a>
+</li></ul>
+<li><a name="toc_TOC12" href="#TOC12">4 Nondetermism</a>
+<li><a name="toc_TOC13" href="#TOC13">5 Constraints</a>
+<li><a name="toc_TOC14" href="#TOC14">6 Miscellany</a>
+<li><a name="toc_TOC15" href="#TOC15">7 Examples</a>
+<ul>
+<li><a href="#TOC16">7.1 Einstein's Riddle</a>
 </li></ul>
 </li></ul>
 </div>
@@ -323,9 +327,42 @@ values, and force a solution:
    <p>In this case backtracking occurs only over <code>solution</code>, whereas in the first
 one we backtracked over the entire <code>let</code>.
 
-<h2 class="chapter"><a name="TOC7"></a>3 Examples</h2>
+<h3 class="section"><a name="TOC7"></a>2.6 Current Limitations</h3>
 
-<h3 class="section"><a name="TOC8"></a>3.1 Einstein's Riddle</h3>
+<p>Screamer is implemented using a code-walker, which does not
+unfortunately currently support the full ANSI Common Lisp.
+
+<h4 class="subsection"><a name="TOC8"></a>2.6.1 Not Supported At All</h4>
+
+<p>Following special operators signal an error if they appear in code processed
+by the code walker:
+
+     <ul>
+<li>load-time-value
+<li>symbol-macrolet
+<li>macrolet
+
+   </ul>
+
+<h4 class="subsection"><a name="TOC9"></a>2.6.2 Limited Support</h4>
+
+<p>Following special operators are accepted, but they cannot contain
+nondeterministic forms:
+
+     <ul>
+<li>progv
+<li>unwind-protect
+<li>catch
+
+   </ul>
+
+   <p>Additionally, functions defined using <code>flet</code> and <code>labels</code>
+are not in nondeterministic context, even if the surrounding context
+is nondeterministic.
+
+<h2 class="chapter"><a name="TOC10"></a>3 Examples</h2>
+
+<h3 class="section"><a name="TOC11"></a>3.1 Einstein's Riddle</h3>
 
 <p>Solving the &ldquo;Einstein's Riddle&rdquo;, aka &ldquo;The Zebra Puzzle&rdquo; using
 nondeterministic features of Screamer, ie. backtracking search.
@@ -333,7 +370,7 @@ nondeterministic features of Screamer, ie. backtracking search.
    <p>[ <a href="einstein.lisp.html">HTML</a> ]
 [ <a href="einstein.lisp">Source</a> ]
 
-<h2 class="chapter"><a name="TOC9"></a>4 Nondetermism</h2>
+<h2 class="chapter"><a name="TOC12"></a>4 Nondetermism</h2>
 
 <p><a name="Macro-either"></a>
 
@@ -711,7 +748,7 @@ will return an ordinary deterministic Common Lisp function, which will signal
 an error at runtime. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC10"></a>5 Constraints</h2>
+<h2 class="chapter"><a name="TOC13"></a>5 Constraints</h2>
 
 <p><a name="Function-booleanpv"></a>
 
@@ -1068,7 +1105,7 @@ ratio.
 Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC11"></a>6 Miscellany</h2>
+<h2 class="chapter"><a name="TOC14"></a>6 Miscellany</h2>
 
 <p><a name="Function-purge"></a>
 
@@ -1110,9 +1147,9 @@ the future.
 <blockquote><p><a name="index-g_t_002aiscream_003f_002a-72"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC12"></a>7 Examples</h2>
+<h2 class="chapter"><a name="TOC15"></a>7 Examples</h2>
 
-<h3 class="section"><a name="TOC13"></a>7.1 Einstein's Riddle</h3>
+<h3 class="section"><a name="TOC16"></a>7.1 Einstein's Riddle</h3>
 
 <p>Solving the &ldquo;Einstein's Riddle&rdquo;, aka &ldquo;The Zebra Puzzle&rdquo; using
 nondeterministic features of Screamer, ie. backtracking search.
