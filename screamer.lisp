@@ -6411,6 +6411,19 @@ directly nested in a call to decide, are similarly transformed."
     v))
 
 (defun an-integer-betweenv (low high &optional (name nil name?))
+  "Returns an integer variable whose value is constrained to be greater than
+or equal to LOW and less than or equal to HIGH. If the resulting integer
+variable is bound, its value is returned instead. Fails if it is known that
+there is no integer between LOW and HIGH at the time of call.
+
+The expression \(AN-INTEGER-BETWEENV LOW HIGH) is an abbreviation for:
+
+ \(LET ((V (MAKE-VARIABLE)))
+    \(ASSERT! (INTEGERPV V))
+    \(ASSERT! (>=V V LOW))
+    \(ASSERT! (<=V V HIGH))
+    \(VALUE-OF v))
+"
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (integerpv v) (>=v v low) (<=v v high)))
     (value-of v)))
