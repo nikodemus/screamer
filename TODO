@@ -35,10 +35,8 @@
 ******* >v
 ******* >=v
 ******* a-booleanv
-******* an-integerv
 ******* an-integer-abovev
 ******* an-integer-belowv
-******* an-integer-betweenv
 ******* a-realv
 ******* a-real-abovev
 ******* a-real-belowv

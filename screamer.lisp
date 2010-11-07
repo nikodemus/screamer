@@ -4736,8 +4736,8 @@ be any Lisp object."
 ;;; Lifted Type Functions
 
 (defun integerpv (x)
-  "Returns T if X is known to be integer valued, and NIL if
-X is known be non-integer value.
+  "Returns T if X is known to be integer valued, and NIL if X is known be
+non-integer value.
 
 If it is not known whether or not X is integer valued when INTEGERPV is called
 then INTEGERPV creates and returns a new boolean variable V.
@@ -6396,6 +6396,7 @@ directly nested in a call to decide, are similarly transformed."
     v))
 
 (defun an-integerv (&optional (name nil name?))
+  "Returns an integer variable."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (integerpv v))
     v))
