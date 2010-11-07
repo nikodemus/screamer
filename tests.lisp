@@ -86,7 +86,7 @@
              (assert! (/=v a b c d e))
              (assert! (=v d 4))
              (assert! (=v b 2))
-             (assert! (=v e 5))
+             (assert! (=v e 5.0))
              (assert! (=v a 1))
              (value-of c)))))
 
