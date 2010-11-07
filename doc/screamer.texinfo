@@ -394,15 +394,18 @@ solution is very different.)
 
 @chapter Constraints
 
-@include include/fun-screamer-booleanpv.texinfo
-@include include/fun-screamer-equals-v.texinfo
-@include include/fun-screamer-integerpv.texinfo
-@include include/fun-screamer-lt-v.texinfo
-@include include/fun-screamer-slash-equals-v.texinfo
 @include include/fun-screamer-make-variable.texinfo
-@include include/fun-screamer-memberv.texinfo
+@include include/macro-screamer-assert!.texinfo
+@include include/macro-screamer-known?.texinfo
+@include include/macro-screamer-decide.texinfo
+@include include/fun-screamer-booleanpv.texinfo
 @include include/fun-screamer-numberpv.texinfo
 @include include/fun-screamer-realpv.texinfo
+@include include/fun-screamer-integerpv.texinfo
+@include include/fun-screamer-memberv.texinfo
+@include include/fun-screamer-equals-v.texinfo
+@include include/fun-screamer-slash-equals-v.texinfo
+@include include/fun-screamer-lt-v.texinfo
 @include include/fun-screamer-a-booleanv.texinfo
 @include include/fun-screamer-a-realv.texinfo
 @include include/fun-screamer-a-real-abovev.texinfo
@@ -412,9 +415,6 @@ solution is very different.)
 @include include/fun-screamer-an-integer-abovev.texinfo
 @include include/fun-screamer-an-integer-belowv.texinfo
 @include include/fun-screamer-an-integer-betweenv.texinfo
-@include include/macro-screamer-assert!.texinfo
-@include include/macro-screamer-decide.texinfo
-@include include/macro-screamer-known?.texinfo
 @include include/var-screamer-star-maximum-discretization-range-star.texinfo
 @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
 @include include/var-screamer-star-strategy-star.texinfo
