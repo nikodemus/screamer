@@ -5703,6 +5703,36 @@ vector."
       (attach-noticer! #'(lambda () (if (known?-equalv x y) (fail))) y))))
 
 (defun equalv (x y)
+  "Returns T if the aggregate object X is known to equal the aggregate object
+Y, NIL if the aggregate object X is known not to equal the aggregate object Y,
+and a new boolean variable V if it is not known whether or not X equals Y when
+EQUALV is called.
+
+The values of X, Y and V are mutually constraints via noticers so that V
+equals T if and only if X is known to equal Y and V equals NIL if and only if
+X is known not to equal Y.
+
+Noticers are attached to V as well as to all variables nested in both in X and
+Y. When the noticers attached to variables nested in X and Y detect that X is
+known to equal Y they restrict V to equal T. Likewise, when the noticers
+attached to variables nested in X and Y detect that X is known not to equal Y
+they restrict V to equal NIL.
+
+Furthermore, if V later becomes known to equal T then X and Y are unified.
+Likewise, if V later becomes known to equal NIL then X and Y are restricted to
+not be equal. This is accomplished by attaching noticers to the variables
+nested in X and Y which detect when X becomes equal to Y and fail.
+
+The expression \(KNOWN? (EQUALV X Y)) is analogous to the extra-logical predicate
+== typically available in Prolog.
+
+The expression \(KNOWN? (NOTV (EQUALV X Y))) is analogous to the extra-logical
+predicate \\= typically available in Prolog.
+
+The expression \(ASSERT! (EQUALV X Y)) is analogous to Prolog unification.
+
+The expression \(ASSERT! (NOTV (EQUALV X Y))) is analogous to the
+disunification operator available in Prolog-II."
   ;; note: Can be made more efficient and return an AND tree of individual
   ;;       constraints needed to make EQUALV true. This can be done also for
   ;;       the KNOWN? and ASSERT! versions.
