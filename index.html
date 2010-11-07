@@ -57,11 +57,16 @@ Allen McAllester.
 courtesy of <a href="http://sb-studio.net/">Steel Bank Studio Ltd</a> by
 <a href="mailto:nikodemus@sb-studio.net">Nikodemus Siivola</a>.
 
+   <p>The Google Group
+<pre class="example">     <a href="http://groups.google.com/group/screamer/">http://groups.google.com/group/screamer/</a>
+</pre>
+   <p>exists for Screamer-related discussions.
+
    <p>Screamer is maintained in Git:
 <pre class="example">     git clone git://github.com/nikodemus/screamer.git
 </pre>
    <p>will get you a local copy.
-<pre class="example">      <a href="http://github.com/nikodemus/screamer">http://github.com/nikodemus/screamer</a>
+<pre class="example">     <a href="http://github.com/nikodemus/screamer">http://github.com/nikodemus/screamer</a>
 </pre>
    <p>is the GitHub project page.
 
@@ -88,13 +93,14 @@ may wish to refer to the original papers below.
 <li><a name="toc_TOC10" href="#TOC10">3 Examples</a>
 <ul>
 <li><a href="#TOC11">3.1 Einstein's Riddle</a>
+<li><a href="#TOC12">3.2 The Zebra Puzzle</a>
 </li></ul>
-<li><a name="toc_TOC12" href="#TOC12">4 Nondetermism</a>
-<li><a name="toc_TOC13" href="#TOC13">5 Constraints</a>
-<li><a name="toc_TOC14" href="#TOC14">6 Miscellany</a>
-<li><a name="toc_TOC15" href="#TOC15">7 Examples</a>
+<li><a name="toc_TOC13" href="#TOC13">4 Nondetermism</a>
+<li><a name="toc_TOC14" href="#TOC14">5 Constraints</a>
+<li><a name="toc_TOC15" href="#TOC15">6 Miscellany</a>
+<li><a name="toc_TOC16" href="#TOC16">7 Examples</a>
 <ul>
-<li><a href="#TOC16">7.1 Einstein's Riddle</a>
+<li><a href="#TOC17">7.1 Einstein's Riddle</a>
 </li></ul>
 </li></ul>
 </div>
@@ -364,13 +370,24 @@ is nondeterministic.
 
 <h3 class="section"><a name="TOC11"></a>3.1 Einstein's Riddle</h3>
 
-<p>Solving the &ldquo;Einstein's Riddle&rdquo;, aka &ldquo;The Zebra Puzzle&rdquo; using
-nondeterministic features of Screamer, ie. backtracking search.
+<p>Solving the &ldquo;Einstein's Riddle&rdquo; using nondeterministic features of
+Screamer, ie. backtracking search.
 
    <p>[ <a href="einstein.lisp.html">HTML</a> ]
 [ <a href="einstein.lisp">Source</a> ]
 
-<h2 class="chapter"><a name="TOC12"></a>4 Nondetermism</h2>
+<h3 class="section"><a name="TOC12"></a>3.2 The Zebra Puzzle</h3>
+
+<p>Solving the &ldquo;The Zebra Puzzle&rdquo;, using forward constraint propagation
+features of Screamer.
+
+   <p>(This puzzle is virtually identical to &ldquo;Einstein's Riddle&rdquo;, but the
+solution is very different.)
+
+   <p>[ <a href="zebra.lisp.html">HTML</a> ]
+[ <a href="zebra.lisp">Source</a> ]
+
+<h2 class="chapter"><a name="TOC13"></a>4 Nondetermism</h2>
 
 <p><a name="Macro-either"></a>
 
@@ -748,7 +765,7 @@ will return an ordinary deterministic Common Lisp function, which will signal
 an error at runtime. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC13"></a>5 Constraints</h2>
+<h2 class="chapter"><a name="TOC14"></a>5 Constraints</h2>
 
 <p><a name="Function-booleanpv"></a>
 
@@ -1105,7 +1122,7 @@ ratio.
 Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC14"></a>6 Miscellany</h2>
+<h2 class="chapter"><a name="TOC15"></a>6 Miscellany</h2>
 
 <p><a name="Function-purge"></a>
 
@@ -1147,9 +1164,9 @@ the future.
 <blockquote><p><a name="index-g_t_002aiscream_003f_002a-72"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC15"></a>7 Examples</h2>
+<h2 class="chapter"><a name="TOC16"></a>7 Examples</h2>
 
-<h3 class="section"><a name="TOC16"></a>7.1 Einstein's Riddle</h3>
+<h3 class="section"><a name="TOC17"></a>7.1 Einstein's Riddle</h3>
 
 <p>Solving the &ldquo;Einstein's Riddle&rdquo;, aka &ldquo;The Zebra Puzzle&rdquo; using
 nondeterministic features of Screamer, ie. backtracking search.

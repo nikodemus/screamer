@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+  <head>
+    <title>Screamer Example: zebra.lisp</title>
+    <link rel="stylesheet" href="style.css" type="text/css">
+  <script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3652989-3']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+  </script>
+  </head>
+  <body>
+    <pre>
+<span class="comment-delimiter">;;;; </span><span class="comment">Example: "The Zebra Puzzle"
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">Classic riddle popularly attributed to Lewis Carrol. (Essentially the
+</span><span class="comment-delimiter">;;;; </span><span class="comment">same as "The Einstein's Riddle".)
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">This solution, contributed by Stephan Frank, uses the constraint
+</span><span class="comment-delimiter">;;;; </span><span class="comment">propagation features of Screamer.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">Five men with different nationalities live in the first five houses of a
+</span><span class="comment-delimiter">;;;; </span><span class="comment">street. They practise five distinct professions, and each of them has a
+</span><span class="comment-delimiter">;;;; </span><span class="comment">favourite animal and a favourite drink, all of them different. The five
+</span><span class="comment-delimiter">;;;; </span><span class="comment">houses are painted in different colours.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">1. The Englishman lives in a red house.
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">2. The Spaniard owns a dog.
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">3. The Japanese is a painter.
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">4. The Italian drinks tea.
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">5. The Norwegian lives in the first house on the left.
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">6. The owner of the green house drinks coffee.
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">7. The green house is on the right of the white one.
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">8. The sculptor breeds snails.
+</span><span class="comment-delimiter">;;;;    </span><span class="comment">9. The diplomat lives in the yellow house.
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">10. Milk is drunk in the middle house.
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">11. The Norwegian's house is next to the blue one.
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">12. The violinist drinks fruit juice.
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">13. The fox is in a house next to that of the doctor.
+</span><span class="comment-delimiter">;;;;   </span><span class="comment">14. The horse is in a house next to that of the diplomat.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">Question: Who owns a Zebra, and who drinks water?
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_eval_w.htm">eval-when</a></span> (<span class="builtin">:compile-toplevel</span> <span class="builtin">:load-toplevel</span>)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_provid.htm">require</a></span> <span class="constant">:screamer</span>))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_in_pkg.htm">in-package</a></span> <span class="builtin">:screamer-user</span>)
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Utility definitions
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">LET-INTEGERS-BETWEENV binds names in VAR-LIST to integer
+</span><span class="comment-delimiter">;;;; </span><span class="comment">variables constrained in the range [min, max].
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">ALL-DIFFERENTV returns a variable constrained to be true if variables in
+</span><span class="comment-delimiter">;;;; </span><span class="comment">the list received all have different values.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defmac.htm">defmacro</a></span> <span class="function-name">let-integers-betweenv</span> (((<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_max_m.htm">min</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_max_m.htm">max</a></span>) var-list) body)
+  `(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ,(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_loop.htm">loop</a></span> for i in var-list
+               collect (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> i `(an-integer-betweenv ,<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_max_m.htm">min</a></span> ,<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_max_m.htm">max</a></span>)))
+     ,body))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">all-differentv</span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>)
+  <span class="comment-delimiter">;; </span><span class="comment">Functionally the same as (apply #'/=v list), but faster.
+</span>  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_flet_.htm">labels</a></span> ((all-different (x xs)
+             (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_if.htm">if</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_null.htm">null</a></span> xs)
+                 <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_t.htm">t</a></span>
+                 (andv (notv (=v x (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">car</a></span> xs)))
+                       (all-different x (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">cdr</a></span> xs))
+                       (all-different (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">car</a></span> xs) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">cdr</a></span> xs))))))
+    (all-different (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">car</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">cdr</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>))))
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Constraint model
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">Houses are identified by integers from 1 to 5.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">We first bind logic variables taking values in that range in
+</span><span class="comment-delimiter">;;;; </span><span class="comment">LET-INTEGERS-BETWEEN for all properties. We group them and assert that
+</span><span class="comment-delimiter">;;;; </span><span class="comment">every value is unique in its group using ALL-DIFFERENTV.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">We create three mode logic variables to represent distances between
+</span><span class="comment-delimiter">;;;; </span><span class="comment">certain houses.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">We assert the constraints stated in the riddle.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">Finally, we ask Screamer to provide a solution that satisfies
+</span><span class="comment-delimiter">;;;; </span><span class="comment">all given constraints.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">zebra-problem</span> ()
+  (let-integers-betweenv ((1 5)
+                          (English Spaniard Japanese Italian Norwegian
+                           Red Green White Yellow Blue
+                           Painter Sculptor Diplomat Violinist
+                           Doctor Dog Snails Fox Horse Zebra
+                           Tea Coffee Milk Juice Water))
+    (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((Nationality (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> English Spaniard Japanese Italian Norwegian))
+          (Color       (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> Red Green White Yellow Blue))
+          (Profession  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> Painter Sculptor Diplomat Violinist Doctor))
+          (Pet         (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> Zebra Dog Snails Fox Horse))
+          (Drink       (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> Water Tea Coffee Milk Juice)))
+      <span class="comment-delimiter">;; </span><span class="comment">The values in each list are exclusive.
+</span>      (assert! (all-differentv Nationality))
+      (assert! (all-differentv Color))
+      (assert! (all-differentv Profession))
+      (assert! (all-differentv Pet))
+      (assert! (all-differentv Drink))
+      <span class="comment-delimiter">;; </span><span class="comment">Setup auxiliary vars needed for neigbouring relations.
+</span>      (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((distance-1 (an-integer-betweenv -1 1))
+            (distance-2 (an-integer-betweenv -1 1))
+            (distance-3 (an-integer-betweenv -1 1)))
+        (assert! (/=v distance-1 0))
+        (assert! (/=v distance-2 0))
+        (assert! (/=v distance-3 0))
+        <span class="comment-delimiter">;; </span><span class="comment">The actual constraints from the problem description.
+</span>        (assert! (=v English Red))
+        (assert! (=v Spaniard Dog))
+        (assert! (=v Japanese Painter))
+        (assert! (=v Italian Tea))
+        (assert! (=v Norwegian 1))
+        (assert! (=v Green Coffee))
+        (assert! (=v Green (+v White 1)))
+        (assert! (=v Sculptor Snails))
+        (assert! (=v Diplomat Yellow))
+        (assert! (=v Milk 3))
+        (assert! (=v distance-1 (-v Norwegian Blue)))
+        (assert! (=v Violinist Juice))
+        (assert! (=v distance-2 (-v Fox Doctor)))
+        (assert! (=v distance-3 (-v Horse Diplomat)))
+        <span class="comment-delimiter">;; </span><span class="comment">Force a solution.
+</span>        (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((result
+               (one-value
+                 <span class="comment-delimiter">;; </span><span class="comment">Feed all the primary values into the solution: we don't
+</span>                 <span class="comment-delimiter">;; </span><span class="comment">want any uncertainty to remain regarding these. If we
+</span>                 <span class="comment-delimiter">;; </span><span class="comment">merely fed in NATIONALITY, ZEBRA, and WATER, we might
+</span>                 <span class="comment-delimiter">;; </span><span class="comment">return false results where some of the constraints were
+</span>                 <span class="comment-delimiter">;; </span><span class="comment">not fully checked because eg. PROFESSION wasn't solved.
+</span>                 (solution (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> Nationality Pet Drink Color Profession)
+                           (static-ordering #'linear-force)))))
+          <span class="comment-delimiter">;; </span><span class="comment">Human-readable labels: results we have back are integers identifying
+</span>          <span class="comment-delimiter">;; </span><span class="comment">the houses. Map back to nationalities.
+</span>          (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_destru.htm">destructuring-bind</a></span> (Nationality Pet Drink <span class="type"><a href="http://www.lispworks.com/reference/HyperSpec/Body/03_da.htm">&amp;rest</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_rest.htm">rest</a></span>) result
+            (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_declar.htm">declare</a></span> (<span class="preprocessor"><a href="http://www.lispworks.com/reference/HyperSpec/Body/d_ignore.htm">ignore</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_rest.htm">rest</a></span>))
+            (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((names (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_vector.htm">vector</a></span> <span class="string">"Brit"</span> <span class="string">"Spaniard"</span> <span class="string">"Japanese"</span> <span class="string">"Italian"</span> <span class="string">"Norwegian"</span>)))
+              (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_format.htm">format</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_t.htm">t</a></span> <span class="string">"The ~A owns the zebra.~%"</span>
+                      (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_aref.htm">aref</a></span> names (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_pos_p.htm">position</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_firstc.htm">first</a></span> Pet) Nationality)))
+              (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_format.htm">format</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_t.htm">t</a></span> <span class="string">"The ~A drinks water.~%"</span>
+                      (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_aref.htm">aref</a></span> names (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_pos_p.htm">position</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_firstc.htm">first</a></span> Drink) Nationality))))))))))
+
+#+nil
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_time.htm">time</a></span> (screamer-user::zebra-problem))
+    </pre>
+  </body>
+</html>
