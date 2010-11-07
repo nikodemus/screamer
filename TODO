@@ -85,17 +85,21 @@
     expansion of loop. :/ If nothing else, documentation should
     mention this. An alternative would be to provide our own
     implemntation of LOOP that is well-behaved when it comes to LOCAL.
-*** WIP Review the list of limitations and move it to documentation once sure it's correct
-***** DONE CATCH - walker accepts, but contents must be deterministic
-***** DONE FLET - bodies of functions are not in nondeterministic context
-      But walker doesn't complain or warn.
-***** DONE LABELS - bodies of functions are not in nondeterministic context
-      But walker doesn't complain or warn.
-***** DONE MACROLET -- walker signals an error
-***** DONE PROGV -- walker accepts, but contents must be deterministic
-***** DONE UNWIND-PROTECT - walker accepts, but contents must be deterministic
-***** DONE LOAD-TIME-VALUE - walker signals an error
-***** DONE SYMBOL-MACROLET -- walker signals an error
+*** TODO review the remaining limitations listed in the old source, and put the in the manual
+     1. Does not handle SETF methods with multiple values for LOCAL
+        SETF.
+     2. If you do a (SETF (SYMBOL-FUNCTION 'FOO) ...) to a nondeterministic
+	function you will lose when you attempt to evaluate (FOO ...).
+     3. If you do a (SETF (SYMBOL-FUNCTION 'FOO) ...) to a deterministic
+	function when FOO was previously defined as a nondeterministic
+	function you will lose when you attempt to evaluate (FOO ...).
+     4. The function record table will not work if we ever support FLET and
+	 LABELS and in particular, if we ever support FLET and LABELS of
+	  nondeterministic functions.
+     5. There is no way to force Screamer into compiling a deterministic
+	function as a nondeterministic one. A wizard might want to do this to
+	take advantage of the fact that a LOCAL SETF/SETQ in a nondeterministic
+	function does not cons up closures.
 * Old "Bugs to fix" list from screamer.lisp
   These haven't been verified or anything, just moved here.
 *** TODO LOCAL SETF does the wrong thing with GETHASH.

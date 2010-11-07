@@ -37,48 +37,6 @@
 ;;; proceed much faster if you first do:
 ;;; (CLRHASH SCREAMER::*FUNCTION-RECORD-TABLE*)
 
-;;; Limitations
-;;;  1. Does not handle SETF methods with multiple values for LOCAL SETF.
-;;;  2. If you do a (SETF (SYMBOL-FUNCTION 'FOO) ...) to a nondeterministic
-;;;     function you will lose when you attempt to evaluate (FOO ...).
-;;;  3. If you do a (SETF (SYMBOL-FUNCTION 'FOO) ...) to a deterministic
-;;;     function when FOO was previously defined as a nondeterministic
-;;;     function you will lose when you attempt to evaluate (FOO ...).
-;;;  4. The function record table will not work if we ever support FLET and
-;;;     LABELS and in particular, if we ever support FLET and LABELS of
-;;;     nondeterministic functions.
-;;;  5. There is no way to force Screamer into compiling a deterministic
-;;;     function as a nondeterministic one. A wizard might want to do this to
-;;;     take advantage of the fact that a LOCAL SETF/SETQ in a nondeterministic
-;;;     function does not cons up closures.
-;;;  6. Doesn't handle most Common Lisp special forms.
-;;;     Currently handles:
-;;;       BLOCK
-;;;       EVAL-WHEN
-;;;       FUNCTION
-;;;       GO
-;;;       IF
-;;;       LET
-;;;       LET*
-;;;       LOCALLY
-;;;       MULTIPLE-VALUE-CALL
-;;;       MULTIPLE-VALUE-PROG1
-;;;       PROGN
-;;;       QUOTE
-;;;       RETURN-FROM
-;;;       SETQ
-;;;       TAGBODY
-;;;       THE
-;;;     Probably will never handle:
-;;;       CATCH
-;;;       FLET
-;;;       LABELS
-;;;       MACROLET
-;;;       PROGV
-;;;       UNWIND-PROTECT
-;;;       LOAD-TIME-VALUE
-;;;       SYMBOL-MACROLET
-
 (in-package :screamer)
 
 (declaim (declaration magic))

@@ -306,6 +306,41 @@ values, and force a solution:
 In this case backtracking occurs only over @code{solution}, whereas in the first
 one we backtracked over the entire @code{let}.
 
+@section Current Limitations
+
+Screamer is implemented using a code-walker, which does not
+unfortunately currently support the full ANSI Common Lisp.
+
+@subsection Not Supported At All
+
+Following special operators signal an error if they appear in code processed
+by the code walker:
+
+@itemize
+
+@item load-time-value
+@item symbol-macrolet
+@item macrolet
+
+@end itemize
+
+@subsection Limited Support
+
+Following special operators are accepted, but they cannot contain
+nondeterministic forms:
+
+@itemize
+
+@item progv
+@item unwind-protect
+@item catch
+
+@end itemize
+
+Additionally, functions defined using @code{flet} and @code{labels}
+are not in nondeterministic context, even if the surrounding context
+is nondeterministic.
+
 @chapter Examples
 
 @section Einstein's Riddle
