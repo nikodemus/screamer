@@ -6453,6 +6453,19 @@ The expression \(AN-INTEGER-BETWEENV LOW HIGH) is an abbreviation for:
     v))
 
 (defun a-real-betweenv (low high &optional (name nil name?))
+  "Returns a real variable whose value is constrained to be greater than or
+equal to low and less than or equal to high. If the resulting real variable is
+bound, its value is returned instead. Fails if it is known that low is greater
+than high at the time of call.
+
+The expression \(A-REAL-BETWEENV LOW HIGH) is an abbreviation for:
+
+ \(LET ((V (MAKE-VARIABLE)))
+    \(ASSERT! (REALPV V))
+    \(ASSERT! (>=V V LOW))
+    \(ASSERT! (<=V V HIGH))
+    \(VALUE-OF V))
+"
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (realpv v) (>=v v low) (<=v v high)))
     v))
