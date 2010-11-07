@@ -6404,14 +6404,14 @@ directly nested in a call to decide, are similarly transformed."
 
 (defun an-integer-abovev (low &optional (name nil name?))
   "Returns an integer variable whose value is constrained to be greater than
-or equal to low."
+or equal to LOW."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (integerpv v) (>=v v low)))
     v))
 
 (defun an-integer-belowv (high &optional (name nil name?))
   "Returns an integer variable whose value is constrained to be less than or
-equal to high."
+equal to HIGH."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (integerpv v) (<=v v high)))
     v))
@@ -6441,7 +6441,7 @@ The expression \(AN-INTEGER-BETWEENV LOW HIGH) is an abbreviation for:
     v))
 
 (defun a-real-abovev (low &optional (name nil name?))
-  "Returns a real variable whose value is constrained to be greater than or equal to low."
+  "Returns a real variable whose value is constrained to be greater than or equal to LOW."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (realpv v) (>=v v low)))
     v))
