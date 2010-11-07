@@ -6403,6 +6403,8 @@ directly nested in a call to decide, are similarly transformed."
     v))
 
 (defun an-integer-abovev (low &optional (name nil name?))
+  "Returns an integer variable whose value is constrained to be greater than
+or equal to low."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (integerpv v) (>=v v low)))
     v))
