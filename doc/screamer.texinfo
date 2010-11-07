@@ -34,13 +34,19 @@ The copy of Screamer this documentation refers to is maintained
 courtesy of @url{http://sb-studio.net/, Steel Bank Studio Ltd} by
 @email{nikodemus@@sb-studio.net, Nikodemus Siivola}.
 
+The Google Group
+@example
+@url{http://groups.google.com/group/screamer/}
+@end example
+exists for Screamer-related discussions.
+
 Screamer is maintained in Git:
 @example
 git clone git://github.com/nikodemus/screamer.git
 @end example
 will get you a local copy.
 @example
- @url{http://github.com/nikodemus/screamer}
+@url{http://github.com/nikodemus/screamer}
 @end example
 is the GitHub project page.
 
@@ -345,11 +351,22 @@ is nondeterministic.
 
 @section Einstein's Riddle
 
-Solving the ``Einstein's Riddle'', aka ``The Zebra Puzzle'' using
-nondeterministic features of Screamer, ie. backtracking search.
+Solving the ``Einstein's Riddle'' using nondeterministic features of
+Screamer, ie. backtracking search.
 
 [ @url{einstein.lisp.html, HTML} ]
 [ @url{einstein.lisp, Source} ]
+
+@section The Zebra Puzzle
+
+Solving the ``The Zebra Puzzle'', using forward constraint propagation
+features of Screamer.
+
+(This puzzle is virtually identical to ``Einstein's Riddle'', but the
+solution is very different.)
+
+[ @url{zebra.lisp.html, HTML} ]
+[ @url{zebra.lisp, Source} ]
 
 @chapter Nondetermism
 

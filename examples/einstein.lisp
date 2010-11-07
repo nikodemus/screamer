@@ -1,4 +1,4 @@
-;;;; Example: "The Einstein's Riddle", aka "The Zebra Puzzle"
+;;;; Example: "The Einstein's Riddle".
 ;;;;
 ;;;; There are five houses in a row, each of different color.
 ;;;;
