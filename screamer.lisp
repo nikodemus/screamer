@@ -2995,6 +2995,8 @@ Screamer's who-calls database."
   (declare-nondeterministic 'an-integer-above))
 
 (cl:defun an-integer-above (low)
+  "Generator yielding integers starting from LOW and continuing sequentially
+in increasing direction."
   (declare (ignore low))
   (screamer-error
    "AN-INTEGER-ABOVE is a nondeterministic function. As such, it must be~%~

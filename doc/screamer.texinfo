@@ -384,6 +384,7 @@ solution is very different.)
 @include include/fun-screamer-a-boolean.texinfo
 @include include/fun-screamer-a-member-of.texinfo
 @include include/fun-screamer-an-integer.texinfo
+@include include/fun-screamer-an-integer-above.texinfo
 @include include/fun-screamer-an-integer-between.texinfo
 @include include/fun-screamer-apply-nondeterministic.texinfo
 @include include/fun-screamer-funcall-nondeterministic.texinfo
