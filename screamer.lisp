@@ -6391,6 +6391,7 @@ directly nested in a call to decide, are similarly transformed."
 ;;;       cases.
 
 (defun a-booleanv (&optional (name nil name?))
+  "Returns a boolean variable."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (booleanpv v))
     v))
