@@ -34,13 +34,19 @@ The copy of Screamer this documentation refers to is maintained
 courtesy of @url{http://sb-studio.net/, Steel Bank Studio Ltd} by
 @email{nikodemus@@sb-studio.net, Nikodemus Siivola}.
 
+The Google Group
+@example
+@url{http://groups.google.com/group/screamer/}
+@end example
+exists for Screamer-related discussions.
+
 Screamer is maintained in Git:
 @example
 git clone git://github.com/nikodemus/screamer.git
 @end example
 will get you a local copy.
 @example
- @url{http://github.com/nikodemus/screamer}
+@url{http://github.com/nikodemus/screamer}
 @end example
 is the GitHub project page.
 
