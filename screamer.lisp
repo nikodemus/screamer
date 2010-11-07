@@ -2978,6 +2978,7 @@ Screamer's who-calls database."
   (declare-nondeterministic 'an-integer))
 
 (cl:defun an-integer ()
+  "Generator yielding integers in sequence 0, 1, -1, 2, -2, ..."
   (screamer-error
    "AN-INTEGER is a nondeterministic function. As such, it must be called~%~
    only from a nondeterministic context."))
