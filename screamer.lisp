@@ -6435,6 +6435,7 @@ The expression \(AN-INTEGER-BETWEENV LOW HIGH) is an abbreviation for:
     (value-of v)))
 
 (defun a-realv (&optional (name nil name?))
+  "Returns a real variable."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (realpv v))
     v))
