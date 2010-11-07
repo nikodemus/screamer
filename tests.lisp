@@ -70,6 +70,20 @@
   (is (equal '(1 ding 2 4 ding 5)
              (all-values (multiple-value-call-nondeterministic.ding)))))
 
+(deftest /=v.constrains-integer-bounds ()
+  (is (eql 3
+           (let ((a (an-integer-betweenv 1 5))
+                 (b (an-integer-betweenv 1 5))
+                 (c (an-integer-betweenv 1 5))
+                 (d (an-integer-betweenv 1 5))
+                 (e (an-integer-betweenv 1 5)))
+             (assert! (/=v a b c d e))
+             (assert! (=v d 4))
+             (assert! (=v b 2))
+             (assert! (=v e 5))
+             (assert! (=v a 1))
+             (value-of c)))))
+
 (deftest prime-ordeal ()
   (is (primordial::test1))
   (is (primordial::test2))

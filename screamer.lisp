@@ -4406,7 +4406,17 @@ be any Lisp object."
   ;; note: Got rid of the nondeterministic version of /=-RULE.
   (let ((x (value-of x))
         (y (value-of y)))
-    (if (and (not (variable? x)) (not (variable? y)) (= x y)) (fail))))
+    (flet ((restrict-bound! (var value)
+             (when (eql value (variable-lower-bound var))
+               (restrict-lower-bound! var (1+ value)))
+             (when (eql value (variable-upper-bound var))
+               (restrict-upper-bound! var (1- value)))))
+      (cond ((and (not (variable? x)) (not (variable? y)) (= x y))
+             (fail))
+            ((and (variable? x) (integerp y))
+             (restrict-bound! x y))
+            ((and (variable? y) (integerp x))
+             (restrict-bound! y x))))))
 
 ;;; Lifted Arithmetic Functions (Two argument optimized)
 
