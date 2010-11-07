@@ -6410,6 +6410,8 @@ or equal to low."
     v))
 
 (defun an-integer-belowv (high &optional (name nil name?))
+  "Returns an integer variable whose value is constrained to be less than or
+equal to high."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (andv (integerpv v) (<=v v high)))
     v))
