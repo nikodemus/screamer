@@ -24,7 +24,6 @@
 ***** Still missing exported symbols:
 ******* unwind-trail
 ******* local-output
-******* an-integer-below
 ******* when-failing
 ******* count-failures
 ******* booleanp

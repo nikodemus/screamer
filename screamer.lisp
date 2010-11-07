@@ -3013,6 +3013,8 @@ in increasing direction."
   (declare-nondeterministic 'an-integer-below))
 
 (cl:defun an-integer-below (high)
+  "Generator yielding integers starting from HIGH and continuing sequentially
+in decreasing direction."
   (declare (ignore high))
   (screamer-error
    "AN-INTEGER-BELOW is a nondeterministic function. As such, it must be~%~
