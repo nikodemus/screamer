@@ -1,15 +1,17 @@
 * Battle Plan
 *** Release 3.21: unofficial maintenance release of 3.20.
+***** This is currently happening on "master".
 ***** WIP Complete manual
       All exported symbols documented, not everything needs to be
       super-polished, but the information should be there.
 ***** DONE ANSI cleanups
 ***** Obvious bugfixes, like 19c3bfaadbbf01401db14589c70b2b102297aef0
 *** New development
-***** Move 3.21 onto "classic" branch, into deep maintenance mode.
-***** Current "dev" becomes the new "master.
+***** This is currently happening on "dev".
+******* Once 3.21 is out, move it onto "classic" branch, into deep maintenance mode.
+******* Then current "dev" becomes the new "master".
 ***** Release 4.0
-******* /=V allowing integer bounds to be constrained.
+******* DONE /=V allowing integer bounds to be constrained.
 ******* Support at least some of the currently missing special forms
 ******* Add DEFINE-SCREAMER-FUNCTION or similar as an alias to SCREAMER::DEFUN.
 ******* Identify some performance issues and see if anything can be done.
