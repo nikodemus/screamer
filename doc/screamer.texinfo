@@ -394,6 +394,7 @@ solution is very different.)
 @include include/fun-screamer-equals-v.texinfo
 @include include/fun-screamer-integerpv.texinfo
 @include include/fun-screamer-lt-v.texinfo
+@include include/fun-screamer-slash-equals-v.texinfo
 @include include/fun-screamer-make-variable.texinfo
 @include include/fun-screamer-memberv.texinfo
 @include include/fun-screamer-numberpv.texinfo
