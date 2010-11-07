@@ -75,9 +75,7 @@
 ;;;       LABELS
 ;;;       MACROLET
 ;;;       PROGV
-;;;       THROW
 ;;;       UNWIND-PROTECT
-;;;    ANSI CL additions:
 ;;;       LOAD-TIME-VALUE
 ;;;       SYMBOL-MACROLET
 

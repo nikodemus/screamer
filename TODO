@@ -86,16 +86,15 @@
     mention this. An alternative would be to provide our own
     implemntation of LOOP that is well-behaved when it comes to LOCAL.
 *** WIP Review the list of limitations and move it to documentation once sure it's correct
-***** DONE CATCH - not supported
+***** DONE CATCH - walker accepts, but contents must be deterministic
 ***** DONE FLET - bodies of functions are not in nondeterministic context
       But walker doesn't complain or warn.
 ***** DONE LABELS - bodies of functions are not in nondeterministic context
       But walker doesn't complain or warn.
-***** TODO MACROLET
-***** TODO PROGV
-***** TODO THROW
-***** TODO UNWIND-PROTECT
-***** DONE LOAD-TIME-VALUE - not supported
+***** DONE MACROLET -- walker signals an error
+***** DONE PROGV -- walker accepts, but contents must be deterministic
+***** DONE UNWIND-PROTECT - walker accepts, but contents must be deterministic
+***** DONE LOAD-TIME-VALUE - walker signals an error
 ***** DONE SYMBOL-MACROLET -- walker signals an error
 * Old "Bugs to fix" list from screamer.lisp
   These haven't been verified or anything, just moved here.
