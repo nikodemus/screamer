@@ -2793,6 +2793,7 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
   (declare-nondeterministic 'a-boolean))
 
 (cl:defun a-boolean ()
+  "Equivalent to \(EITHER T NIL)."
   (screamer-error
    "A-BOOLEAN is a nondeterministic function. As such, it must be called only~%~
    from a nondeterministic context."))
@@ -2977,6 +2978,7 @@ Screamer's who-calls database."
   (declare-nondeterministic 'an-integer))
 
 (cl:defun an-integer ()
+  "Generator yielding integers in sequence 0, 1, -1, 2, -2, ..."
   (screamer-error
    "AN-INTEGER is a nondeterministic function. As such, it must be called~%~
    only from a nondeterministic context."))
@@ -2993,6 +2995,8 @@ Screamer's who-calls database."
   (declare-nondeterministic 'an-integer-above))
 
 (cl:defun an-integer-above (low)
+  "Generator yielding integers starting from LOW and continuing sequentially
+in increasing direction."
   (declare (ignore low))
   (screamer-error
    "AN-INTEGER-ABOVE is a nondeterministic function. As such, it must be~%~
@@ -3009,6 +3013,8 @@ Screamer's who-calls database."
   (declare-nondeterministic 'an-integer-below))
 
 (cl:defun an-integer-below (high)
+  "Generator yielding integers starting from HIGH and continuing sequentially
+in decreasing direction."
   (declare (ignore high))
   (screamer-error
    "AN-INTEGER-BELOW is a nondeterministic function. As such, it must be~%~
