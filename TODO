@@ -45,7 +45,6 @@
 ******* maxv
 ******* funcallv
 ******* applyv
-******* equalv
 ******* bound?
 ******* value-of
 ******* ground?
