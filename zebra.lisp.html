@@ -136,13 +136,16 @@
         <span class="comment-delimiter">;; </span><span class="comment">Force a solution.
 </span>        (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((result
                (one-value
-                 <span class="comment-delimiter">;; </span><span class="comment">Feed all the primary values into the solution: we don't
-</span>                 <span class="comment-delimiter">;; </span><span class="comment">want any uncertainty to remain regarding these. If we
-</span>                 <span class="comment-delimiter">;; </span><span class="comment">merely fed in NATIONALITY, ZEBRA, and WATER, we might
-</span>                 <span class="comment-delimiter">;; </span><span class="comment">return false results where some of the constraints were
-</span>                 <span class="comment-delimiter">;; </span><span class="comment">not fully checked because eg. PROFESSION wasn't solved.
-</span>                 (solution (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> Nationality Pet Drink Color Profession)
-                           (static-ordering #'linear-force)))))
+                <span class="comment-delimiter">;; </span><span class="comment">Feed all the primary values into the solution: we don't
+</span>                <span class="comment-delimiter">;; </span><span class="comment">want any uncertainty to remain regarding these. If we
+</span>                <span class="comment-delimiter">;; </span><span class="comment">merely fed in NATIONALITY, ZEBRA, and WATER, we might
+</span>                <span class="comment-delimiter">;; </span><span class="comment">return false results where some of the constraints were
+</span>                <span class="comment-delimiter">;; </span><span class="comment">not fully checked because eg. PROFESSION wasn't solved.
+</span>                <span class="comment-delimiter">;;</span><span class="comment">
+</span>                <span class="comment-delimiter">;; </span><span class="comment">We're using STATIC-ORDERING here for simplicity. REORDER
+</span>                <span class="comment-delimiter">;; </span><span class="comment">using DOMAIN-SIZE would be faster.
+</span>                (solution (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> Nationality Pet Drink Color Profession)
+                          (static-ordering #'linear-force)))))
           <span class="comment-delimiter">;; </span><span class="comment">Human-readable labels: results we have back are integers identifying
 </span>          <span class="comment-delimiter">;; </span><span class="comment">the houses. Map back to nationalities.
 </span>          (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_destru.htm">destructuring-bind</a></span> (Nationality Pet Drink <span class="type"><a href="http://www.lispworks.com/reference/HyperSpec/Body/03_da.htm">&amp;rest</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_rest.htm">rest</a></span>) result
