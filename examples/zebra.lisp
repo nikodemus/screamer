@@ -115,13 +115,16 @@
         ;; Force a solution.
         (let ((result
                (one-value
-                 ;; Feed all the primary values into the solution: we don't
-                 ;; want any uncertainty to remain regarding these. If we
-                 ;; merely fed in NATIONALITY, ZEBRA, and WATER, we might
-                 ;; return false results where some of the constraints were
-                 ;; not fully checked because eg. PROFESSION wasn't solved.
-                 (solution (list Nationality Pet Drink Color Profession)
-                           (static-ordering #'linear-force)))))
+                ;; Feed all the primary values into the solution: we don't
+                ;; want any uncertainty to remain regarding these. If we
+                ;; merely fed in NATIONALITY, ZEBRA, and WATER, we might
+                ;; return false results where some of the constraints were
+                ;; not fully checked because eg. PROFESSION wasn't solved.
+                ;;
+                ;; We're using STATIC-ORDERING here for simplicity. REORDER
+                ;; using DOMAIN-SIZE would be faster.
+                (solution (list Nationality Pet Drink Color Profession)
+                          (static-ordering #'linear-force)))))
           ;; Human-readable labels: results we have back are integers identifying
           ;; the houses. Map back to nationalities.
           (destructuring-bind (Nationality Pet Drink &rest rest) result
