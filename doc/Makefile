@@ -16,6 +16,6 @@ include:
 
 screamer.html: screamer.texinfo style.css docstrings.lisp ../*.lisp ../*.asd
 	make include
-	makeinfo --html --no-split --css=style.css screamer.texinfo
+	makeinfo --html --no-split --css-include=style.css screamer.texinfo
 
 html: screamer.html
