@@ -430,14 +430,4 @@ solution is very different.)
 @include include/var-screamer-star-screamer-version-star.texinfo
 @include include/var-screamer-star-iscream?star.texinfo
 
-@chapter Examples
-
-@section Einstein's Riddle
-
-Solving the ``Einstein's Riddle'', aka ``The Zebra Puzzle'' using
-nondeterministic features of Screamer, ie. backtracking search.
-
-[ @url{http://nikodemus.github.com/screamer/examples/einstein.html, HTML} ]
-[ @url{http://nikodemus.github.com/screamer/examples/einstein.lisp, Source} ]
-
 @bye
