@@ -413,6 +413,7 @@ solution is very different.)
 @include include/fun-screamer-an-integer-belowv.texinfo
 @include include/fun-screamer-an-integer-betweenv.texinfo
 @include include/fun-screamer-value-of.texinfo
+@include include/fun-screamer-bound?.texinfo
 @include include/macro-screamer-assert!.texinfo
 @include include/macro-screamer-decide.texinfo
 @include include/macro-screamer-known?.texinfo

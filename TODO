@@ -46,7 +46,6 @@
 ******* funcallv
 ******* applyv
 ******* equalv
-******* bound?
 ******* ground?
 ******* apply-substitution
 ******* linear-force
