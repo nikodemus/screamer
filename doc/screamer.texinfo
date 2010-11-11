@@ -431,10 +431,18 @@ solution is very different.)
 
 @section Einstein's Riddle
 
-Solving the ``Einstein's Riddle'', aka ``The Zebra Puzzle'' using
+Solving ``Einstein's Riddle'', aka ``The Zebra Puzzle'' using
 nondeterministic features of Screamer, ie. backtracking search.
 
-[ @url{http://nikodemus.github.com/screamer/examples/einstein.html, HTML} ]
-[ @url{http://nikodemus.github.com/screamer/examples/einstein.lisp, Source} ]
+[ @url{http://nikodemus.github.com/screamer/einstein.lisp.html, HTML} ]
+[ @url{http://nikodemus.github.com/screamer/einstein.lisp, Source} ]
+
+@section The Zebra Puzzle
+
+Solving the original ``Zebra Puzzle'' using the constraint propagation
+facility of Screamer.
+
+[ @url{http://nikodemus.github.com/screamer/zebra.lisp.html, HTML} ]
+[ @url{http://nikodemus.github.com/screamer/zebra.lisp, Source} ]
 
 @bye
