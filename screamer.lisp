@@ -3330,7 +3330,12 @@ variable which is shared with X."
          (go loop))
       (let ((y (make-variable))) (restrict-value! y x) y)))
 
-(defun bound? (x) (not (variable? (value-of x))))
+(defun bound? (x)
+  "Returns T if X is not a variable or if X is a bound
+variable. Otherwise returns NIL. BOUND? is analogous to the
+extra-logical predicates VAR and NONVAR typically available in
+Prolog."
+  (not (variable? (value-of x))))
 
 (defun ground? (x)
   (let ((x (value-of x)))

@@ -45,7 +45,6 @@
 ******* maxv
 ******* funcallv
 ******* applyv
-******* bound?
 ******* ground?
 ******* apply-substitution
 ******* linear-force
