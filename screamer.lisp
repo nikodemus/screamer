@@ -3305,6 +3305,11 @@ be any Lisp object."
 (defun variable-false? (x) (null (variable-value x)))
 
 (defun value-of (x)
+  "Returns X if X is not a variable. If X is a variable then VALUE-OF
+dereferences X and returns the dereferenced value. If X is bound then
+the value returned will not be a variable. If X is unbound then the
+value returned will be a variable which may be X itself or another
+variable which is shared with X."
   (tagbody
    loop
      (if (or (not (variable? x))
