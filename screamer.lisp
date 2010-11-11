@@ -3305,6 +3305,11 @@ be any Lisp object."
 (defun variable-false? (x) (null (variable-value x)))
 
 (defun value-of (x)
+  "Returns X if X is not a variable. If X is a variable then VALUE-OF
+dereferences X and returns the dereferenced value. If X is bound then
+the value returned will not be a variable. If X is unbound then the
+value returned will be a variable which may be X itself or another
+variable which is shared with X."
   (tagbody
    loop
      (if (or (not (variable? x))
@@ -3325,9 +3330,19 @@ be any Lisp object."
          (go loop))
       (let ((y (make-variable))) (restrict-value! y x) y)))
 
-(defun bound? (x) (not (variable? (value-of x))))
+(defun bound? (x)
+  "Returns T if X is not a variable or if X is a bound
+variable. Otherwise returns NIL. BOUND? is analogous to the
+extra-logical predicates VAR and NONVAR typically available in
+Prolog."
+  (not (variable? (value-of x))))
 
 (defun ground? (x)
+  "The primitive GROUND? is an extension of the primitive BOUND? which
+can recursively determine whether an entire aggregate object is
+bound. Returns T if X is bound and either the value of X is atomic or
+all of the slots in the value of X are also bound. Otherwise returns
+nil."
   (let ((x (value-of x)))
     (and (not (variable? x))
          (or (not (consp x)) (and (ground? (car x)) (ground? (cdr x)))))))

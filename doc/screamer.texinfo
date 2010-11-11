@@ -397,6 +397,9 @@ solution is very different.)
 @chapter Constraints
 
 @include include/fun-screamer-make-variable.texinfo
+@include include/fun-screamer-value-of.texinfo
+@include include/fun-screamer-bound?.texinfo
+@include include/fun-screamer-ground?.texinfo
 @include include/macro-screamer-assert!.texinfo
 @include include/macro-screamer-known?.texinfo
 @include include/macro-screamer-decide.texinfo
@@ -429,15 +432,5 @@ solution is very different.)
 @include include/var-screamer-star-dynamic-extent?star.texinfo
 @include include/var-screamer-star-screamer-version-star.texinfo
 @include include/var-screamer-star-iscream?star.texinfo
-
-@chapter Examples
-
-@section Einstein's Riddle
-
-Solving the ``Einstein's Riddle'', aka ``The Zebra Puzzle'' using
-nondeterministic features of Screamer, ie. backtracking search.
-
-[ @url{http://nikodemus.github.com/screamer/examples/einstein.html, HTML} ]
-[ @url{http://nikodemus.github.com/screamer/examples/einstein.lisp, Source} ]
 
 @bye

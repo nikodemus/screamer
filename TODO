@@ -1,3 +1,4 @@
+-*- mode: org -*-
 * Battle Plan
 *** Release 3.21: unofficial maintenance release of 3.20.
 ***** This is currently happening on "master".
@@ -45,9 +46,6 @@
 ******* maxv
 ******* funcallv
 ******* applyv
-******* bound?
-******* value-of
-******* ground?
 ******* apply-substitution
 ******* linear-force
 ******* divide-and-conquer-force
