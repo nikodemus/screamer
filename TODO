@@ -46,7 +46,6 @@
 ******* funcallv
 ******* applyv
 ******* equalv
-******* ground?
 ******* apply-substitution
 ******* linear-force
 ******* divide-and-conquer-force
