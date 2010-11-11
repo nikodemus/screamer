@@ -47,7 +47,6 @@
 ******* applyv
 ******* equalv
 ******* bound?
-******* value-of
 ******* ground?
 ******* apply-substitution
 ******* linear-force
