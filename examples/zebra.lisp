@@ -47,14 +47,7 @@
      ,body))
 
 (defun all-differentv (list)
-  ;; Functionally the same as (apply #'/=v list), but faster.
-  (labels ((all-different (x xs)
-             (if (null xs)
-                 t
-                 (andv (notv (=v x (car xs)))
-                       (all-different x (cdr xs))
-                       (all-different (car xs) (cdr xs))))))
-    (all-different (car list) (cdr list))))
+  (apply #'/=v list))
 
 ;;;; Constraint model
 ;;;;
