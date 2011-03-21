@@ -11,23 +11,10 @@
 ;;;;
 ;;;; VAR-INTEGER-LIST returns a list of COUNT variables constrained to be
 ;;;; between MIN and MAX.
-;;;;
-;;;; ALL-DIFFERENTV returns a variable constrained to be true if variables in
-;;;; the list received all have different values.
 
 (defun var-integer-list (count min max)
   (loop for i below count
         collect (an-integer-betweenv min max)))
-
-(defun all-differentv (x &rest xs)
-  ;; Functionally the same as (apply #'/=v list), but faster.
-  (labels ((all-different (x xs)
-             (if (null xs)
-                 t
-                 (andv (notv (=v x (car xs)))
-                       (all-different x (cdr xs))
-                       (all-different (car xs) (cdr xs))))))
-    (all-different x xs)))
 
 ;;;; Utility functions for Sudoku CSP modelling
 
@@ -112,7 +99,7 @@
                             (columns vars)
                             (boxes vars))
                vars)
-        (assert! (apply 'all-differentv list)))
+        (assert! (apply #'/=v list)))
       (reorder #'domain-size
                #'(lambda (x) (declare (ignore x)) nil)
                #'<
@@ -123,6 +110,3 @@
         do (sudoku *sudoku-problem-1*)
            (sudoku *sudoku-problem-2*)
            (sudoku *sudoku-problem-3*)))
-
-
-
