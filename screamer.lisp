@@ -3400,8 +3400,10 @@ nil."
                                  (cons noticer (variable-noticers x)))))
                   (attach-noticer!-internal noticer (variable-value x))))))
 
-(defun attach-noticer! (noticer x)
-  (attach-noticer!-internal noticer x)
+(defun attach-noticer! (noticer &rest things)
+  (declare (dynamic-extent things))
+  (dolist (x things)
+    (attach-noticer!-internal noticer x))
   (funcall noticer))
 
 (defun run-noticers (x)
@@ -4762,24 +4764,21 @@ nil."
   (assert!-numberpv y)
   (let ((x (variablize x))
         (y (variablize y)))
-    (attach-noticer! #'(lambda () (=-rule x y)) x)
-    (attach-noticer! #'(lambda () (=-rule x y)) y)))
+    (attach-noticer! #'(lambda () (=-rule x y)) x y)))
 
 (defun assert!-<=v2 (x y)
   (assert!-realpv x)
   (assert!-realpv y)
   (let ((x (variablize x))
         (y (variablize y)))
-    (attach-noticer! #'(lambda () (<=-rule x y)) x)
-    (attach-noticer! #'(lambda () (<=-rule x y)) y)))
+    (attach-noticer! #'(lambda () (<=-rule x y)) x y)))
 
 (defun assert!-<v2 (x y)
   (assert!-realpv x)
   (assert!-realpv y)
   (let ((x (variablize x))
         (y (variablize y)))
-    (attach-noticer! #'(lambda () (<-rule x y)) x)
-    (attach-noticer! #'(lambda () (<-rule x y)) y)))
+    (attach-noticer! #'(lambda () (<-rule x y)) x y)))
 
 (defun assert!-/=v2 (x y)
   (assert!-numberpv x)
@@ -4788,8 +4787,7 @@ nil."
         (y (variablize y)))
     ;; note: Got rid of the nondeterministic version that called the
     ;;       nondeterministic version of /=-RULE.
-    (attach-noticer! #'(lambda () (/=-rule x y)) x)
-    (attach-noticer! #'(lambda () (/=-rule x y)) y)))
+    (attach-noticer! #'(lambda () (/=-rule x y)) x y)))
 
 ;;; Lifted Type Functions
 
