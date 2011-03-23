@@ -169,11 +169,9 @@ initialization forms of &AUX variables are always deterministic
 contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 
 (defun-compile-time get-function-record (function-name)
-  (let ((function-record (gethash function-name *function-record-table*)))
-    (unless function-record
-      (setf function-record (make-function-record :function-name function-name))
-      (setf (gethash function-name *function-record-table*) function-record))
-    function-record))
+  (or (gethash function-name *function-record-table*)
+      (setf (gethash function-name *function-record-table*)
+            (make-function-record :function-name function-name))))
 
 (defun-compile-time peal-off-documentation-string-and-declarations
     (body &optional documentation-string?)
