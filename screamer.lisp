@@ -2496,17 +2496,25 @@ EITHER is a special form, not a function. It is an error for the expression
 SETF and SETQ expressions lexically nested in its body result in local
 side effects which are undone upon backtracking.
 
-Note that this affects only side effects introduced explicitly via SETF and
-SETQ. Side effects introduced by Common Lisp builtin in functions such as
-RPLACA are always global.
+This affects only side effects introduced explicitly via SETF and
+SETQ. Side effects introduced by either user defined functions or builtin
+Common Lisp functions such as RPLACA are always global.
 
-Furthermore, it affects only occurrences of SETF and SETQ which appear
-textually nested in the body of the LOCAL expression -- not those appearing in
-functions called from the body.
+Behaviour of side effects introduced by macro-expansions such as INCF
+depends on the exact macro-expansion. If (INCF (FOO)) expands using
+eg. SET-FOO, LOCAL is unable to undo the side-effect.
 
-LOCAL and GLOBAL expressions may be nested inside one another. The nearest
-surrounding declaration determines whether or not a given SETF or SETQ results
-in a local or global side effect.
+LOCAL does not currently distinguish between initially uninitialized
+and intialized places, such as unbound variables or hash-table keys
+with no prior values. As a result, an attempt to assign an unbound
+variable inside LOCAL will signal an error due to the system's attempt
+to first read the variable. Similarly, undoing a (SETF GETHASH) when
+the key did not previously exist in the table will insert a NIL into
+the table instead of doing a REMHASH.
+
+LOCAL and GLOBAL expressions may be nested inside one another. The
+nearest surrounding declaration determines whether or not a given SETF
+or SETQ results in a local or global side effect.
 
 Side effects default to be global when there is no surrounding LOCAL or GLOBAL
 expression. Local side effects can appear both in deterministic as well as
@@ -2514,9 +2522,6 @@ nondeterministic contexts though different techniques are used to implement
 the trailing of prior values for restoration upon backtracking. In
 nondeterministic contexts, LOCAL as well as SETF are treated as special forms
 rather than macros. This should be completely transparent to the user."
-  ;; FIXME: Surely screamer isn't smart enough to undo calls to SETF
-  ;; functions... so this probably only deals with variable assignments. Check
-  ;; it, say it.
   (let ((*local?* t))
     `(progn ,@(mapcar
                #'(lambda (form) (perform-substitutions form environment))

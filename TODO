@@ -67,6 +67,12 @@
     Most of the DEFUN-COMPILE-TIME functions should probably go
     to a file of their own, loaded before the main screamer code
     is compiled.
+*** TODO Cleanups
+***** TODO #:DUMMY-N gensyms used all over the place
+      This makes macro-expansions harder to read than they need to be.
+      Use differently named gensyms for different things.
+***** TODO DEFMACRO-COMPILE-TIME
+      Check if Allegro still needs this.
 *** TODO primordial.lisp has some commented-out tests using LOOP
     Apparently LOCAL and LOOP interactions depend on the specific
     expansion of loop. :/ If nothing else, documentation should
@@ -87,11 +93,22 @@
 	function as a nondeterministic one. A wizard might want to do this to
 	take advantage of the fact that a LOCAL SETF/SETQ in a nondeterministic
 	function does not cons up closures.
+* Bugs
+*** TODO LOCAL only reliable with explicit SETF/SETQ:
+    If (INCF (FOO)) expands into a form that does SET-FOO instead of
+    (SETF (FOO) ...) form, the code walker will not know about the
+    side-effect.
+
+    Options:
+    - Implement SCREAMER:INCF, etc.
+    - Wrap all non-SETF/SETQ forms in GLOBAL, so that those side-effects are never undone.
+    - Leave it as-is.
+*** TODO No Previous value vs New Value distinction
+***** TODO (SETF (GETHASH ...) ...) does not REMHASH on unwind if there was not previous element
+***** TODO LOCAL (SETF/SETQ X e) will signal an error if X is unbound
+      because it needs to trail the previous value of X and it has none.
 * Old "Bugs to fix" list from screamer.lisp
   These haven't been verified or anything, just moved here.
-*** TODO LOCAL SETF does the wrong thing with GETHASH.
-*** TODO LOCAL (SETF/SETQ X e) will signal an error if X is unbound
-    because it needs to trail the previous value of X and it has none.
 *** TODO Deterministic/nondeterministic LOCAL SETF/SETQ undone out of order.
 *** TODO Changing determinism status
     can cause code from a different file to be included causing wierd behavior.
@@ -123,8 +140,9 @@
 *** TODO Backtracking out of INTEGER-BETWEENV and the like will yield an
     unconstrained variable since the constraints are asserted locally.
 * Refactoring
-*** Consider depending on Alexandria
+*** Depend on Alexandria
 ***** peal-off-documentation-string-and-declarations -> alexandria:parse-body
+*** SETF and SETQ walking is suspiciously different
 * Future Work
 *** TODO See if it would make sense to make nondeterministic functions funcallable instances.
 *** TODO Lock package on SBCL.
