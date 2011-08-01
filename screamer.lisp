@@ -3074,12 +3074,13 @@ either a list or a vector."
             (setf sequence (value-of (rest sequence)))))
          (funcall continuation (first sequence))))
       ((vectorp sequence)
-       (let ((n (1- (length sequence))))
+       (let ((n (length sequence)))
          (unless (zerop n)
-           (choice-point-external
-            (dotimes (i n)
-              (choice-point-internal (funcall continuation (aref sequence i)))))
-           (funcall continuation (aref sequence n)))))
+           (let ((n (1- n)))
+             (choice-point-external
+              (dotimes (i n)
+                (choice-point-internal (funcall continuation (aref sequence i)))))
+             (funcall continuation (aref sequence n))))))
       (t (error "SEQUENCE must be a sequence")))))
 
 ;;; note: The following two functions work only when Screamer is running under

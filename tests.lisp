@@ -70,6 +70,12 @@
   (is (equal '(1 ding 2 4 ding 5)
              (all-values (multiple-value-call-nondeterministic.ding)))))
 
+(deftest a-member-of-vector ()
+  (is (equal '() (all-values (a-member-of ""))))
+  (is (equal '(#\a) (all-values (a-member-of "a"))))
+  (is (equal '(#\a #\b) (all-values (a-member-of "ab"))))
+  (is (equal '(#\a #\b #\c) (all-values (a-member-of "abc")))))
+
 (deftest prime-ordeal ()
   (is (primordial::test1))
   (is (primordial::test2))
