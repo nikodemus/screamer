@@ -349,6 +349,43 @@ Additionally, functions defined using @code{flet} and @code{labels}
 are not in nondeterministic context, even if the surrounding context
 is nondeterministic.
 
+@subsection Limitations in Undoing Side-Effects
+
+Undoing side-effects via @code{local} is reliable only if the
+@code{setf} and @code{setq} forms are lexically apparent:
+
+@lisp
+(local (incf (foo)))
+@end lisp
+
+may or may not work as expected, depending on how @code{foo} is
+implemented. If @code{(incf (foo))} expands using eg. @code{set-foo},
+the code-walker will not notice the side-effect.
+
+Undoing side-effects via @code{local} when there is no prior value
+might not work as expected, depending on the implementation of the
+place:
+
+@itemize
+
+@item
+If reading a non-existent value causes an error to be signalled, the
+initial assignment inside @code{local} will cause that to happen.
+
+Example: assignment to an unbound variable inside @code{local} signals
+an error.
+
+@item
+If reading a non-existent value causes a marker object (eg.
+@code{nil}) to be returned, undoing the side-effect means assigning
+the marker object back to the place.
+
+Example: undoing @code{(setf gethash)} of a previously unknown key
+will cause @code{nil} to be stored in the table instead of removing
+the new key and its value entirely via @code{remhash}.
+
+@end itemize
+
 @chapter Examples
 
 @section Einstein's Riddle
