@@ -2831,30 +2831,34 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
   (choice-point (funcall continuation t))
   (funcall continuation nil))
 
+;; FIXME: Since we export FAIL, throwing to it is probably a bad idea.
+;; ...better throw to %FAIL.
+(defvar *fail* (lambda () (throw 'fail nil)))
+
 (defun fail ()
   "Backtracks to the most recent choise point. Equivalent to
 \(EITHER). Note that FAIL is deterministic function and thus it is
 permissible to reference #'FAIL, and write \(FUNCALL #'FAIL) or
 \(APPLY #'FAIL). In nondeterministic contexts, the expression \(FAIL)
 is optimized to generate inline backtracking code."
-  ;; FIXME: Since we export FAIL, throwing to it is probably a bad idea.
-  ;; ...better throw to %FAIL.
-  (throw 'fail nil))
+  (funcall *fail*))
 
-(defmacro-compile-time when-failing ((&body failing-forms) &body forms)
-  (let ((old-fail (gensym "FAIL-")))
-    `(let ((,old-fail #'fail))
-       (unwind-protect
-            (progn (setf (symbol-function 'fail)
-                         #'(lambda () ,@failing-forms (funcall ,old-fail)))
-                   ,@forms)
-         (setf (symbol-function 'fail) ,old-fail)))))
+(defmacro-compile-time when-failing ((&body failing-forms) &body body)
+  "Whenever FAIL is called during execution of BODY, executes FAILING-FORMS
+before unwinding."
+  (let ((old-fail (gensym "FAIL")))
+    `(let* ((,old-fail *fail*)
+            (*fail* (lambda () ,@failing-forms (funcall ,old-fail))))
+       ,@body)))
 
-(defmacro-compile-time count-failures (&body forms)
+(defmacro-compile-time count-failures (&body body)
+  "Executes BODY keeping track of the number of times FAIL has been called
+without unwinding from BODY. After BODY completes, reports the number of
+failures to *STANDARD-OUTPUT* before returning values from BODY."
   (let ((values (gensym "VALUES-")))
-    `(let ((failure-count 0))
+    `(let ((failure-count 0)) ; FIXME: use a gensym after 3.21 -- now backwards compat is king
        (when-failing ((incf failure-count))
-         (let ((,values (multiple-value-list (progn ,@forms))))
+         (let ((,values (multiple-value-list (progn ,@body))))
            (format t "Failures         = ~10<~;~d~>" failure-count)
            (values-list ,values))))))
 
@@ -3113,6 +3117,10 @@ either a list or a vector."
           (format nil "~A" (code-char 29))))
 
 (defmacro-compile-time local-output (&body forms)
+  "Currently unsupported.
+
+When running under ILisp with iscream.el loaded, does non-determinism aware
+output to Emacs, which will be deleted when the current choise is unwound."
   `(progn
      (unless *iscream?*
        (error "Cannot do LOCAL-OUTPUT unless Screamer is running under~%~

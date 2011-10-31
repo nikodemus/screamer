@@ -153,3 +153,15 @@
                    (1 (is (null unwind)))
                    (2 (is (equal '(1) unwind)))
                    (3 (is (equal '(2 1) unwind)))))))))
+
+(deftest test-count-failures ()
+  (is (equal "Failures         =          5"
+             (with-output-to-string (*standard-output*)
+               (is (equal '(:a 5)
+                          (count-failures
+                            (one-value
+                                (let ((x (either 1 2 3 4 5 :a)))
+                                  (unless (keywordp x)
+                                    (fail))
+                                  ;; FIXME: leak, but keeping it for backwards compatibility
+                                  (list x screamer::failure-count))))))))))

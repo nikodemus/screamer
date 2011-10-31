@@ -439,6 +439,8 @@ of Screamer.
 @include include/fun-screamer-funcall-nondeterministic.texinfo
 @include include/fun-screamer-multiple-value-call-nondeterministic.texinfo
 @include include/fun-screamer-nondeterministic-function?.texinfo
+@include include/macro-screamer-when-failing.texinfo
+@include include/macro-screamer-count-failures.texinfo
 
 @chapter Constraints
 
