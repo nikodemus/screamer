@@ -110,20 +110,10 @@ disable it. Default is platform dependent.")
   "The allowed lambda list keywords in order.")
 
 (defmacro-compile-time choice-point-internal (form)
-  ;; note: Is it really better to use VECTOR-PUSH-EXTEND than CONS for the
-  ;;       trail?
   `(catch 'fail
      (let ((*nondeterministic?* t))
        (unwind-protect ,form
-         (block nil
-           (tagbody
-            loop
-              (if (= (fill-pointer *trail*) trail-pointer) (return))
-              (funcall (vector-pop *trail*))
-              ;; note: This is to allow the trail closures to be garbage
-              ;;       collected.
-              (setf (aref *trail* (fill-pointer *trail*)) nil)
-              (go loop)))))))
+         (unwind-trail-to trail-pointer)))))
 
 (defmacro-compile-time choice-point-external (&rest forms)
   ;; note: Is it really better to use VECTOR-PUSH-EXTEND than CONS for the
@@ -2718,10 +2708,46 @@ each backtrack of I."
                             (decf ,counter))))
          ,default-expression))))
 
+;;; In classic Screamer TRAIL is unexported and UNWIND-TRAIL is exported. This
+;;; doesn't seem very safe or sane: while users could conceivably want to use
+;;; TRAIL to track unwinds, using UNWIND-TRAIL seems inherently dangerous
+;;; given that Screamer uses TRAIL internally.
+;;;
+;;; So, we export TRAIL, and document UNWIND-TRAIL as being deprecated,
+;;; and plan to delete it before 4.0.
 (defun trail (function)
+  "When called in non-deterministic context, adds FUNCTION to the trail.
+Outside non-deterministic context does nothing.
+
+Functions on the trail are called when unwinding from a nondeterministic
+selection (due to either a normal return, or calling FAIL.)"
   ;; note: Is it really better to use VECTOR-PUSH-EXTEND than CONS for the
   ;;       trail?
-  (if *nondeterministic?* (vector-push-extend function *trail* 1024)))
+  (when *nondeterministic?*
+    (vector-push-extend function *trail* 1024))
+  function)
+
+(defun unwind-trail-to (trail-pointer)
+  (declare (fixnum trail-pointer))
+  (loop with trail = *trail*
+        do (when (<= (fill-pointer trail) trail-pointer)
+             (return-from unwind-trail-to))
+           (funcall (vector-pop trail))
+           ;; note: This is to allow the trail closures to be garbage collected.
+           (setf (aref trail (fill-pointer trail)) nil)))
+
+;;; FIXME: Since Screamer doesn't use UNWIND-TRAIL even internally, it should
+;;; probably be deleted when Screamer 4.0 is in the works.
+(defun unwind-trail ()
+  "DEPRECATED.
+
+Calls all functions installed using TRAIL, and removes them from the trail.
+
+Using UNWIND-TRAIL is dangerous, as TRAIL is used by Screamer internally to
+eg. undo effects of local assignments -- hence users should never call it. It
+is provided at the moment only for backwards compatibility with classic
+Screamer."
+  (unwind-trail-to 0))
 
 (defun y-or-n-p
     (&optional (format-string nil format-string?) &rest format-args)
@@ -2945,15 +2971,6 @@ nondeterministic source contexts."
               (declare (ignore ,other-arguments))
               ,@body)
           ,form))))
-
-(defun unwind-trail ()
-  (tagbody
-   loop
-     (if (zerop (fill-pointer *trail*)) (return-from unwind-trail))
-     (funcall (vector-pop *trail*))
-     ;; note: This is to allow the trail closures to be garbage collected.
-     (setf (aref *trail* (fill-pointer *trail*)) nil)
-     (go loop)))
 
 (defun purge (function-name)
   "Removes any information about FUNCTION-NAME from Screamer's

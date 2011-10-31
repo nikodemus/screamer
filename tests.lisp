@@ -157,3 +157,13 @@
   (is (primordial::test68))
   (is (primordial::test69)))
 
+(deftest test-trail ()
+  (is (equal '(t t t)
+             (all-values
+               (let* ((unwind nil)
+                      (x (either 1 2 3)))
+                 (trail (lambda () (push x unwind)))
+                 (ecase x
+                   (1 (is (null unwind)))
+                   (2 (is (equal '(1) unwind)))
+                   (3 (is (equal '(2 1) unwind)))))))))

@@ -43,6 +43,7 @@
            #:funcall-nondeterministic
            #:apply-nondeterministic
            #:unwind-trail
+           #:trail
            #:purge
            #:unwedge-screamer
            #:local-output

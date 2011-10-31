@@ -29,6 +29,8 @@
 
 (defsystem :screamer
   :serial t
+  :licence "MIT"
+  :description "Nondeterministic programming and constraint propagation."
   :components
   ((:file "package")
    (:file "screamer")))
