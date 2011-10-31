@@ -2708,13 +2708,6 @@ each backtrack of I."
                             (decf ,counter))))
          ,default-expression))))
 
-;;; In classic Screamer TRAIL is unexported and UNWIND-TRAIL is exported. This
-;;; doesn't seem very safe or sane: while users could conceivably want to use
-;;; TRAIL to track unwinds, using UNWIND-TRAIL seems inherently dangerous
-;;; given that Screamer uses TRAIL internally.
-;;;
-;;; So, we export TRAIL, and document UNWIND-TRAIL as being deprecated,
-;;; and plan to delete it before 4.0.
 (defun trail (function)
   "When called in non-deterministic context, adds FUNCTION to the trail.
 Outside non-deterministic context does nothing.
@@ -2735,19 +2728,6 @@ selection (due to either a normal return, or calling FAIL.)"
            (funcall (vector-pop trail))
            ;; note: This is to allow the trail closures to be garbage collected.
            (setf (aref trail (fill-pointer trail)) nil)))
-
-;;; FIXME: Since Screamer doesn't use UNWIND-TRAIL even internally, it should
-;;; probably be deleted when Screamer 4.0 is in the works.
-(defun unwind-trail ()
-  "DEPRECATED.
-
-Calls all functions installed using TRAIL, and removes them from the trail.
-
-Using UNWIND-TRAIL is dangerous, as TRAIL is used by Screamer internally to
-eg. undo effects of local assignments -- hence users should never call it. It
-is provided at the moment only for backwards compatibility with classic
-Screamer."
-  (unwind-trail-to 0))
 
 (defun y-or-n-p
     (&optional (format-string nil format-string?) &rest format-args)
