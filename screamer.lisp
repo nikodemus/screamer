@@ -110,7 +110,7 @@ disable it. Default is platform dependent.")
   "The allowed lambda list keywords in order.")
 
 (defmacro-compile-time choice-point-internal (form)
-  `(catch 'fail
+  `(catch '%fail
      (let ((*nondeterministic?* t))
        (unwind-protect ,form
          (unwind-trail-to trail-pointer)))))
@@ -2831,9 +2831,7 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
   (choice-point (funcall continuation t))
   (funcall continuation nil))
 
-;; FIXME: Since we export FAIL, throwing to it is probably a bad idea.
-;; ...better throw to %FAIL.
-(defvar *fail* (lambda () (throw 'fail nil)))
+(defvar *fail* (lambda () (throw '%fail nil)))
 
 (defun fail ()
   "Backtracks to the most recent choise point. Equivalent to
