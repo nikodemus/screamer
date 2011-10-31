@@ -95,10 +95,11 @@ may wish to refer to the original papers below.
 <ul>
 <li><a href="#TOC12">3.1 Einstein's Riddle</a>
 <li><a href="#TOC13">3.2 The Zebra Puzzle</a>
+<li><a href="#TOC14">3.3 The Sudoku Puzzle</a>
 </li></ul>
-<li><a name="toc_TOC14" href="#TOC14">4 Nondetermism</a>
-<li><a name="toc_TOC15" href="#TOC15">5 Constraints</a>
-<li><a name="toc_TOC16" href="#TOC16">6 Miscellany</a>
+<li><a name="toc_TOC15" href="#TOC15">4 Nondetermism</a>
+<li><a name="toc_TOC16" href="#TOC16">5 Constraints</a>
+<li><a name="toc_TOC17" href="#TOC17">6 Miscellany</a>
 </li></ul>
 </div>
 
@@ -418,7 +419,15 @@ solution is very different.)
    <p>[ <a href="zebra.lisp.html">HTML</a> ]
 [ <a href="zebra.lisp">Source</a> ]
 
-<h2 class="chapter"><a name="TOC14"></a>4 Nondetermism</h2>
+<h3 class="section"><a name="TOC14"></a>3.3 The Sudoku Puzzle</h3>
+
+<p>Solving a sudoku puzzle using forward constraint propagation features
+of Screamer.
+
+   <p>[ <a href="sudoku.lisp.html">HTML</a> ]
+[ <a href="sudoku.lisp">Source</a> ]
+
+<h2 class="chapter"><a name="TOC15"></a>4 Nondetermism</h2>
 
 <p><a name="Macro-either"></a>
 
@@ -845,7 +854,7 @@ will return an ordinary deterministic Common Lisp function, which will signal
 an error at runtime. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC15"></a>5 Constraints</h2>
+<h2 class="chapter"><a name="TOC16"></a>5 Constraints</h2>
 
 <p><a name="Function-make_002dvariable"></a>
 
@@ -1499,7 +1508,7 @@ ratio.
 Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
 </p></blockquote></div>
 
-<h2 class="chapter"><a name="TOC16"></a>6 Miscellany</h2>
+<h2 class="chapter"><a name="TOC17"></a>6 Miscellany</h2>
 
 <p><a name="Function-booleanp"></a>
 
