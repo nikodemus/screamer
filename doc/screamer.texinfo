@@ -412,7 +412,6 @@ solution is very different.)
 @include include/macro-screamer-either.texinfo
 @include include/fun-screamer-fail.texinfo
 @include include/fun-screamer-trail.texinfo
-@include include/fun-screamer-unwind-trail.texinfo
 @include include/macro-screamer-all-values.texinfo
 @include include/macro-screamer-one-value.texinfo
 @include include/macro-screamer-for-effects.texinfo
