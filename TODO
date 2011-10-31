@@ -17,13 +17,13 @@
 ******* Add DEFINE-SCREAMER-FUNCTION or similar as an alias to SCREAMER::DEFUN.
 ******* Identify some performance issues and see if anything can be done.
 ******* Try to improve debuggability of Screamer generated code.
+******* Delete UNWIND-TRAIL.
 * Documentation
 *** WIP A web-friendly manual
 ***** Unify language
 ******* Some docstrings talk of EXPRESSIONS, some of FORMS.
 ******* "Yields" vs "returns" a value.
 ***** Still missing exported symbols:
-******* unwind-trail
 ******* local-output
 ******* when-failing
 ******* count-failures
