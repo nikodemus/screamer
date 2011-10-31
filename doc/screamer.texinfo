@@ -407,6 +407,14 @@ solution is very different.)
 [ @url{zebra.lisp.html, HTML} ]
 [ @url{zebra.lisp, Source} ]
 
+@section The Sudoku Puzzle
+
+Solving a sudoku puzzle using forward constraint propagation features
+of Screamer.
+
+[ @url{sudoku.lisp.html, HTML} ]
+[ @url{sudoku.lisp, Source} ]
+
 @chapter Nondetermism
 
 @include include/macro-screamer-either.texinfo
