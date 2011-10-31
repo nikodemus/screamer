@@ -8,9 +8,14 @@
 ***** DONE ANSI cleanups
 ***** Obvious bugfixes, like 19c3bfaadbbf01401db14589c70b2b102297aef0
 *** New development
-***** This is currently happening on "dev".
-******* Once 3.21 is out, move it onto "classic" branch, into deep maintenance mode.
-******* Then current "dev" becomes the new "master".
+***** Once 3.21 is out, move it onto "classic" branch, into deep maintenance mode.
+***** New stuff appears for now on "future" branch, which is rebased constantly.
+      It is master + new code on top.
+      Once 3.21 is out, future becomes the new master.
+***** New stuff is also on "dev" branch, which is not rebased -- for convenience.
+      It gets master and future merged into it. Or possibly master as
+      merges and future as cherries. In either case, it will be thrown
+      out once 3.21 is out.
 ***** Release 4.0
 ******* DONE /=V allowing integer bounds to be constrained.
 ******* Support at least some of the currently missing special forms
@@ -31,8 +36,6 @@
 ******* >=v
 ******* a-numberv
 ******* a-member-ofv
-******* andv
-******* orv
 ******* count-trues
 ******* count-truesv
 ******* +v

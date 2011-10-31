@@ -441,6 +441,8 @@ solution is very different.)
 @include include/macro-screamer-assert!.texinfo
 @include include/macro-screamer-known?.texinfo
 @include include/macro-screamer-decide.texinfo
+@include include/fun-screamer-andv.texinfo
+@include include/fun-screamer-orv.texinfo
 @include include/fun-screamer-booleanpv.texinfo
 @include include/fun-screamer-numberpv.texinfo
 @include include/fun-screamer-realpv.texinfo
