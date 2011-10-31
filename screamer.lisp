@@ -5215,7 +5215,7 @@ boolean."
             ((zerop count) t)
             ((= count 1) (first xs))
             (t (let ((z (a-booleanv)))
-                 (attach-noticer!
+                 (attach-noticer!-internal
                   #'(lambda ()
                       (cond ((variable-true? z) (dolist (x xs) (restrict-true! x)))
                             ((and (= count 1) (variable-false? z))
@@ -5237,7 +5237,28 @@ boolean."
                       x)))
                  z)))))))
 
-(defun andv (&rest xs) (andv-internal xs))
+(defun andv (&rest xs)
+  "Restricts each argument to be boolean.
+
+Returns T if called with no arguments, or if all arguments are known to equal
+T after being restricted to be boolean, and returns NIL if any argument is
+known to equal NIL after this restriction.
+
+Otherwise returns a boolean variable V. The values of the arguments and V are
+mutually constrained:
+
+ * If any argument is later known to equal NIL value of V becomes NIL.
+
+ * If all arguments are later known to equal T, value of V becomes T.
+
+ * If value of V is later known to equal T, all arguments become T.
+
+ * If value of V is later known to equal NIL, and all but one argument is
+   known to be T, the remaining argument becomes NIL.
+
+Note that unlike CL:AND, ANDV is a function and always evaluates all its
+arguments. Secondly, any non-boolean argument causes it to fail."
+  (andv-internal xs))
 
 (defun assert!-notv-andv-internal (xs)
   (dolist (x xs) (assert!-booleanpv x))
@@ -5274,7 +5295,7 @@ boolean."
             ((zerop count) nil)
             ((= count 1) (first xs))
             (t (let ((z (a-booleanv)))
-                 (attach-noticer!
+                 (attach-noticer!-internal
                   #'(lambda ()
                       (cond ((variable-false? z)
                              (dolist (x xs) (restrict-false! x)))
@@ -5297,7 +5318,28 @@ boolean."
                       x)))
                  z)))))))
 
-(defun orv (&rest xs) (orv-internal xs))
+(defun orv (&rest xs)
+  "Restricts each argument to be boolean.
+
+Returns NIL if called with no arguments, or if all arguments are known to
+equal NIL after being restructed to be boolean, and returns T if any argument
+is known to equal T after this restriction.
+
+Otherwise returns a boolean variable V. The values of arguments and V are
+mutually constrained:
+
+ * If any argument is later known to equal T, value of V becomes T.
+
+ * If all arguments are later known to equal NIL, value of V becomes NIL.
+
+ * If value of V is later known to equal NIL, all arguments become NIL.
+
+ * If value of V is later known to equal T, and all but one argument is
+   known to be NIL, the remaining argument becomes T.
+
+Note that unlike CL:OR, ORV is a function and always evaluates all its
+arguments. Secondly, any non-boolean argument causes it to fail."
+  (orv-internal xs))
 
 (defun assert!-orv-internal (xs)
   (dolist (x xs) (assert!-booleanpv x))
