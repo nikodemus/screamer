@@ -412,7 +412,6 @@ solution is very different.)
 @include include/macro-screamer-either.texinfo
 @include include/fun-screamer-fail.texinfo
 @include include/fun-screamer-trail.texinfo
-@include include/fun-screamer-unwind-trail.texinfo
 @include include/macro-screamer-all-values.texinfo
 @include include/macro-screamer-one-value.texinfo
 @include include/macro-screamer-for-effects.texinfo
@@ -466,7 +465,9 @@ solution is very different.)
 
 @chapter Miscellany
 
+@include include/fun-screamer-booleanp.texinfo
 @include include/fun-screamer-purge.texinfo
+@include include/fun-screamer-unwind-trail.texinfo
 @include include/fun-screamer-unwedge-screamer.texinfo
 @include include/var-screamer-star-dynamic-extent?star.texinfo
 @include include/var-screamer-star-screamer-version-star.texinfo

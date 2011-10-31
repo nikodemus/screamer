@@ -27,7 +27,6 @@
 ******* local-output
 ******* when-failing
 ******* count-failures
-******* booleanp
 ******* <=v
 ******* >v
 ******* >=v

@@ -3186,7 +3186,9 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 #+screamer-clos
 (defun-compile-time variable? (thing) (typep thing 'variable))
 
-(defun booleanp (x) (typep x 'boolean))
+(defun booleanp (x)
+  "Returns true iff X is T or NIL."
+  (typep x 'boolean))
 
 (defun infinity-min (x y) (and x y (min x y)))
 
