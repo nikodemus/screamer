@@ -5687,6 +5687,15 @@ arguments. Secondly, any non-boolean argument causes it to fail."
 (defun assert!-notv-funcallv (f &rest x) (assert!-constraint f nil x))
 
 (defun funcallv (f &rest x)
+  "F must be a deterministic function. If all arguments X are bound, returns
+the result of calling F on the dereferenced values of arguments.
+
+Otherwise returns a fresh variable V, constrained to be equal to the result
+of calling F on the dereferenced values of arguments.
+
+Additionally, if all but one of V and the argument variables become known, and
+the remaining variable has a finite domain, then that domain is further
+restricted to be consistent with other arguments."
   (let ((f (value-of f)))
     (if (variable? f)
         (error "The current implementation does not allow the first argument~%~
@@ -5725,6 +5734,15 @@ arguments. Secondly, any non-boolean argument causes it to fail."
   (assert!-constraint f nil (arguments-for-applyv x xs)))
 
 (defun applyv (f x &rest xs)
+  "F must be a deterministic function. If all arguments X are bound, returns
+the result of calling F on the dereferenced values of spread arguments.
+
+Otherwise returns a fresh variable V, constrained to be equal to the result
+of calling F on the dereferenced values of arguments.
+
+Additionally, if all but one of V and the argument variables become known, and
+the remaining variable has a finite domain, then that domain is further
+restricted to be consistent with other arguments."
   (let ((f (value-of f)))
     (if (variable? f)
         (error "The current implementation does not allow the first argument~%~
@@ -6598,11 +6616,14 @@ The expression \(A-REAL-BETWEENV LOW HIGH) is an abbreviation for:
     v))
 
 (defun a-numberv (&optional (name nil name?))
+  "Returns a variable whose value is constained to be a number."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (numberpv v))
     v))
 
 (defun a-member-ofv (values &optional (name nil name?))
+  "Returns a variable whose value is constrained to be one of VALUES.
+VALUES can be either a vector or a list designator."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (memberv v values))
     (value-of v)))

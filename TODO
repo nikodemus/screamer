@@ -34,8 +34,6 @@
 ******* <=v
 ******* >v
 ******* >=v
-******* a-numberv
-******* a-member-ofv
 ******* count-trues
 ******* count-truesv
 ******* +v
@@ -44,8 +42,6 @@
 ******* /v
 ******* minv
 ******* maxv
-******* funcallv
-******* applyv
 ******* apply-substitution
 ******* linear-force
 ******* divide-and-conquer-force
