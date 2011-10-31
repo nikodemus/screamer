@@ -32,7 +32,6 @@
 ******* >=v
 ******* a-numberv
 ******* a-member-ofv
-******* notv
 ******* andv
 ******* orv
 ******* count-trues

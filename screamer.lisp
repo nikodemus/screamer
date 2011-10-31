@@ -5176,6 +5176,17 @@ vector."
 ;;; Lifted NOTV, ANDV and ORV
 
 (defun notv (x)
+  "Restricts X to be a boolean.
+
+Returns T if this restricts X to NIL, and T if this restricts X to NIL.
+
+Otherwise returns a new boolean variable V. V and X are mutually constrained
+via noticers, so that if either is later known to equal T, the other is
+restricted to equal NIL and vice versa.
+
+Note that unlike CL:NOT NOTV does not accept arbitrary values as arguments: it
+fails if its argument is not T, NIL, or variable that can be restricted to a
+boolean."
   (assert!-booleanpv x)
   (let ((x (value-of x)))
     (cond ((eq x t) nil)
@@ -6192,9 +6203,9 @@ X2."
       (if polarity? `(known?-true ,form) `(known?-false ,form))))
 
 (defmacro-compile-time known? (x)
-  "Restricts X to be a boolean. If X is equal to T after being restricted to be boolean,
-returns T. If X is equal to NIL or if the value of X is unknown returns NIL.
-The argument X can be either a variable or a non-variable.
+  "Restricts X to be a boolean. If X is equal to T after being restricted to
+be boolean, returns T. If X is equal to NIL or if the value of X is unknown
+returns NIL. The argument X can be either a variable or a non-variable.
 
 The initial restriction to boolean may cause other assertions to be made due
 to noticers attached to X. A call to KNOWN? fails if X is known not to be
