@@ -26,13 +26,11 @@
 ******* local-output
 ******* when-failing
 ******* count-failures
-******* booleanp
 ******* <=v
 ******* >v
 ******* >=v
 ******* a-numberv
 ******* a-member-ofv
-******* notv
 ******* andv
 ******* orv
 ******* count-trues

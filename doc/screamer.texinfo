@@ -446,6 +446,7 @@ solution is very different.)
 @include include/fun-screamer-realpv.texinfo
 @include include/fun-screamer-integerpv.texinfo
 @include include/fun-screamer-memberv.texinfo
+@include include/fun-screamer-notv.texinfo
 @include include/fun-screamer-equalv.texinfo
 @include include/fun-screamer-equals-v.texinfo
 @include include/fun-screamer-slash-equals-v.texinfo
@@ -465,7 +466,9 @@ solution is very different.)
 
 @chapter Miscellany
 
+@include include/fun-screamer-booleanp.texinfo
 @include include/fun-screamer-purge.texinfo
+@include include/fun-screamer-unwind-trail.texinfo
 @include include/fun-screamer-unwedge-screamer.texinfo
 @include include/var-screamer-star-dynamic-extent?star.texinfo
 @include include/var-screamer-star-screamer-version-star.texinfo
