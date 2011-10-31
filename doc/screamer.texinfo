@@ -465,6 +465,9 @@ of Screamer.
 @include include/fun-screamer-equals-v.texinfo
 @include include/fun-screamer-slash-equals-v.texinfo
 @include include/fun-screamer-lt-v.texinfo
+@include include/fun-screamer-lt-equals-v.texinfo
+@include include/fun-screamer-gt-v.texinfo
+@include include/fun-screamer-gt-equals-v.texinfo
 @include include/fun-screamer-a-booleanv.texinfo
 @include include/fun-screamer-a-numberv.texinfo
 @include include/fun-screamer-a-member-ofv.texinfo

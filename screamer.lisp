@@ -6080,7 +6080,7 @@ to be real.
 Returns T when called with one argument. A call such as \(<V X1 X2 ... Xn)
 with more than two arguments behaves like a conjunction of two argument calls:
 
-  \(ANDV \(<V X1 X2) ... \(<V Xi Xi+1 ) ... \(<V XNn-1 Xn))
+  \(ANDV \(<V X1 X2) ... \(<V Xi Xi+1 ) ... \(<V Xn-1 Xn))
 
 When called with two arguments, returns T if X1 is known to be less than X2 at
 the time of call, NIL if X1 is known to be greater than or equal to X2 at the
@@ -6126,21 +6126,81 @@ performed by an analogous set of noticers without this last equality check."
       t
       (andv (<=v2 x (first xs)) (<=v-internal (first xs) (rest xs)))))
 
-(defun <=v (x &rest xs) (<=v-internal x xs))
+(defun <=v (x &rest xs)
+  "All arguments are constrained to be real. Returns T when called with one
+argument. A call such as \(<=V X1 X2 ... Xn) with more than two arguments
+behaves like a conjunction of two argument calls:
+
+  \(ANDV \(<=V X1 X2) ... \(<=V Xi Xi+1) ... \(<=V Xn-1 Xn))
+
+When called with two arguments, returns T if X1 is know to be less than or equal to X2
+at the time of the call, NIL if X1 is known to be greater than X2, and otherwise a new
+boolean variable V.
+
+Values of V, X1, and X2 are mutually constrained:
+
+ * V is equal to T iff X1 is known to be less than or equal to X2.
+
+ * V is equal to NIL iff X2 is known to be greater than X2.
+
+ * If V is known to be T, X1 is constrained to be less than or equal to X2.
+
+ * If V is known to be NIL, X1 is constrained to be greater than X2."
+  (<=v-internal x xs))
 
 (defun >v-internal (x xs)
   (if (null xs)
       t
       (andv (<v2 (first xs) x) (>v-internal (first xs) (rest xs)))))
 
-(defun >v (x &rest xs) (>v-internal x xs))
+(defun >v (x &rest xs)
+  "All arguments are constrained to be real. Returns T when called with one
+argument. A call such as \(>V X1 X2 ... Xn) with more than two arguments
+behaves like a conjunction of two argument calls:
+
+  \(ANDV \(> X1 X2) ... \(> Xi Xi+1) ... \(> Xn-1 Xn))
+
+When called with two arguments, returns T if X1 is know to be greater than X2
+at the time of the call, NIL if X1 is known to be less than or equal to X2,
+and otherwise a new boolean variable V.
+
+Values of V, X1, and X2 are mutually constrained:
+
+ * V is equal to T iff X1 is known to be greater than X2.
+
+ * V is equal to NIL iff X2 is known to be less than or equal to X2.
+
+ * If V is known to be T, X1 is constrained to be greater than X2.
+
+ * If V is known to be NIL, X1 is constrained to be less than or equal to X2."
+  (>v-internal x xs))
 
 (defun >=v-internal (x xs)
   (if (null xs)
       t
       (andv (<=v2 (first xs) x) (>=v-internal (first xs) (rest xs)))))
 
-(defun >=v (x &rest xs) (>=v-internal x xs))
+(defun >=v (x &rest xs)
+  "All arguments are constrained to be real. Returns T when called
+with one argument. A call such as \(>=V X1 X2 ... Xn) with more than two
+arguments behaves like a conjunction of two argument calls:
+
+  \(ANDV \(>=V X1 X2) ... \(>=V Xi Xi+1) ... \(>=V Xn-1 Xn))
+
+When called with two arguments, returns T if X1 is know to be greater than or
+equal to X2 at the time of the call, NIL if X1 is known to be less than X2,
+and otherwise a new boolean variable V.
+
+Values of V, X1, and X2 are mutually constrained:
+
+ * V is equal to T iff X1 is known to be greater than or equal to X2.
+
+ * V is equal to NIL iff X2 is know to be less than X2.
+
+ * If V is known to be T, X1 is constrained to be greater than or equal to X2.
+
+ * If V is known to be NIL, X1 is constrained to be less than X2."
+  (>=v-internal x xs))
 
 (defun /=v-internal (x xs)
   (if (null xs)
