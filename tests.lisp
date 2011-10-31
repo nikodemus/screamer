@@ -90,6 +90,20 @@
   (is (equal '(#\a #\b) (all-values (a-member-of "ab"))))
   (is (equal '(#\a #\b #\c) (all-values (a-member-of "abc")))))
 
+(deftest /=v.constrains-integer-bounds ()
+  (is (eql 3
+           (let ((a (an-integer-betweenv 1 5))
+                 (b (an-integer-betweenv 1 5))
+                 (c (an-integer-betweenv 1 5))
+                 (d (an-integer-betweenv 1 5))
+                 (e (an-integer-betweenv 1 5)))
+             (assert! (/=v a b c d e))
+             (assert! (=v d 4))
+             (assert! (=v b 2))
+             (assert! (=v e 5.0))
+             (assert! (=v a 1))
+             (value-of c)))))
+
 (deftest prime-ordeal ()
   (is (primordial::test1))
   (is (primordial::test2))
