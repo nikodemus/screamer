@@ -479,6 +479,7 @@ of Screamer.
 @include include/fun-screamer-an-integer-abovev.texinfo
 @include include/fun-screamer-an-integer-belowv.texinfo
 @include include/fun-screamer-an-integer-betweenv.texinfo
+@include include/fun-screamer-count-truesv.texinfo
 @include include/var-screamer-star-maximum-discretization-range-star.texinfo
 @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
 @include include/var-screamer-star-strategy-star.texinfo
@@ -486,6 +487,7 @@ of Screamer.
 @chapter Miscellany
 
 @include include/fun-screamer-booleanp.texinfo
+@include include/fun-screamer-count-trues.texinfo
 @include include/fun-screamer-purge.texinfo
 @include include/fun-screamer-unwind-trail.texinfo
 @include include/fun-screamer-unwedge-screamer.texinfo

@@ -5427,9 +5427,12 @@ arguments. Secondly, any non-boolean argument causes it to fail."
                                                     (restrict-false! x)))))))))))
                         x))))))))))
 
-(defun count-trues-internal (xs) (count-if #'identity xs))
+(defun count-trues-internal (xs)
+  (count-if #'identity xs))
 
-(defun count-trues (&rest xs) (count-trues-internal xs))
+(defun count-trues (&rest xs)
+  "Returns the number of time a non-NIL value occurs in its arguments."
+  (count-trues-internal xs))
 
 (defun count-truesv-internal (xs)
   (dolist (x xs) (assert!-booleanpv x))
@@ -5458,20 +5461,29 @@ arguments. Secondly, any non-boolean argument causes it to fail."
                #'(lambda ()
                    (cond ((variable-false? x)
                           (local (decf upper))
-                          (restrict-upper-bound! z upper)
-                          (if (= upper (variable-lower-bound z))
-                              (dolist (x xs)
-                                (unless (variable-false? x) (restrict-true! x)))))
+                          (restrict-upper-bound! z upper))
                          ((variable-true? x)
                           (local (incf lower))
-                          (restrict-lower-bound! z lower)
-                          (if (= lower (variable-upper-bound z))
-                              (dolist (x xs)
-                                (unless (variable-true? x) (restrict-false! x)))))))
+                          (restrict-lower-bound! z lower))))
                x)))
           z))))
 
-(defun count-truesv (&rest xs) (count-truesv-internal xs))
+(defun count-truesv (&rest xs)
+  "Constrains all its arguments to be boolean. If each argument is known, returns
+the number of T arguments. Otherwise returns a fresh constraint variable V.
+
+V and arguments are mutually constrained:
+
+ * Lower bound of V is the number arguments known to be T.
+
+ * Upper bound of V is the number arguments minus the number of arguments known to be NIL.
+
+ * If lower bound of V is constrained to be equal to number of arguments known
+   to be NIL, all arguments not known to be NIL are constrained to be T.
+
+ * If Upper bound of V is constrained to be equal to number of arguments known
+   to be T, all arguments not known to be T are constrained to be NIL."
+  (count-truesv-internal xs))
 
 ;;; Lifted FUNCALLV and APPLYV
 

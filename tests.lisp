@@ -165,3 +165,25 @@
                                     (fail))
                                   ;; FIXME: leak, but keeping it for backwards compatibility
                                   (list x screamer::failure-count))))))))))
+
+(deftest count-truesv.1 ()
+  (is (eq nil
+          (let* ((x (a-booleanv))
+                 (y (a-booleanv))
+                 (z (a-booleanv))
+                 (n (count-truesv x y z)))
+            (assert! x)
+            (assert! y)
+            (assert! (=v n 2))
+            (value-of z)))))
+
+(deftest count-truesv.2 ()
+  (is (= 2
+         (let* ((x (a-booleanv))
+                (y (a-booleanv))
+                (z (a-booleanv))
+                (n (count-truesv x y z)))
+           (assert! x)
+           (assert! y)
+           (assert! (notv z))
+           (value-of n)))))
