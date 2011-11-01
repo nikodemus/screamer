@@ -3377,6 +3377,9 @@ nil."
          (or (not (consp x)) (and (ground? (car x)) (ground? (cdr x)))))))
 
 (defun apply-substitution (x)
+  "If X is a CONS, or a variable whose value is a CONS, returns
+a freshly consed copy of the tree with all variables dereferenced.
+Otherwise returns the value of X."
   (let ((x (value-of x)))
     (if (consp x)
         (cons (apply-substitution (car x)) (apply-substitution (cdr x)))
