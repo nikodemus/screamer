@@ -3760,6 +3760,32 @@ nil."
                                (variable-enumerated-domain x)))))
           (run-noticers x)))))
 
+(defun prune-enumerated-domain (x &optional (enumerated-domain (variable-enumerated-domain x)))
+  ;; Returns an enumerated domain from which elements what violate
+  ;; restrictions on X have been removed.
+  (remove-if-not (lambda (elt)
+                   (cond ((numberp elt)
+                          (if (realp elt)
+                              (when (cond ((integerp elt)
+                                           (variable-possibly-integer? x))
+                                          (t
+                                           (variable-possibly-noninteger-real? x)))
+                                (let ((low (variable-lower-bound x))
+                                      (high (variable-upper-bound x)))
+                                  (cond ((and low high)
+                                         (<= low elt high))
+                                        (low
+                                         (<= low elt))
+                                        (high
+                                         (<= elt high))
+                                        (t t))))
+                              (variable-possibly-nonreal-number? x)))
+                         ((booleanp elt)
+                          (variable-possibly-boolean? x))
+                         (t
+                          (variable-possibly-nonboolean-nonnumber? x))))
+                 enumerated-domain))
+
 (defun share! (x y)
   ;; note: X and Y must be variables such that (EQ X (VALUE-OF X)) and
   ;;       (EQ Y (VALUE-OF Y)).
@@ -3770,6 +3796,7 @@ nil."
         (x-upper-bound (variable-upper-bound x))
         (y-lower-bound (variable-lower-bound y))
         (y-upper-bound (variable-upper-bound y)))
+    ;; Apply all restrictions from X to Y.
     (cond ((and (variable-integer? y) (not (variable-integer? x)))
            (if x-lower-bound (setf x-lower-bound (ceiling x-lower-bound)))
            (if x-upper-bound (setf x-upper-bound (floor x-upper-bound))))
@@ -3824,84 +3851,58 @@ nil."
                 (null (variable-upper-bound y))
                 (< (variable-lower-bound y) (variable-upper-bound y)))
       (fail))
-    (if run?
-        (let ((lower-bound (variable-lower-bound y))
-              (upper-bound (variable-upper-bound y)))
-          (if (eq (variable-enumerated-domain y) t)
-              (if (and lower-bound
-                       upper-bound
-                       (variable-integer? y)
-                       (or (null *maximum-discretization-range*)
-                           (<= (- upper-bound lower-bound)
-                               *maximum-discretization-range*)))
-                  (set-enumerated-domain!
-                   y (all-values (an-integer-between lower-bound upper-bound))))
-              (if lower-bound
-                  (if upper-bound
-                      (if (some #'(lambda (element)
-                                    (or (< element lower-bound)
-                                        (> element upper-bound)))
-                                (variable-enumerated-domain y))
-                          ;; note: Could do less consing if had LOCAL DELETE-IF.
-                          ;;       This would also allow checking list only once.
-                          (set-enumerated-domain!
-                           y (remove-if #'(lambda (element)
-                                            (or (< element lower-bound)
-                                                (> element upper-bound)))
-                                        (variable-enumerated-domain y))))
-                      (if (some #'(lambda (element) (< element lower-bound))
-                                (variable-enumerated-domain y))
-                          ;; note: Could do less consing if had LOCAL DELETE-IF.
-                          ;;       This would also allow checking list only once.
-                          (set-enumerated-domain!
-                           y (remove-if #'(lambda (element)
-                                            (< element lower-bound))
-                                        (variable-enumerated-domain y)))))
-                  (if upper-bound
-                      (if (some #'(lambda (element) (> element upper-bound))
-                                (variable-enumerated-domain y))
-                          ;; note: Could do less consing if had LOCAL DELETE-IF.
-                          ;;       This would also allow checking list only once.
-                          (set-enumerated-domain!
-                           y (remove-if #'(lambda (element)
-                                            (> element upper-bound))
-                                        (variable-enumerated-domain y)))))))))
+    (when run?
+      ;; Something has changed: update enumerated domain of Y.
+      (let ((lower-bound (variable-lower-bound y))
+            (upper-bound (variable-upper-bound y)))
+        (if (eq (variable-enumerated-domain y) t)
+            (if (and lower-bound
+                     upper-bound
+                     (variable-integer? y)
+                     (or (null *maximum-discretization-range*)
+                         (<= (- upper-bound lower-bound)
+                             *maximum-discretization-range*)))
+                (set-enumerated-domain!
+                 y (all-values (an-integer-between lower-bound upper-bound))))
+            (set-enumerated-domain!
+             y (prune-enumerated-domain y (variable-enumerated-domain y))))))
     (local (let* ((enumerated-domain
-                   (cond
-                     ((eq (variable-enumerated-domain x) t)
-                      (if (eq (variable-enumerated-domain y) t)
-                          t
-                          (set-difference (variable-enumerated-domain y)
-                                          (variable-enumerated-antidomain x)
-                                          :test #'equal)))
-                     ((eq (variable-enumerated-domain y) t)
-                      (set-difference (variable-enumerated-domain x)
-                                      (variable-enumerated-antidomain y)
-                                      :test #'equal))
-                     (t (intersection (variable-enumerated-domain x)
-                                      (variable-enumerated-domain y)
-                                      :test #'equal))))
+                    (cond
+                      ((eq (variable-enumerated-domain x) t)
+                       (if (eq (variable-enumerated-domain y) t)
+                           t
+                           (set-difference (variable-enumerated-domain y)
+                                           (variable-enumerated-antidomain x)
+                                           :test #'equal)))
+                      ((eq (variable-enumerated-domain y) t)
+                       (set-difference (variable-enumerated-domain x)
+                                       (variable-enumerated-antidomain y)
+                                       :test #'equal))
+                      (t (intersection (variable-enumerated-domain x)
+                                       (variable-enumerated-domain y)
+                                       :test #'equal))))
                   (enumerated-antidomain
-                   (if (eq enumerated-domain t)
-                       (union (variable-enumerated-antidomain x)
-                              (variable-enumerated-antidomain y)
-                              :test #'equal)
-                       '())))
+                    (if (eq enumerated-domain t)
+                        (union (variable-enumerated-antidomain x)
+                               (variable-enumerated-antidomain y)
+                               :test #'equal)
+                        '())))
              (if (null enumerated-domain) (fail))
              (if (and (not (eq enumerated-domain t))
                       (or (eq (variable-enumerated-domain y) t)
                           (< (length enumerated-domain)
                              (length (variable-enumerated-domain y)))))
-                 (setf (variable-enumerated-domain y) enumerated-domain))
+                 (set-enumerated-domain!
+                  y (prune-enumerated-domain y enumerated-domain)))
              (if (if (eq enumerated-domain t)
                      (> (length enumerated-antidomain)
                         (length (variable-enumerated-antidomain y)))
                      (not (null (variable-enumerated-antidomain y))))
                  (setf (variable-enumerated-antidomain y) enumerated-antidomain)))
-           (setf (variable-noticers y)
-                 (append (variable-noticers y) (variable-noticers x)))
-           (setf (variable-noticers x) '())
-           (setf (variable-value x) y))
+      (setf (variable-noticers y)
+            (append (variable-noticers y) (variable-noticers x)))
+      (setf (variable-noticers x) '())
+      (setf (variable-value x) y))
     (run-noticers y)))
 
 (defun restrict-value! (x value)
