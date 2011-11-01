@@ -453,6 +453,7 @@ of Screamer.
 @include include/macro-screamer-decide.texinfo
 @include include/fun-screamer-apply-substitution.texinfo
 @include include/fun-screamer-linear-force.texinfo
+@include include/fun-screamer-divide-and-conquer-force.texinfo
 @include include/fun-screamer-applyv.texinfo
 @include include/fun-screamer-funcallv.texinfo
 @include include/fun-screamer-andv.texinfo

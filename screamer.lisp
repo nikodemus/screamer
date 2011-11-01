@@ -6925,6 +6925,36 @@ VALUES can be either a vector or a list designator."
 ;;;       functions.
 
 (defun divide-and-conquer-force (variable)
+  "Returns X if X is not a variable. If X is a bound variable then returns its
+value. Otherwise implements a single binary-branching step of a
+divide-and-conquer search algorithm. There are always two alternatives, the
+second of which is tried upon backtracking.
+
+If it is known to have a finite domain D then this domain is split into two
+halves and the value of X is nondeterministically restricted to be a member
+one of the halves. If X becomes bound by this restriction then its value is
+returned. Otherwise, X itself is returned.
+
+If X is not known to have a finite domain but is known to be real and to have
+both lower and upper bounds then nondeterministically either the lower or
+upper bound is restricted to the midpoint between the lower and upper bound.
+If X becomes bound by this restriction then its dereferenced value is
+returned. Otherwise, X itself is returned.
+
+An error is signalled if X is not known to be restricted to a finite domain
+and either is not known to be real or is not known to have both a lower and
+upper bound.
+
+When the set of potential values may be infinite, users of
+DIVIDE-AND-CONQUER-FORCE may need to take care to fail when the range size of
+the variable becomes too small, unless other constraints on it are sufficient
+to guarentee failure.
+
+The method of splitting the domain into two halves is left unspecified to give
+future implementations leeway in incorporating heuristics in the process of
+determining a good search order. All that is specified is that if the domain
+size is even prior to splitting, the halves are of equal size, while if the
+domain size is odd, the halves differ in size by at most one."
   (let ((variable (value-of variable)))
     (if (variable? variable)
         (cond
