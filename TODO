@@ -42,7 +42,6 @@
 ******* range-size
 ******* reorder
 ******* solution
-******* template
 ******* define-screamer-package
 * Performance
 *** TODO Rewrite dynamic-extent continuations using FLET

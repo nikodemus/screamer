@@ -7047,6 +7047,18 @@ nikodemus@random-state.net."
     (t (values template variables))))
 
 (defun template (template)
+  "Copies an aggregate object, replacing any symbol beginning with a question
+mark with a newly created variable.
+
+If the same symbol appears more than once in X, only one variable is created
+for that symbol, the same variable replacing any occurrences of that symbol.
+Thus \(TEMPLATE '(A B (?C D ?E) ?E)) has the same effect as:
+
+  \(LET ((?C (MAKE-VARIABLE))
+        \(?E (MAKE-VARIABLE)))
+    \(LIST 'A 'B (LIST C 'D E) E)).
+
+This is useful for creating patterns to be unified with other structures."
   (template-internal (value-of template) '()))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
