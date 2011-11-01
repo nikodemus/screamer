@@ -512,6 +512,7 @@ of Screamer.
 
 @chapter Miscellany
 
+@include include/macro-screamer-define-screamer-package.texinfo
 @include include/macro-screamer-best-value.texinfo
 @include include/fun-screamer-booleanp.texinfo
 @include include/fun-screamer-count-trues.texinfo
