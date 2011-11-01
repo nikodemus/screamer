@@ -42,6 +42,11 @@
 (declaim (declaration magic))
 
 (defmacro define-screamer-package (defined-package-name &body options)
+  "Convenience wrapper around DEFPACKAGE. Passes its argument directly
+to DEFPACKAGE, and automatically injects two additional options:
+
+    \(:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p)
+    \(:use :cl :screamer)"
   `(defpackage ,defined-package-name
      ,@options
      (:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p)
