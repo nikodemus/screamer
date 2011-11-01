@@ -110,7 +110,7 @@ disable it. Default is platform dependent.")
   "The allowed lambda list keywords in order.")
 
 (defmacro-compile-time choice-point-internal (form)
-  `(catch 'fail
+  `(catch '%fail
      (let ((*nondeterministic?* t))
        (unwind-protect ,form
          (unwind-trail-to trail-pointer)))))
@@ -2811,30 +2811,32 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
   (choice-point (funcall continuation t))
   (funcall continuation nil))
 
+(defvar *fail* (lambda () (throw '%fail nil)))
+
 (defun fail ()
   "Backtracks to the most recent choise point. Equivalent to
 \(EITHER). Note that FAIL is deterministic function and thus it is
 permissible to reference #'FAIL, and write \(FUNCALL #'FAIL) or
 \(APPLY #'FAIL). In nondeterministic contexts, the expression \(FAIL)
 is optimized to generate inline backtracking code."
-  ;; FIXME: Since we export FAIL, throwing to it is probably a bad idea.
-  ;; ...better throw to %FAIL.
-  (throw 'fail nil))
+  (funcall *fail*))
 
-(defmacro-compile-time when-failing ((&body failing-forms) &body forms)
-  (let ((old-fail (gensym "FAIL-")))
-    `(let ((,old-fail #'fail))
-       (unwind-protect
-            (progn (setf (symbol-function 'fail)
-                         #'(lambda () ,@failing-forms (funcall ,old-fail)))
-                   ,@forms)
-         (setf (symbol-function 'fail) ,old-fail)))))
+(defmacro-compile-time when-failing ((&body failing-forms) &body body)
+  "Whenever FAIL is called during execution of BODY, executes FAILING-FORMS
+before unwinding."
+  (let ((old-fail (gensym "FAIL")))
+    `(let* ((,old-fail *fail*)
+            (*fail* (lambda () ,@failing-forms (funcall ,old-fail))))
+       ,@body)))
 
-(defmacro-compile-time count-failures (&body forms)
+(defmacro-compile-time count-failures (&body body)
+  "Executes BODY keeping track of the number of times FAIL has been called
+without unwinding from BODY. After BODY completes, reports the number of
+failures to *STANDARD-OUTPUT* before returning values from BODY."
   (let ((values (gensym "VALUES-")))
-    `(let ((failure-count 0))
+    `(let ((failure-count 0)) ; FIXME: use a gensym after 3.21 -- now backwards compat is king
        (when-failing ((incf failure-count))
-         (let ((,values (multiple-value-list (progn ,@forms))))
+         (let ((,values (multiple-value-list (progn ,@body))))
            (format t "Failures         = ~10<~;~d~>" failure-count)
            (values-list ,values))))))
 
@@ -3093,6 +3095,10 @@ either a list or a vector."
           (format nil "~A" (code-char 29))))
 
 (defmacro-compile-time local-output (&body forms)
+  "Currently unsupported.
+
+When running under ILisp with iscream.el loaded, does non-determinism aware
+output to Emacs, which will be deleted when the current choise is unwound."
   `(progn
      (unless *iscream?*
        (error "Cannot do LOCAL-OUTPUT unless Screamer is running under~%~
@@ -5413,9 +5419,12 @@ arguments. Secondly, any non-boolean argument causes it to fail."
                                                     (restrict-false! x)))))))))))
                         x))))))))))
 
-(defun count-trues-internal (xs) (count-if #'identity xs))
+(defun count-trues-internal (xs)
+  (count-if #'identity xs))
 
-(defun count-trues (&rest xs) (count-trues-internal xs))
+(defun count-trues (&rest xs)
+  "Returns the number of time a non-NIL value occurs in its arguments."
+  (count-trues-internal xs))
 
 (defun count-truesv-internal (xs)
   (dolist (x xs) (assert!-booleanpv x))
@@ -5444,20 +5453,29 @@ arguments. Secondly, any non-boolean argument causes it to fail."
                #'(lambda ()
                    (cond ((variable-false? x)
                           (local (decf upper))
-                          (restrict-upper-bound! z upper)
-                          (if (= upper (variable-lower-bound z))
-                              (dolist (x xs)
-                                (unless (variable-false? x) (restrict-true! x)))))
+                          (restrict-upper-bound! z upper))
                          ((variable-true? x)
                           (local (incf lower))
-                          (restrict-lower-bound! z lower)
-                          (if (= lower (variable-upper-bound z))
-                              (dolist (x xs)
-                                (unless (variable-true? x) (restrict-false! x)))))))
+                          (restrict-lower-bound! z lower))))
                x)))
           z))))
 
-(defun count-truesv (&rest xs) (count-truesv-internal xs))
+(defun count-truesv (&rest xs)
+  "Constrains all its arguments to be boolean. If each argument is known, returns
+the number of T arguments. Otherwise returns a fresh constraint variable V.
+
+V and arguments are mutually constrained:
+
+ * Lower bound of V is the number arguments known to be T.
+
+ * Upper bound of V is the number arguments minus the number of arguments known to be NIL.
+
+ * If lower bound of V is constrained to be equal to number of arguments known
+   to be NIL, all arguments not known to be NIL are constrained to be T.
+
+ * If Upper bound of V is constrained to be equal to number of arguments known
+   to be T, all arguments not known to be T are constrained to be NIL."
+  (count-truesv-internal xs))
 
 ;;; Lifted FUNCALLV and APPLYV
 
@@ -5679,6 +5697,15 @@ arguments. Secondly, any non-boolean argument causes it to fail."
 (defun assert!-notv-funcallv (f &rest x) (assert!-constraint f nil x))
 
 (defun funcallv (f &rest x)
+  "F must be a deterministic function. If all arguments X are bound, returns
+the result of calling F on the dereferenced values of arguments.
+
+Otherwise returns a fresh variable V, constrained to be equal to the result
+of calling F on the dereferenced values of arguments.
+
+Additionally, if all but one of V and the argument variables become known, and
+the remaining variable has a finite domain, then that domain is further
+restricted to be consistent with other arguments."
   (let ((f (value-of f)))
     (if (variable? f)
         (error "The current implementation does not allow the first argument~%~
@@ -5717,6 +5744,15 @@ arguments. Secondly, any non-boolean argument causes it to fail."
   (assert!-constraint f nil (arguments-for-applyv x xs)))
 
 (defun applyv (f x &rest xs)
+  "F must be a deterministic function. If all arguments X are bound, returns
+the result of calling F on the dereferenced values of spread arguments.
+
+Otherwise returns a fresh variable V, constrained to be equal to the result
+of calling F on the dereferenced values of arguments.
+
+Additionally, if all but one of V and the argument variables become known, and
+the remaining variable has a finite domain, then that domain is further
+restricted to be consistent with other arguments."
   (let ((f (value-of f)))
     (if (variable? f)
         (error "The current implementation does not allow the first argument~%~
@@ -5846,22 +5882,139 @@ disunification operator available in Prolog-II."
 (defun +v-internal (xs)
   (if (null xs) 0 (+v2 (first xs) (+v-internal (rest xs)))))
 
-(defun +v (&rest xs) (+v-internal xs))
+(defun +v (&rest xs)
+  "Constrains its arguments to be numbers. Returns 0 if called with no
+arguments. If called with a single argument, returns its value. If called with
+more than two arguments, behaves as nested sequence of two-argument calls:
+
+  \(+V X1 X2 ... Xn) = \(+V X1 (+V X2 (+V ...)))
+
+When called with two arguments, if both arguments are bound, returns the sum
+of their values. If either argument is known to be zero, returns the value of
+the remaining argument. Otherwise returns number variable V.
+
+  * Sum of X1 and X2 is constrained to equal V. This includes constraining
+    their bounds appropriately. If it becomes known that cannot be true, FAIL
+    is called.
+
+  * If both arguments are known to be reals, V is constrained to be real.
+
+  * If both arguments are known to be integers, V is constained to be integer.
+
+  * If one argument is known to be a non-integer, and the other is known to
+    be a real, V is constrained to be a non-integer.
+
+  * If one argument is known to be a non-real, and the other is known
+    to be a real, V is constrained to be non-real.
+
+Note: Numeric contagion rules of Common Lisp are not applied if either
+argument equals zero."
+  (+v-internal xs))
 
 (defun -v-internal (x xs)
   (if (null xs) x (-v-internal (-v2 x (first xs)) (rest xs))))
 
-(defun -v (x &rest xs) (if (null xs) (-v2 0 x) (-v-internal x xs)))
+(defun -v (x &rest xs)
+  "Constrains its arguments to be numbers. If called with a single argument,
+behaves as if the two argument call:
+
+  \(-V 0 X)
+
+If called with more than two arguments, behaves as nested sequence of
+two-argument calls:
+
+  \(-V X1 X2 ... Xn) = \(-V X1 (-V X2 (-V ...)))
+
+When called with two arguments, if both arguments are bound, returns the
+difference of their values. If X2 is known to be zero, returns the value of
+X1. Otherwise returns number variable V.
+
+  * Difference of X1 and X2 is constrained to equal V. This includes
+    constraining their bounds appropriately. If it becomes known that cannot
+    be true, FAIL is called.
+
+  * If both arguments are known to be reals, V is constrained to be real.
+
+  * If both arguments are known to be integers, V is constained to be integer.
+
+  * If one argument is known to be a non-integer, and the other is known to
+    be a real, V is constrained to be a non-integer.
+
+  * If one argument is known to be a non-real, and the other is known
+    to be a real, V is constrained to be non-real.
+
+Note: Numeric contagion rules of Common Lisp are not applied if X2 equals zero."
+  (if (null xs) (-v2 0 x) (-v-internal x xs)))
 
 (defun *v-internal (xs)
   (if (null xs) 1 (*v2 (first xs) (*v-internal (rest xs)))))
 
-(defun *v (&rest xs) (*v-internal xs))
+(defun *v (&rest xs)
+  "Constrains its arguments to be numbers. If called with no arugments,
+returns 1. If called with a single argument, returns its value. If called with
+more than two arguments, behaves as nested sequence of two-argument calls:
+
+  \(*V X1 X2 ... Xn) = \(*V X1 (*V X2 (*V ...)))
+
+When called with two arguments, if both arguments are bound, returns the
+product of their values. If either argument is known to equal zero, returns
+zero. If either argument is known to equal one, returns the value of the other.
+Otherwise returns number variable V.
+
+  * Product of X1 and X2 is constrained to equal V. This includes constraining
+    their bounds appropriately. If it becomes known that cannot be true, FAIL
+    is called.
+
+  * If both arguments are known to be reals, V is constrained to be real.
+
+  * If both arguments are known to be integers, V is constained to be integer.
+
+  * If V is known to be an integer, and either X1 or X2 is known to be real,
+    both X1 and X2 are constrained to be integers.
+
+  * If V is known to be an reals, and either X1 or X2 is known to be real,
+    both X1 and X2 are constrained to be reals.
+
+Note: Numeric contagion rules of Common Lisp are not applied if either
+argument equals zero or one."
+  (*v-internal xs))
 
 (defun /v-internal (x xs)
   (if (null xs) x (/v-internal (/v2 x (first xs)) (rest xs))))
 
-(defun /v (x &rest xs) (if (null xs) (/v2 1 x) (/v-internal x xs)))
+(defun /v (x &rest xs)
+  "Constrains its arguments to be numbers. If called with a single argument,
+behaves as the two argument call:
+
+  \(/V 1 X)
+
+If called with more than two arguments, behaves as nested sequence of
+two-argument calls:
+
+  \(/V X1 X2 ... Xn) = \(/V ... (/V (/V X1 X2) X3) ... Xn)
+
+When called with two arguments, if both arguments are bound, returns the
+division of their values. If X1 is known to equal zero, returns 0. If X2 is
+known to equal zero, FAIL is called. If X2 is known to equal one, returns the
+value of X1. Otherwise returns number variable V.
+
+  * Division of X1 and X2 is constrained to equal V. This includes
+    constraining their bounds appropriately. If it becomes known that cannot
+    be true, FAIL is called.
+
+  * If both arguments are known to be reals, V is constrained to be real.
+
+  * If both arguments are known to be integers, V is constained to be integer.
+
+  * If V is known to be an integer, and either X1 or X2 is known to be real,
+    both X1 and X2 are constrained to be integers.
+
+  * If V is known to be an reals, and either X1 or X2 is known to be real,
+    both X1 and X2 are constrained to be reals.
+
+Note: Numeric contagion rules of Common Lisp are not applied if X1 equals zero
+or X2 equals one."
+  (if (null xs) (/v2 1 x) (/v-internal x xs)))
 
 (defun minv-internal (x xs)
   (if (null xs) x (minv-internal (minv2 x (first xs)) (rest xs))))
@@ -6048,7 +6201,7 @@ to be real.
 Returns T when called with one argument. A call such as \(<V X1 X2 ... Xn)
 with more than two arguments behaves like a conjunction of two argument calls:
 
-  \(ANDV \(<V X1 X2) ... \(<V Xi Xi+1 ) ... \(<V XNn-1 Xn))
+  \(ANDV \(<V X1 X2) ... \(<V Xi Xi+1 ) ... \(<V Xn-1 Xn))
 
 When called with two arguments, returns T if X1 is known to be less than X2 at
 the time of call, NIL if X1 is known to be greater than or equal to X2 at the
@@ -6094,21 +6247,81 @@ performed by an analogous set of noticers without this last equality check."
       t
       (andv (<=v2 x (first xs)) (<=v-internal (first xs) (rest xs)))))
 
-(defun <=v (x &rest xs) (<=v-internal x xs))
+(defun <=v (x &rest xs)
+  "All arguments are constrained to be real. Returns T when called with one
+argument. A call such as \(<=V X1 X2 ... Xn) with more than two arguments
+behaves like a conjunction of two argument calls:
+
+  \(ANDV \(<=V X1 X2) ... \(<=V Xi Xi+1) ... \(<=V Xn-1 Xn))
+
+When called with two arguments, returns T if X1 is know to be less than or equal to X2
+at the time of the call, NIL if X1 is known to be greater than X2, and otherwise a new
+boolean variable V.
+
+Values of V, X1, and X2 are mutually constrained:
+
+ * V is equal to T iff X1 is known to be less than or equal to X2.
+
+ * V is equal to NIL iff X2 is known to be greater than X2.
+
+ * If V is known to be T, X1 is constrained to be less than or equal to X2.
+
+ * If V is known to be NIL, X1 is constrained to be greater than X2."
+  (<=v-internal x xs))
 
 (defun >v-internal (x xs)
   (if (null xs)
       t
       (andv (<v2 (first xs) x) (>v-internal (first xs) (rest xs)))))
 
-(defun >v (x &rest xs) (>v-internal x xs))
+(defun >v (x &rest xs)
+  "All arguments are constrained to be real. Returns T when called with one
+argument. A call such as \(>V X1 X2 ... Xn) with more than two arguments
+behaves like a conjunction of two argument calls:
+
+  \(ANDV \(> X1 X2) ... \(> Xi Xi+1) ... \(> Xn-1 Xn))
+
+When called with two arguments, returns T if X1 is know to be greater than X2
+at the time of the call, NIL if X1 is known to be less than or equal to X2,
+and otherwise a new boolean variable V.
+
+Values of V, X1, and X2 are mutually constrained:
+
+ * V is equal to T iff X1 is known to be greater than X2.
+
+ * V is equal to NIL iff X2 is known to be less than or equal to X2.
+
+ * If V is known to be T, X1 is constrained to be greater than X2.
+
+ * If V is known to be NIL, X1 is constrained to be less than or equal to X2."
+  (>v-internal x xs))
 
 (defun >=v-internal (x xs)
   (if (null xs)
       t
       (andv (<=v2 (first xs) x) (>=v-internal (first xs) (rest xs)))))
 
-(defun >=v (x &rest xs) (>=v-internal x xs))
+(defun >=v (x &rest xs)
+  "All arguments are constrained to be real. Returns T when called
+with one argument. A call such as \(>=V X1 X2 ... Xn) with more than two
+arguments behaves like a conjunction of two argument calls:
+
+  \(ANDV \(>=V X1 X2) ... \(>=V Xi Xi+1) ... \(>=V Xn-1 Xn))
+
+When called with two arguments, returns T if X1 is know to be greater than or
+equal to X2 at the time of the call, NIL if X1 is known to be less than X2,
+and otherwise a new boolean variable V.
+
+Values of V, X1, and X2 are mutually constrained:
+
+ * V is equal to T iff X1 is known to be greater than or equal to X2.
+
+ * V is equal to NIL iff X2 is know to be less than X2.
+
+ * If V is known to be T, X1 is constrained to be greater than or equal to X2.
+
+ * If V is known to be NIL, X1 is constrained to be less than X2."
+  (>=v-internal x xs))
 
 (defun /=v-internal (x xs)
   (if (null xs)
@@ -6590,11 +6803,14 @@ The expression \(A-REAL-BETWEENV LOW HIGH) is an abbreviation for:
     v))
 
 (defun a-numberv (&optional (name nil name?))
+  "Returns a variable whose value is constained to be a number."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (numberpv v))
     v))
 
 (defun a-member-ofv (values &optional (name nil name?))
+  "Returns a variable whose value is constrained to be one of VALUES.
+VALUES can be either a vector or a list designator."
   (let ((v (if name? (make-variable name) (make-variable))))
     (assert! (memberv v values))
     (value-of v)))

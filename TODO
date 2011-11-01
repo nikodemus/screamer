@@ -22,30 +22,19 @@
 ******* Add DEFINE-SCREAMER-FUNCTION or similar as an alias to SCREAMER::DEFUN.
 ******* Identify some performance issues and see if anything can be done.
 ******* Try to improve debuggability of Screamer generated code.
+******* Make iscream.el work under Slime.
+******* Change COUNT-FAILURES to make the number easier to access.
+******* Consider adding a separate type for gaussian integers.
 * Documentation
 *** WIP A web-friendly manual
-***** Unify language
+***** Cleanups
 ******* Some docstrings talk of EXPRESSIONS, some of FORMS.
 ******* "Yields" vs "returns" a value.
+******* Restricts vs constrains.
+******* Don't talk about noticers: they're an implementation detail.
 ***** Still missing exported symbols:
-******* local-output
-******* when-failing
-******* count-failures
-******* <=v
-******* >v
-******* >=v
-******* a-numberv
-******* a-member-ofv
-******* count-trues
-******* count-truesv
-******* +v
-******* -v
-******* *v
-******* /v
 ******* minv
 ******* maxv
-******* funcallv
-******* applyv
 ******* apply-substitution
 ******* linear-force
 ******* divide-and-conquer-force

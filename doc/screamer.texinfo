@@ -439,6 +439,8 @@ of Screamer.
 @include include/fun-screamer-funcall-nondeterministic.texinfo
 @include include/fun-screamer-multiple-value-call-nondeterministic.texinfo
 @include include/fun-screamer-nondeterministic-function?.texinfo
+@include include/macro-screamer-when-failing.texinfo
+@include include/macro-screamer-count-failures.texinfo
 
 @chapter Constraints
 
@@ -449,6 +451,8 @@ of Screamer.
 @include include/macro-screamer-assert!.texinfo
 @include include/macro-screamer-known?.texinfo
 @include include/macro-screamer-decide.texinfo
+@include include/fun-screamer-applyv.texinfo
+@include include/fun-screamer-funcallv.texinfo
 @include include/fun-screamer-andv.texinfo
 @include include/fun-screamer-orv.texinfo
 @include include/fun-screamer-booleanpv.texinfo
@@ -458,10 +462,19 @@ of Screamer.
 @include include/fun-screamer-memberv.texinfo
 @include include/fun-screamer-notv.texinfo
 @include include/fun-screamer-equalv.texinfo
+@include include/fun-screamer-plus-v.texinfo
+@include include/fun-screamer---v.texinfo
+@include include/fun-screamer-star-v.texinfo
+@include include/fun-screamer-slash-v.texinfo
 @include include/fun-screamer-equals-v.texinfo
 @include include/fun-screamer-slash-equals-v.texinfo
 @include include/fun-screamer-lt-v.texinfo
+@include include/fun-screamer-lt-equals-v.texinfo
+@include include/fun-screamer-gt-v.texinfo
+@include include/fun-screamer-gt-equals-v.texinfo
 @include include/fun-screamer-a-booleanv.texinfo
+@include include/fun-screamer-a-numberv.texinfo
+@include include/fun-screamer-a-member-ofv.texinfo
 @include include/fun-screamer-a-realv.texinfo
 @include include/fun-screamer-a-real-abovev.texinfo
 @include include/fun-screamer-a-real-belowv.texinfo
@@ -470,6 +483,7 @@ of Screamer.
 @include include/fun-screamer-an-integer-abovev.texinfo
 @include include/fun-screamer-an-integer-belowv.texinfo
 @include include/fun-screamer-an-integer-betweenv.texinfo
+@include include/fun-screamer-count-truesv.texinfo
 @include include/var-screamer-star-maximum-discretization-range-star.texinfo
 @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
 @include include/var-screamer-star-strategy-star.texinfo
@@ -477,6 +491,7 @@ of Screamer.
 @chapter Miscellany
 
 @include include/fun-screamer-booleanp.texinfo
+@include include/fun-screamer-count-trues.texinfo
 @include include/fun-screamer-purge.texinfo
 @include include/fun-screamer-unwind-trail.texinfo
 @include include/fun-screamer-unwedge-screamer.texinfo
