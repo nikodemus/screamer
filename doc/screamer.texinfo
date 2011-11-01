@@ -451,6 +451,7 @@ of Screamer.
 @include include/macro-screamer-assert!.texinfo
 @include include/macro-screamer-known?.texinfo
 @include include/macro-screamer-decide.texinfo
+@include include/fun-screamer-linear-force.texinfo
 @include include/fun-screamer-applyv.texinfo
 @include include/fun-screamer-funcallv.texinfo
 @include include/fun-screamer-andv.texinfo

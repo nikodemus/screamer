@@ -5505,8 +5505,34 @@ V and arguments are mutually constrained:
    (value-of force-function) (variables-in (value-of x)))
   (apply-substitution x))
 
-(defun linear-force (variable)
-  (let ((variable (value-of variable)))
+(defun linear-force (x)
+  "Returns X if it is not a variable. If X is a bound variable then returns
+its value.
+
+If X is an unbound variable then it must be known to have a countable set of
+potential values. In this case X is nondeterministically restricted to be
+equal to one of the values in this countable set, thus forcing X to be bound.
+The dereferenced value of X is then returned.
+
+An unbound variable is known to have a countable set of potential values
+either if it is known to have a finite domain or if it is known to be integer
+valued.
+
+An error is signalled if X is not known to have a finite domain and is not
+known to be integer valued.
+
+Upon backtracking X will be bound to each potential value in turn, failing
+when there remain no untried alternatives.
+
+Since the set of potential values is required only to be countable, not
+finite, the set of untried alternatives may never be exhausted and
+backtracking need not terminate. This can happen, for instance, when X is
+known to be an integer but lacks either an upper of lower bound.
+
+The order in which the nondeterministic alternatives are tried is left
+unspecified to give future implementations leeway in incorporating heuristics
+in the process of determining a good search order."
+  (let ((variable (value-of x)))
     (if (variable? variable)
         (restrict-value!
          variable
