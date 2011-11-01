@@ -444,42 +444,38 @@ of Screamer.
 
 @chapter Constraints
 
+@section Basics
+
 @include include/fun-screamer-make-variable.texinfo
+@include include/macro-screamer-assert!.texinfo
 @include include/fun-screamer-value-of.texinfo
+@include include/fun-screamer-apply-substitution.texinfo
 @include include/fun-screamer-bound?.texinfo
 @include include/fun-screamer-ground?.texinfo
-@include include/macro-screamer-assert!.texinfo
-@include include/macro-screamer-known?.texinfo
-@include include/macro-screamer-decide.texinfo
-@include include/fun-screamer-apply-substitution.texinfo
-@include include/fun-screamer-linear-force.texinfo
-@include include/fun-screamer-divide-and-conquer-force.texinfo
 @include include/fun-screamer-applyv.texinfo
 @include include/fun-screamer-funcallv.texinfo
+@include include/fun-screamer-equalv.texinfo
+@include include/fun-screamer-template.texinfo
+
+@section Booleans
+
+@include include/fun-screamer-a-booleanv.texinfo
+@include include/fun-screamer-booleanpv.texinfo
+@include include/macro-screamer-known?.texinfo
+@include include/macro-screamer-decide.texinfo
+@include include/fun-screamer-notv.texinfo
 @include include/fun-screamer-andv.texinfo
 @include include/fun-screamer-orv.texinfo
-@include include/fun-screamer-booleanpv.texinfo
-@include include/fun-screamer-numberpv.texinfo
-@include include/fun-screamer-realpv.texinfo
-@include include/fun-screamer-integerpv.texinfo
-@include include/fun-screamer-memberv.texinfo
-@include include/fun-screamer-notv.texinfo
-@include include/fun-screamer-minv.texinfo
-@include include/fun-screamer-maxv.texinfo
-@include include/fun-screamer-equalv.texinfo
-@include include/fun-screamer-plus-v.texinfo
-@include include/fun-screamer---v.texinfo
-@include include/fun-screamer-star-v.texinfo
-@include include/fun-screamer-slash-v.texinfo
-@include include/fun-screamer-equals-v.texinfo
-@include include/fun-screamer-slash-equals-v.texinfo
-@include include/fun-screamer-lt-v.texinfo
-@include include/fun-screamer-lt-equals-v.texinfo
-@include include/fun-screamer-gt-v.texinfo
-@include include/fun-screamer-gt-equals-v.texinfo
-@include include/fun-screamer-a-booleanv.texinfo
-@include include/fun-screamer-a-numberv.texinfo
+@include include/fun-screamer-count-truesv.texinfo
+
+@section Sequences
+
 @include include/fun-screamer-a-member-ofv.texinfo
+@include include/fun-screamer-memberv.texinfo
+
+@section Numbers
+
+@include include/fun-screamer-a-numberv.texinfo
 @include include/fun-screamer-a-realv.texinfo
 @include include/fun-screamer-a-real-abovev.texinfo
 @include include/fun-screamer-a-real-belowv.texinfo
@@ -488,18 +484,35 @@ of Screamer.
 @include include/fun-screamer-an-integer-abovev.texinfo
 @include include/fun-screamer-an-integer-belowv.texinfo
 @include include/fun-screamer-an-integer-betweenv.texinfo
+@include include/fun-screamer-numberpv.texinfo
+@include include/fun-screamer-realpv.texinfo
+@include include/fun-screamer-integerpv.texinfo
+@include include/fun-screamer-minv.texinfo
+@include include/fun-screamer-maxv.texinfo
+@include include/fun-screamer-plus-v.texinfo
+@include include/fun-screamer---v.texinfo
+@include include/fun-screamer-star-v.texinfo
+@include include/fun-screamer-slash-v.texinfo
+@include include/fun-screamer-lt-v.texinfo
+@include include/fun-screamer-lt-equals-v.texinfo
+@include include/fun-screamer-equals-v.texinfo
+@include include/fun-screamer-gt-equals-v.texinfo
+@include include/fun-screamer-gt-v.texinfo
+@include include/fun-screamer-slash-equals-v.texinfo
+
+@section Forcing Solutions
+
+@include include/fun-screamer-solution.texinfo
 @include include/fun-screamer-static-ordering.texinfo
+@include include/fun-screamer-reorder.texinfo
+@include include/fun-screamer-linear-force.texinfo
+@include include/fun-screamer-divide-and-conquer-force.texinfo
 @include include/fun-screamer-domain-size.texinfo
 @include include/fun-screamer-range-size.texinfo
-@include include/fun-screamer-count-truesv.texinfo
-@include include/macro-screamer-best-value.texinfo
-@include include/fun-screamer-template.texinfo
-@include include/var-screamer-star-maximum-discretization-range-star.texinfo
-@include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
-@include include/var-screamer-star-strategy-star.texinfo
 
 @chapter Miscellany
 
+@include include/macro-screamer-best-value.texinfo
 @include include/fun-screamer-booleanp.texinfo
 @include include/fun-screamer-count-trues.texinfo
 @include include/fun-screamer-purge.texinfo
@@ -508,5 +521,9 @@ of Screamer.
 @include include/var-screamer-star-dynamic-extent?star.texinfo
 @include include/var-screamer-star-screamer-version-star.texinfo
 @include include/var-screamer-star-iscream?star.texinfo
+@include include/var-screamer-star-maximum-discretization-range-star.texinfo
+@include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
+@include include/var-screamer-star-strategy-star.texinfo
+
 
 @bye

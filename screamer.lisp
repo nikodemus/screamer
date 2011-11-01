@@ -3370,8 +3370,9 @@ Prolog."
   "The primitive GROUND? is an extension of the primitive BOUND? which
 can recursively determine whether an entire aggregate object is
 bound. Returns T if X is bound and either the value of X is atomic or
-all of the slots in the value of X are also bound. Otherwise returns
-nil."
+a CONS tree where all atoms are bound.
+
+Otherwise returns nil."
   (let ((x (value-of x)))
     (and (not (variable? x))
          (or (not (consp x)) (and (ground? (car x)) (ground? (cdr x)))))))
