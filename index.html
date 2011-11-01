@@ -2095,11 +2095,24 @@ size the difference of their upper and lower bounds.
 
 <h2 class="chapter"><a name="TOC22"></a>6 Miscellany</h2>
 
-<p><a name="Macro-best_002dvalue"></a>
+<p><a name="Macro-define_002dscreamer_002dpackage"></a>
 
 <div class="defun">
-&mdash; Macro: <b>best-value</b><var> form1 objective-form &amp;optional form2<a name="index-best_002dvalue-151"></a></var><br>
-<blockquote><p><a name="index-best_002dvalue-152"></a>First evaluates <code>objective-form</code>, which should evaluate to constraint variable <code>v</code>.
+&mdash; Macro: <b>define-screamer-package</b><var> defined-package-name &amp;body options<a name="index-define_002dscreamer_002dpackage-151"></a></var><br>
+<blockquote><p><a name="index-define_002dscreamer_002dpackage-152"></a>Convenience wrapper around <code>defpackage</code>. Passes its argument directly
+to <code>defpackage</code>, and automatically injects two additional options:
+
+     <pre class="lisp">          
+              (:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p)
+              (:use :cl :screamer)
+     </pre>
+        </blockquote></div>
+
+   <p><a name="Macro-best_002dvalue"></a>
+
+<div class="defun">
+&mdash; Macro: <b>best-value</b><var> form1 objective-form &amp;optional form2<a name="index-best_002dvalue-153"></a></var><br>
+<blockquote><p><a name="index-best_002dvalue-154"></a>First evaluates <code>objective-form</code>, which should evaluate to constraint variable <code>v</code>.
 
         <p>Then repeatedly evaluates <code>form1</code> in non-deterministic context till it fails. If
 previous round of evaluation produced an upper bound <code>b</code> for <code>v</code>, the during the
@@ -2123,30 +2136,30 @@ nikodemus@random-state.net.
    <p><a name="Function-booleanp"></a>
 
 <div class="defun">
-&mdash; Function: <b>booleanp</b><var> x<a name="index-booleanp-153"></a></var><br>
-<blockquote><p><a name="index-booleanp-154"></a>Returns true iff <code>x</code> is <code>t</code> or <code>nil</code>. 
+&mdash; Function: <b>booleanp</b><var> x<a name="index-booleanp-155"></a></var><br>
+<blockquote><p><a name="index-booleanp-156"></a>Returns true iff <code>x</code> is <code>t</code> or <code>nil</code>. 
 </p></blockquote></div>
 
    <p><a name="Function-count_002dtrues"></a>
 
 <div class="defun">
-&mdash; Function: <b>count-trues</b><var> &amp;rest xs<a name="index-count_002dtrues-155"></a></var><br>
-<blockquote><p><a name="index-count_002dtrues-156"></a>Returns the number of time a non-NIL value occurs in its arguments. 
+&mdash; Function: <b>count-trues</b><var> &amp;rest xs<a name="index-count_002dtrues-157"></a></var><br>
+<blockquote><p><a name="index-count_002dtrues-158"></a>Returns the number of time a non-NIL value occurs in its arguments. 
 </p></blockquote></div>
 
    <p><a name="Function-purge"></a>
 
 <div class="defun">
-&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-157"></a></var><br>
-<blockquote><p><a name="index-purge-158"></a>Removes any information about <code>function-name</code> from Screamer's
+&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-159"></a></var><br>
+<blockquote><p><a name="index-purge-160"></a>Removes any information about <code>function-name</code> from Screamer's
 who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Function-unwind_002dtrail"></a>
 
 <div class="defun">
-&mdash; Function: <b>unwind-trail</b><var><a name="index-unwind_002dtrail-159"></a></var><br>
-<blockquote><p><a name="index-unwind_002dtrail-160"></a><code>deprecated</code>.
+&mdash; Function: <b>unwind-trail</b><var><a name="index-unwind_002dtrail-161"></a></var><br>
+<blockquote><p><a name="index-unwind_002dtrail-162"></a><code>deprecated</code>.
 
         <p>Calls all functions installed using <code>trail</code>, and removes them from the trail.
 
@@ -2159,24 +2172,24 @@ Screamer.
    <p><a name="Function-unwedge_002dscreamer"></a>
 
 <div class="defun">
-&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-161"></a></var><br>
-<blockquote><p><a name="index-unwedge_002dscreamer-162"></a>Removes any information about all user defined functions from
+&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-163"></a></var><br>
+<blockquote><p><a name="index-unwedge_002dscreamer-164"></a>Removes any information about all user defined functions from
 Screamer's who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002adynamic_002dextent_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-163"></a></var><br>
-<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-164"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
+&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-165"></a></var><br>
+<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-166"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
 disable it. Default is platform dependent. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002ascreamer_002dversion_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-165"></a></var><br>
-<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-166"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
+&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-167"></a></var><br>
+<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-168"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
 while we're considering how to express versions for this copy of Screamer in
 the future. 
 </p></blockquote></div>
@@ -2184,31 +2197,31 @@ the future.
    <p><a name="Variable-_002aiscream_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-167"></a></var><br>
-<blockquote><p><a name="index-g_t_002aiscream_003f_002a-168"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
+&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-169"></a></var><br>
+<blockquote><p><a name="index-g_t_002aiscream_003f_002a-170"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002amaximum_002ddiscretization_002drange_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-169"></a></var><br>
-<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-170"></a>Discretize integer variables whose range is not greater than this number. 
+&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-171"></a></var><br>
+<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-172"></a>Discretize integer variables whose range is not greater than this number. 
 Discretize all integer variables if <code>nil</code>. Must be an integer or <code>nil</code>. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002aminimum_002dshrink_002dratio_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-171"></a></var><br>
-<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-172"></a>Ignore propagations which reduce the range of a variable by less than this
+&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-173"></a></var><br>
+<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-174"></a>Ignore propagations which reduce the range of a variable by less than this
 ratio. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002astrategy_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-173"></a></var><br>
-<blockquote><p><a name="index-g_t_002astrategy_002a-174"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
+&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-175"></a></var><br>
+<blockquote><p><a name="index-g_t_002astrategy_002a-176"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
 Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
 </p></blockquote></div>
 
