@@ -99,7 +99,14 @@ may wish to refer to the original papers below.
 </li></ul>
 <li><a name="toc_TOC15" href="#TOC15">4 Nondetermism</a>
 <li><a name="toc_TOC16" href="#TOC16">5 Constraints</a>
-<li><a name="toc_TOC17" href="#TOC17">6 Miscellany</a>
+<ul>
+<li><a href="#TOC17">5.1 Basics</a>
+<li><a href="#TOC18">5.2 Booleans</a>
+<li><a href="#TOC19">5.3 Sequences</a>
+<li><a href="#TOC20">5.4 Numbers</a>
+<li><a href="#TOC21">5.5 Forcing Solutions</a>
+</li></ul>
+<li><a name="toc_TOC22" href="#TOC22">6 Miscellany</a>
 </li></ul>
 </div>
 
@@ -873,6 +880,8 @@ failures to <code>*standard-output*</code> before returning values from <code>bo
 
 <h2 class="chapter"><a name="TOC16"></a>5 Constraints</h2>
 
+<h3 class="section"><a name="TOC17"></a>5.1 Basics</h3>
+
 <p><a name="Function-make_002dvariable"></a>
 
 <div class="defun">
@@ -884,43 +893,11 @@ variable. Otherwise, a unique name is assigned. The parameter <code>name</code> 
 be any Lisp object. 
 </p></blockquote></div>
 
-   <p><a name="Function-value_002dof"></a>
-
-<div class="defun">
-&mdash; Function: <b>value-of</b><var> x<a name="index-value_002dof-51"></a></var><br>
-<blockquote><p><a name="index-value_002dof-52"></a>Returns <code>x</code> if <code>x</code> is not a variable. If <code>x</code> is a variable then <code>value-of</code>
-dereferences <code>x</code> and returns the dereferenced value. If <code>x</code> is bound then
-the value returned will not be a variable. If <code>x</code> is unbound then the
-value returned will be a variable which may be <code>x</code> itself or another
-variable which is shared with <code>x</code>. 
-</p></blockquote></div>
-
-   <p><a name="Function-bound_003f"></a>
-
-<div class="defun">
-&mdash; Function: <b>bound?</b><var> x<a name="index-bound_003f-53"></a></var><br>
-<blockquote><p><a name="index-bound_003f-54"></a>Returns <code>t</code> if <code>x</code> is not a variable or if <code>x</code> is a bound
-variable. Otherwise returns <code>nil</code>. <code>bound</code>? is analogous to the
-extra-logical predicates <code>var</code> and <code>nonvar</code> typically available in
-Prolog. 
-</p></blockquote></div>
-
-   <p><a name="Function-ground_003f"></a>
-
-<div class="defun">
-&mdash; Function: <b>ground?</b><var> x<a name="index-ground_003f-55"></a></var><br>
-<blockquote><p><a name="index-ground_003f-56"></a>The primitive <code>ground</code>? is an extension of the primitive <code>bound</code>? which
-can recursively determine whether an entire aggregate object is
-bound. Returns <code>t</code> if <code>x</code> is bound and either the value of <code>x</code> is atomic or
-all of the slots in the value of <code>x</code> are also bound. Otherwise returns
-nil. 
-</p></blockquote></div>
-
    <p><a name="Macro-assert_0021"></a>
 
 <div class="defun">
-&mdash; Macro: <b>assert!</b><var> x<a name="index-assert_0021-57"></a></var><br>
-<blockquote><p><a name="index-assert_0021-58"></a>Restricts <code>x</code> to <code>t</code>. No meaningful result is returned. The argument <code>x</code> can be
+&mdash; Macro: <b>assert!</b><var> x<a name="index-assert_0021-51"></a></var><br>
+<blockquote><p><a name="index-assert_0021-52"></a>Restricts <code>x</code> to <code>t</code>. No meaningful result is returned. The argument <code>x</code> can be
 either a variable or a non-variable.
 
         <p>This assertion may cause other assertions to be made due to noticers attached
@@ -943,11 +920,154 @@ in a call to <code>assert</code>!, or directly nested in a call to <code>notv</c
 directly nested in a call to <code>assert</code>!, are similarly transformed. 
 </p></blockquote></div>
 
+   <p><a name="Function-value_002dof"></a>
+
+<div class="defun">
+&mdash; Function: <b>value-of</b><var> x<a name="index-value_002dof-53"></a></var><br>
+<blockquote><p><a name="index-value_002dof-54"></a>Returns <code>x</code> if <code>x</code> is not a variable. If <code>x</code> is a variable then <code>value-of</code>
+dereferences <code>x</code> and returns the dereferenced value. If <code>x</code> is bound then
+the value returned will not be a variable. If <code>x</code> is unbound then the
+value returned will be a variable which may be <code>x</code> itself or another
+variable which is shared with <code>x</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-apply_002dsubstitution"></a>
+
+<div class="defun">
+&mdash; Function: <b>apply-substitution</b><var> x<a name="index-apply_002dsubstitution-55"></a></var><br>
+<blockquote><p><a name="index-apply_002dsubstitution-56"></a>If <code>x</code> is a <code>cons</code>, or a variable whose value is a <code>cons</code>, returns
+a freshly consed copy of the tree with all variables dereferenced. 
+Otherwise returns the value of <code>x</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-bound_003f"></a>
+
+<div class="defun">
+&mdash; Function: <b>bound?</b><var> x<a name="index-bound_003f-57"></a></var><br>
+<blockquote><p><a name="index-bound_003f-58"></a>Returns <code>t</code> if <code>x</code> is not a variable or if <code>x</code> is a bound
+variable. Otherwise returns <code>nil</code>. <code>bound</code>? is analogous to the
+extra-logical predicates <code>var</code> and <code>nonvar</code> typically available in
+Prolog. 
+</p></blockquote></div>
+
+   <p><a name="Function-ground_003f"></a>
+
+<div class="defun">
+&mdash; Function: <b>ground?</b><var> x<a name="index-ground_003f-59"></a></var><br>
+<blockquote><p><a name="index-ground_003f-60"></a>The primitive <code>ground</code>? is an extension of the primitive <code>bound</code>? which
+can recursively determine whether an entire aggregate object is
+bound. Returns <code>t</code> if <code>x</code> is bound and either the value of <code>x</code> is atomic or
+a <code>cons</code> tree where all atoms are bound.
+
+        <p>Otherwise returns nil. 
+</p></blockquote></div>
+
+   <p><a name="Function-applyv"></a>
+
+<div class="defun">
+&mdash; Function: <b>applyv</b><var> f x &amp;rest xs<a name="index-applyv-61"></a></var><br>
+<blockquote><p><a name="index-applyv-62"></a><code>f</code> must be a deterministic function. If all arguments <code>x</code> are bound, returns
+the result of calling <code>f</code> on the dereferenced values of spread arguments.
+
+        <p>Otherwise returns a fresh variable <code>v</code>, constrained to be equal to the result
+of calling <code>f</code> on the dereferenced values of arguments.
+
+        <p>Additionally, if all but one of <code>v</code> and the argument variables become known, and
+the remaining variable has a finite domain, then that domain is further
+restricted to be consistent with other arguments. 
+</p></blockquote></div>
+
+   <p><a name="Function-funcallv"></a>
+
+<div class="defun">
+&mdash; Function: <b>funcallv</b><var> f &amp;rest x<a name="index-funcallv-63"></a></var><br>
+<blockquote><p><a name="index-funcallv-64"></a><code>f</code> must be a deterministic function. If all arguments <code>x</code> are bound, returns
+the result of calling <code>f</code> on the dereferenced values of arguments.
+
+        <p>Otherwise returns a fresh variable <code>v</code>, constrained to be equal to the result
+of calling <code>f</code> on the dereferenced values of arguments.
+
+        <p>Additionally, if all but one of <code>v</code> and the argument variables become known, and
+the remaining variable has a finite domain, then that domain is further
+restricted to be consistent with other arguments. 
+</p></blockquote></div>
+
+   <p><a name="Function-equalv"></a>
+
+<div class="defun">
+&mdash; Function: <b>equalv</b><var> x y<a name="index-equalv-65"></a></var><br>
+<blockquote><p><a name="index-equalv-66"></a>Returns <code>t</code> if the aggregate object <code>x</code> is known to equal the aggregate object
+<code>y</code>, <code>nil</code> if the aggregate object <code>x</code> is known not to equal the aggregate object <code>y</code>,
+and a new boolean variable <code>v</code> if it is not known whether or not <code>x</code> equals <code>y</code> when
+<code>equalv</code> is called.
+
+        <p>The values of <code>x</code>, <code>y</code> and <code>v</code> are mutually constraints via noticers so that <code>v</code>
+equals <code>t</code> if and only if <code>x</code> is known to equal <code>y</code> and <code>v</code> equals <code>nil</code> if and only if
+<code>x</code> is known not to equal <code>y</code>.
+
+        <p>Noticers are attached to <code>v</code> as well as to all variables nested in both in <code>x</code> and
+<code>y</code>. When the noticers attached to variables nested in <code>x</code> and <code>y</code> detect that <code>x</code> is
+known to equal <code>y</code> they restrict <code>v</code> to equal <code>t</code>. Likewise, when the noticers
+attached to variables nested in <code>x</code> and <code>y</code> detect that <code>x</code> is known not to equal <code>y</code>
+they restrict <code>v</code> to equal <code>nil</code>.
+
+        <p>Furthermore, if <code>v</code> later becomes known to equal <code>t</code> then <code>x</code> and <code>y</code> are unified. 
+Likewise, if <code>v</code> later becomes known to equal <code>nil</code> then <code>x</code> and <code>y</code> are restricted to
+not be equal. This is accomplished by attaching noticers to the variables
+nested in <code>x</code> and <code>y</code> which detect when <code>x</code> becomes equal to <code>y</code> and fail.
+
+        <p>The expression <code>(known? (equalv x y)) </code>is analogous to the extra-logical predicate
+<code>==</code> typically available in Prolog.
+
+        <p>The expression <code>(known? (notv (equalv x y))) </code>is analogous to the extra-logical
+predicate \= typically available in Prolog.
+
+        <p>The expression <code>(assert! (equalv x y)) </code>is analogous to Prolog unification.
+
+        <p>The expression <code>(assert! (notv (equalv x y))) </code>is analogous to the
+disunification operator available in Prolog-II. 
+</p></blockquote></div>
+
+   <p><a name="Function-template"></a>
+
+<div class="defun">
+&mdash; Function: <b>template</b><var> template<a name="index-template-67"></a></var><br>
+<blockquote><p><a name="index-template-68"></a>Copies an aggregate object, replacing any symbol beginning with a question
+mark with a newly created variable.
+
+        <p>If the same symbol appears more than once in <code>x</code>, only one variable is created
+for that symbol, the same variable replacing any occurrences of that symbol. 
+Thus <code>(template '(a b (?c d ?e) ?e)) </code>has the same effect as:
+
+     <pre class="lisp">          
+            (LET ((?C (MAKE-VARIABLE))
+                  (?E (MAKE-VARIABLE)))
+              (LIST 'A 'B (LIST C 'D E) E)).
+     </pre>
+        <p>This is useful for creating patterns to be unified with other structures. 
+</p></blockquote></div>
+
+<h3 class="section"><a name="TOC18"></a>5.2 Booleans</h3>
+
+<p><a name="Function-a_002dbooleanv"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-booleanv</b><var> &amp;optional name<a name="index-a_002dbooleanv-69"></a></var><br>
+<blockquote><p><a name="index-a_002dbooleanv-70"></a>Returns a boolean variable. 
+</p></blockquote></div>
+
+   <p><a name="Function-booleanpv"></a>
+
+<div class="defun">
+&mdash; Function: <b>booleanpv</b><var> x<a name="index-booleanpv-71"></a></var><br>
+<blockquote><p><a name="index-booleanpv-72"></a>The expression <code>(booleanpv x) </code>is an abbreviation for <code>(memberv x '(t nil))</code>. 
+</p></blockquote></div>
+
    <p><a name="Macro-known_003f"></a>
 
 <div class="defun">
-&mdash; Macro: <b>known?</b><var> x<a name="index-known_003f-59"></a></var><br>
-<blockquote><p><a name="index-known_003f-60"></a>Restricts <code>x</code> to be a boolean. If <code>x</code> is equal to <code>t</code> after being restricted to
+&mdash; Macro: <b>known?</b><var> x<a name="index-known_003f-73"></a></var><br>
+<blockquote><p><a name="index-known_003f-74"></a>Restricts <code>x</code> to be a boolean. If <code>x</code> is equal to <code>t</code> after being restricted to
 be boolean, returns <code>t</code>. If <code>x</code> is equal to <code>nil</code> or if the value of <code>x</code> is unknown
 returns <code>nil</code>. The argument <code>x</code> can be either a variable or a non-variable.
 
@@ -976,8 +1096,8 @@ nested in a call to <code>known</code>?, are similarly transformed.
    <p><a name="Macro-decide"></a>
 
 <div class="defun">
-&mdash; Macro: <b>decide</b><var> x<a name="index-decide-61"></a></var><br>
-<blockquote><p><a name="index-decide-62"></a>Restricts <code>x</code> to a be boolean. After <code>x</code> is restricted a nondeterministic
+&mdash; Macro: <b>decide</b><var> x<a name="index-decide-75"></a></var><br>
+<blockquote><p><a name="index-decide-76"></a>Restricts <code>x</code> to a be boolean. After <code>x</code> is restricted a nondeterministic
 choice is made. For one branch, <code>x</code> is restricted to equal <code>t</code> and <code>(decide x)</code>
 returns <code>t</code> as a result. For the other branch, <code>x</code> is restricted to equal <code>nil</code> and
 <code>(decide x) </code>returns <code>nil</code> as a result. The argument <code>x</code> can be either a variable
@@ -1010,41 +1130,28 @@ in a call to decide, or directly nested in a call to <code>notv</code> which is 
 directly nested in a call to decide, are similarly transformed. 
 </p></blockquote></div>
 
-   <p><a name="Function-applyv"></a>
+   <p><a name="Function-notv"></a>
 
 <div class="defun">
-&mdash; Function: <b>applyv</b><var> f x &amp;rest xs<a name="index-applyv-63"></a></var><br>
-<blockquote><p><a name="index-applyv-64"></a><code>f</code> must be a deterministic function. If all arguments <code>x</code> are bound, returns
-the result of calling <code>f</code> on the dereferenced values of spread arguments.
+&mdash; Function: <b>notv</b><var> x<a name="index-notv-77"></a></var><br>
+<blockquote><p><a name="index-notv-78"></a>Restricts <code>x</code> to be a boolean.
 
-        <p>Otherwise returns a fresh variable <code>v</code>, constrained to be equal to the result
-of calling <code>f</code> on the dereferenced values of arguments.
+        <p>Returns <code>t</code> if this restricts <code>x</code> to <code>nil</code>, and <code>t</code> if this restricts <code>x</code> to <code>nil</code>.
 
-        <p>Additionally, if all but one of <code>v</code> and the argument variables become known, and
-the remaining variable has a finite domain, then that domain is further
-restricted to be consistent with other arguments. 
-</p></blockquote></div>
+        <p>Otherwise returns a new boolean variable <code>v</code>. <code>v</code> and <code>x</code> are mutually constrained
+via noticers, so that if either is later known to equal <code>t</code>, the other is
+restricted to equal <code>nil</code> and vice versa.
 
-   <p><a name="Function-funcallv"></a>
-
-<div class="defun">
-&mdash; Function: <b>funcallv</b><var> f &amp;rest x<a name="index-funcallv-65"></a></var><br>
-<blockquote><p><a name="index-funcallv-66"></a><code>f</code> must be a deterministic function. If all arguments <code>x</code> are bound, returns
-the result of calling <code>f</code> on the dereferenced values of arguments.
-
-        <p>Otherwise returns a fresh variable <code>v</code>, constrained to be equal to the result
-of calling <code>f</code> on the dereferenced values of arguments.
-
-        <p>Additionally, if all but one of <code>v</code> and the argument variables become known, and
-the remaining variable has a finite domain, then that domain is further
-restricted to be consistent with other arguments. 
+        <p>Note that unlike <code>cl:not</code> <code>notv</code> does not accept arbitrary values as arguments: it
+fails if its argument is not <code>t</code>, <code>nil</code>, or variable that can be restricted to a
+boolean. 
 </p></blockquote></div>
 
    <p><a name="Function-andv"></a>
 
 <div class="defun">
-&mdash; Function: <b>andv</b><var> &amp;rest xs<a name="index-andv-67"></a></var><br>
-<blockquote><p><a name="index-andv-68"></a>Restricts each argument to be boolean.
+&mdash; Function: <b>andv</b><var> &amp;rest xs<a name="index-andv-79"></a></var><br>
+<blockquote><p><a name="index-andv-80"></a>Restricts each argument to be boolean.
 
         <p>Returns <code>t</code> if called with no arguments, or if all arguments are known to equal
 <code>t</code> after being restricted to be boolean, and returns <code>nil</code> if any argument is
@@ -1071,8 +1178,8 @@ arguments. Secondly, any non-boolean argument causes it to fail.
    <p><a name="Function-orv"></a>
 
 <div class="defun">
-&mdash; Function: <b>orv</b><var> &amp;rest xs<a name="index-orv-69"></a></var><br>
-<blockquote><p><a name="index-orv-70"></a>Restricts each argument to be boolean.
+&mdash; Function: <b>orv</b><var> &amp;rest xs<a name="index-orv-81"></a></var><br>
+<blockquote><p><a name="index-orv-82"></a>Restricts each argument to be boolean.
 
         <p>Returns <code>nil</code> if called with no arguments, or if all arguments are known to
 equal <code>nil</code> after being restructed to be boolean, and returns <code>t</code> if any argument
@@ -1096,86 +1203,43 @@ mutually constrained:
 arguments. Secondly, any non-boolean argument causes it to fail. 
 </p></blockquote></div>
 
-   <p><a name="Function-booleanpv"></a>
+   <p><a name="Function-count_002dtruesv"></a>
 
 <div class="defun">
-&mdash; Function: <b>booleanpv</b><var> x<a name="index-booleanpv-71"></a></var><br>
-<blockquote><p><a name="index-booleanpv-72"></a>The expression <code>(booleanpv x) </code>is an abbreviation for <code>(memberv x '(t nil))</code>. 
-</p></blockquote></div>
+&mdash; Function: <b>count-truesv</b><var> &amp;rest xs<a name="index-count_002dtruesv-83"></a></var><br>
+<blockquote><p><a name="index-count_002dtruesv-84"></a>Constrains all its arguments to be boolean. If each argument is known, returns
+the number of <code>t</code> arguments. Otherwise returns a fresh constraint variable <code>v</code>.
 
-   <p><a name="Function-numberpv"></a>
-
-<div class="defun">
-&mdash; Function: <b>numberpv</b><var> x<a name="index-numberpv-73"></a></var><br>
-<blockquote><p><a name="index-numberpv-74"></a>Returns <code>t</code> if <code>x</code> is known to be numeric, <code>nil</code> if <code>x</code> is known to be
-non-numeric, and otherwise returns a new boolean variable <code>v</code>.
-
-        <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
-to <code>t</code> if and only if <code>x</code> is known to be numeric and <code>v</code> is equal to <code>nil</code> if and only
-if <code>x</code> is known to be non-numeric.
+        <p><code>v</code> and arguments are mutually constrained:
 
           <ul>
-<li>If <code>x</code> later becomes known to be numeric, a noticer attached to <code>x</code> restricts <code>v</code>
-  to equal <code>t</code>. Likewise, if <code>x</code> later becomes known to be non-numeric, a noticer
-  attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
+<li>Lower bound of <code>v</code> is the number arguments known to be <code>t</code>.
 
-          <li>If <code>v</code> ever becomes known
-  to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x</code> to be numeric. Likewise,
-  if <code>v</code> ever becomes known to equal <code>nil</code> then a noticer attached to <code>v</code> restricts <code>x</code>
-  to be non-numeric. 
+          <li>Upper bound of <code>v</code> is the number arguments minus the number of arguments known to be <code>nil</code>.
+
+          <li>If lower bound of <code>v</code> is constrained to be equal to number of arguments known
+   to be <code>nil</code>, all arguments not known to be <code>nil</code> are constrained to be <code>t</code>.
+
+          <li>If Upper bound of <code>v</code> is constrained to be equal to number of arguments known
+   to be <code>t</code>, all arguments not known to be <code>t</code> are constrained to be <code>nil</code>. 
 </ul>
         </p></blockquote></div>
 
-   <p><a name="Function-realpv"></a>
+<h3 class="section"><a name="TOC19"></a>5.3 Sequences</h3>
+
+<p><a name="Function-a_002dmember_002dofv"></a>
 
 <div class="defun">
-&mdash; Function: <b>realpv</b><var> x<a name="index-realpv-75"></a></var><br>
-<blockquote><p><a name="index-realpv-76"></a>Returns <code>t</code> if <code>x</code> is known to be real, <code>nil</code> if <code>x</code> is known to be non-real,
-and otherwise returns a new boolean variable <code>v</code>.
-
-        <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
-to <code>t</code> if and only if <code>x</code> is known to be real and <code>v</code> is equal to <code>nil</code> if and only if
-<code>x</code> is known to be non-real.
-
-          <ul>
-<li>If <code>x</code> later becomes known to be real, a noticer attached to <code>x</code> restricts <code>v</code> to
-  equal <code>t</code>. Likewise, if <code>x</code> later becomes known to be non-real, a noticer
-  attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
-
-          <li>If <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x</code>
-  to be real. Likewise, if <code>v</code> ever becomes known to equal <code>nil</code> then a noticer
-  attached to <code>v</code> restricts <code>x</code> to be non-real. 
-</ul>
-        </p></blockquote></div>
-
-   <p><a name="Function-integerpv"></a>
-
-<div class="defun">
-&mdash; Function: <b>integerpv</b><var> x<a name="index-integerpv-77"></a></var><br>
-<blockquote><p><a name="index-integerpv-78"></a>Returns <code>t</code> if <code>x</code> is known to be integer valued, and <code>nil</code> if <code>x</code> is known be
-non-integer value.
-
-        <p>If it is not known whether or not <code>x</code> is integer valued when <code>integerpv</code> is called
-then <code>integerpv</code> creates and returns a new boolean variable <code>v</code>.
-
-        <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
-to <code>t</code> if and only if <code>x</code> is known to be integer valued, and <code>v</code> is equal to <code>nil</code> if
-and only if <code>x</code> is known to be non-integer valued.
-
-        <p>If <code>x</code> later becomes known to be integer valued, a noticer attached to <code>x</code>
-restricts <code>v</code> to equal <code>t</code>. Likewise, if <code>x</code> later becomes known to be non-integer
-valued, a noticer attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
-
-        <p>Furthermore, if <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code>
-restricts <code>x</code> to be integer valued. Likewise, if <code>v</code> ever becomes known to equal
-<code>nil</code> then a noticer attached to <code>v</code> restricts <code>x</code> to be non-integer valued. 
+&mdash; Function: <b>a-member-ofv</b><var> values &amp;optional name<a name="index-a_002dmember_002dofv-85"></a></var><br>
+<blockquote><p><a name="index-a_002dmember_002dofv-86"></a>Returns a variable whose value is constrained to be one of <code>values</code>. 
+<code>values</code> can be either a vector or a list designator. 
 </p></blockquote></div>
 
    <p><a name="Function-memberv"></a>
 
 <div class="defun">
-&mdash; Function: <b>memberv</b><var> x sequence<a name="index-memberv-79"></a></var><br>
-<blockquote><p><a name="index-memberv-80"></a>Returns <code>t</code> if <code>x</code> is known to be a member of <code>sequence</code> (using the Common Lisp
+&mdash; Function: <b>memberv</b><var> x sequence<a name="index-memberv-87"></a></var><br>
+<blockquote><p><a name="index-memberv-88"></a>Returns <code>t</code> if <code>x</code> is known to be a member of <code>sequence</code> (using the Common Lisp
 function <code>eql</code> as a test function), <code>nil</code> if <code>x</code> is known not to be a member of
 <code>sequence</code>, and otherwise returns a new boolean variable <code>v</code>.
 
@@ -1202,28 +1266,172 @@ not contain any unbound variables when <code>memberv</code> is called.
 vector. 
 </p></blockquote></div>
 
-   <p><a name="Function-notv"></a>
+<h3 class="section"><a name="TOC20"></a>5.4 Numbers</h3>
+
+<p><a name="Function-a_002dnumberv"></a>
 
 <div class="defun">
-&mdash; Function: <b>notv</b><var> x<a name="index-notv-81"></a></var><br>
-<blockquote><p><a name="index-notv-82"></a>Restricts <code>x</code> to be a boolean.
+&mdash; Function: <b>a-numberv</b><var> &amp;optional name<a name="index-a_002dnumberv-89"></a></var><br>
+<blockquote><p><a name="index-a_002dnumberv-90"></a>Returns a variable whose value is constained to be a number. 
+</p></blockquote></div>
 
-        <p>Returns <code>t</code> if this restricts <code>x</code> to <code>nil</code>, and <code>t</code> if this restricts <code>x</code> to <code>nil</code>.
+   <p><a name="Function-a_002drealv"></a>
 
-        <p>Otherwise returns a new boolean variable <code>v</code>. <code>v</code> and <code>x</code> are mutually constrained
-via noticers, so that if either is later known to equal <code>t</code>, the other is
-restricted to equal <code>nil</code> and vice versa.
+<div class="defun">
+&mdash; Function: <b>a-realv</b><var> &amp;optional name<a name="index-a_002drealv-91"></a></var><br>
+<blockquote><p><a name="index-a_002drealv-92"></a>Returns a real variable. 
+</p></blockquote></div>
 
-        <p>Note that unlike <code>cl:not</code> <code>notv</code> does not accept arbitrary values as arguments: it
-fails if its argument is not <code>t</code>, <code>nil</code>, or variable that can be restricted to a
-boolean. 
+   <p><a name="Function-a_002dreal_002dabovev"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-real-abovev</b><var> low &amp;optional name<a name="index-a_002dreal_002dabovev-93"></a></var><br>
+<blockquote><p><a name="index-a_002dreal_002dabovev-94"></a>Returns a real variable whose value is constrained to be greater than or equal to <code>low</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-a_002dreal_002dbelowv"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-real-belowv</b><var> high &amp;optional name<a name="index-a_002dreal_002dbelowv-95"></a></var><br>
+<blockquote><p><a name="index-a_002dreal_002dbelowv-96"></a>Returns a real variable whose value is constrained to be less than or equal to <code>high</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-a_002dreal_002dbetweenv"></a>
+
+<div class="defun">
+&mdash; Function: <b>a-real-betweenv</b><var> low high &amp;optional name<a name="index-a_002dreal_002dbetweenv-97"></a></var><br>
+<blockquote><p><a name="index-a_002dreal_002dbetweenv-98"></a>Returns a real variable whose value is constrained to be greater than or
+equal to low and less than or equal to high. If the resulting real variable is
+bound, its value is returned instead. Fails if it is known that low is greater
+than high at the time of call.
+
+        <p>The expression <code>(a-real-betweenv low high) </code>is an abbreviation for:
+
+     <pre class="lisp">          
+           (LET ((V (MAKE-VARIABLE)))
+              (ASSERT! (REALPV V))
+              (ASSERT! (&gt;=V V LOW))
+              (ASSERT! (&lt;=V V HIGH))
+              (VALUE-OF V))
+     </pre>
+        </blockquote></div>
+
+   <p><a name="Function-an_002dintegerv"></a>
+
+<div class="defun">
+&mdash; Function: <b>an-integerv</b><var> &amp;optional name<a name="index-an_002dintegerv-99"></a></var><br>
+<blockquote><p><a name="index-an_002dintegerv-100"></a>Returns an integer variable. 
+</p></blockquote></div>
+
+   <p><a name="Function-an_002dinteger_002dabovev"></a>
+
+<div class="defun">
+&mdash; Function: <b>an-integer-abovev</b><var> low &amp;optional name<a name="index-an_002dinteger_002dabovev-101"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dabovev-102"></a>Returns an integer variable whose value is constrained to be greater than
+or equal to <code>low</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-an_002dinteger_002dbelowv"></a>
+
+<div class="defun">
+&mdash; Function: <b>an-integer-belowv</b><var> high &amp;optional name<a name="index-an_002dinteger_002dbelowv-103"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dbelowv-104"></a>Returns an integer variable whose value is constrained to be less than or
+equal to <code>high</code>. 
+</p></blockquote></div>
+
+   <p><a name="Function-an_002dinteger_002dbetweenv"></a>
+
+<div class="defun">
+&mdash; Function: <b>an-integer-betweenv</b><var> low high &amp;optional name<a name="index-an_002dinteger_002dbetweenv-105"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dbetweenv-106"></a>Returns an integer variable whose value is constrained to be greater than
+or equal to <code>low</code> and less than or equal to <code>high</code>. If the resulting integer
+variable is bound, its value is returned instead. Fails if it is known that
+there is no integer between <code>low</code> and <code>high</code> at the time of call.
+
+        <p>The expression <code>(an-integer-betweenv low high) </code>is an abbreviation for:
+
+     <pre class="lisp">          
+           (LET ((V (MAKE-VARIABLE)))
+              (ASSERT! (INTEGERPV V))
+              (ASSERT! (&gt;=V V LOW))
+              (ASSERT! (&lt;=V V HIGH))
+              (VALUE-OF v))
+     </pre>
+        </blockquote></div>
+
+   <p><a name="Function-numberpv"></a>
+
+<div class="defun">
+&mdash; Function: <b>numberpv</b><var> x<a name="index-numberpv-107"></a></var><br>
+<blockquote><p><a name="index-numberpv-108"></a>Returns <code>t</code> if <code>x</code> is known to be numeric, <code>nil</code> if <code>x</code> is known to be
+non-numeric, and otherwise returns a new boolean variable <code>v</code>.
+
+        <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
+to <code>t</code> if and only if <code>x</code> is known to be numeric and <code>v</code> is equal to <code>nil</code> if and only
+if <code>x</code> is known to be non-numeric.
+
+          <ul>
+<li>If <code>x</code> later becomes known to be numeric, a noticer attached to <code>x</code> restricts <code>v</code>
+  to equal <code>t</code>. Likewise, if <code>x</code> later becomes known to be non-numeric, a noticer
+  attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
+
+          <li>If <code>v</code> ever becomes known
+  to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x</code> to be numeric. Likewise,
+  if <code>v</code> ever becomes known to equal <code>nil</code> then a noticer attached to <code>v</code> restricts <code>x</code>
+  to be non-numeric. 
+</ul>
+        </p></blockquote></div>
+
+   <p><a name="Function-realpv"></a>
+
+<div class="defun">
+&mdash; Function: <b>realpv</b><var> x<a name="index-realpv-109"></a></var><br>
+<blockquote><p><a name="index-realpv-110"></a>Returns <code>t</code> if <code>x</code> is known to be real, <code>nil</code> if <code>x</code> is known to be non-real,
+and otherwise returns a new boolean variable <code>v</code>.
+
+        <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
+to <code>t</code> if and only if <code>x</code> is known to be real and <code>v</code> is equal to <code>nil</code> if and only if
+<code>x</code> is known to be non-real.
+
+          <ul>
+<li>If <code>x</code> later becomes known to be real, a noticer attached to <code>x</code> restricts <code>v</code> to
+  equal <code>t</code>. Likewise, if <code>x</code> later becomes known to be non-real, a noticer
+  attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
+
+          <li>If <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x</code>
+  to be real. Likewise, if <code>v</code> ever becomes known to equal <code>nil</code> then a noticer
+  attached to <code>v</code> restricts <code>x</code> to be non-real. 
+</ul>
+        </p></blockquote></div>
+
+   <p><a name="Function-integerpv"></a>
+
+<div class="defun">
+&mdash; Function: <b>integerpv</b><var> x<a name="index-integerpv-111"></a></var><br>
+<blockquote><p><a name="index-integerpv-112"></a>Returns <code>t</code> if <code>x</code> is known to be integer valued, and <code>nil</code> if <code>x</code> is known be
+non-integer value.
+
+        <p>If it is not known whether or not <code>x</code> is integer valued when <code>integerpv</code> is called
+then <code>integerpv</code> creates and returns a new boolean variable <code>v</code>.
+
+        <p>The values of <code>x</code> and <code>v</code> are mutually constrained via noticers so that <code>v</code> is equal
+to <code>t</code> if and only if <code>x</code> is known to be integer valued, and <code>v</code> is equal to <code>nil</code> if
+and only if <code>x</code> is known to be non-integer valued.
+
+        <p>If <code>x</code> later becomes known to be integer valued, a noticer attached to <code>x</code>
+restricts <code>v</code> to equal <code>t</code>. Likewise, if <code>x</code> later becomes known to be non-integer
+valued, a noticer attached to <code>x</code> restricts <code>v</code> to equal <code>nil</code>.
+
+        <p>Furthermore, if <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code>
+restricts <code>x</code> to be integer valued. Likewise, if <code>v</code> ever becomes known to equal
+<code>nil</code> then a noticer attached to <code>v</code> restricts <code>x</code> to be non-integer valued. 
 </p></blockquote></div>
 
    <p><a name="Function-minv"></a>
 
 <div class="defun">
-&mdash; Function: <b>minv</b><var> x &amp;rest xs<a name="index-minv-83"></a></var><br>
-<blockquote><p><a name="index-minv-84"></a>Constrains its arguments to be real. If called with a single argument,
+&mdash; Function: <b>minv</b><var> x &amp;rest xs<a name="index-minv-113"></a></var><br>
+<blockquote><p><a name="index-minv-114"></a>Constrains its arguments to be real. If called with a single argument,
 returns its value. If called with multiple arguments, behaves as if a
 combination of two argument calls:
 
@@ -1246,8 +1454,8 @@ the other, returns the value of that argument. Otherwise returns a real variable
    <p><a name="Function-maxv"></a>
 
 <div class="defun">
-&mdash; Function: <b>maxv</b><var> x &amp;rest xs<a name="index-maxv-85"></a></var><br>
-<blockquote><p><a name="index-maxv-86"></a>Constrains its arguments to be real. If called with a single argument,
+&mdash; Function: <b>maxv</b><var> x &amp;rest xs<a name="index-maxv-115"></a></var><br>
+<blockquote><p><a name="index-maxv-116"></a>Constrains its arguments to be real. If called with a single argument,
 returns its value. If called with multiple arguments, behaves as if a
 combination of two argument calls:
 
@@ -1267,47 +1475,11 @@ variable <code>v</code>, mutually constrained with the arguments:
 </ul>
         </p></blockquote></div>
 
-   <p><a name="Function-equalv"></a>
-
-<div class="defun">
-&mdash; Function: <b>equalv</b><var> x y<a name="index-equalv-87"></a></var><br>
-<blockquote><p><a name="index-equalv-88"></a>Returns <code>t</code> if the aggregate object <code>x</code> is known to equal the aggregate object
-<code>y</code>, <code>nil</code> if the aggregate object <code>x</code> is known not to equal the aggregate object <code>y</code>,
-and a new boolean variable <code>v</code> if it is not known whether or not <code>x</code> equals <code>y</code> when
-<code>equalv</code> is called.
-
-        <p>The values of <code>x</code>, <code>y</code> and <code>v</code> are mutually constraints via noticers so that <code>v</code>
-equals <code>t</code> if and only if <code>x</code> is known to equal <code>y</code> and <code>v</code> equals <code>nil</code> if and only if
-<code>x</code> is known not to equal <code>y</code>.
-
-        <p>Noticers are attached to <code>v</code> as well as to all variables nested in both in <code>x</code> and
-<code>y</code>. When the noticers attached to variables nested in <code>x</code> and <code>y</code> detect that <code>x</code> is
-known to equal <code>y</code> they restrict <code>v</code> to equal <code>t</code>. Likewise, when the noticers
-attached to variables nested in <code>x</code> and <code>y</code> detect that <code>x</code> is known not to equal <code>y</code>
-they restrict <code>v</code> to equal <code>nil</code>.
-
-        <p>Furthermore, if <code>v</code> later becomes known to equal <code>t</code> then <code>x</code> and <code>y</code> are unified. 
-Likewise, if <code>v</code> later becomes known to equal <code>nil</code> then <code>x</code> and <code>y</code> are restricted to
-not be equal. This is accomplished by attaching noticers to the variables
-nested in <code>x</code> and <code>y</code> which detect when <code>x</code> becomes equal to <code>y</code> and fail.
-
-        <p>The expression <code>(known? (equalv x y)) </code>is analogous to the extra-logical predicate
-<code>==</code> typically available in Prolog.
-
-        <p>The expression <code>(known? (notv (equalv x y))) </code>is analogous to the extra-logical
-predicate \= typically available in Prolog.
-
-        <p>The expression <code>(assert! (equalv x y)) </code>is analogous to Prolog unification.
-
-        <p>The expression <code>(assert! (notv (equalv x y))) </code>is analogous to the
-disunification operator available in Prolog-II. 
-</p></blockquote></div>
-
    <p><a name="Function-_002bv"></a>
 
 <div class="defun">
-&mdash; Function: <b>+v</b><var> &amp;rest xs<a name="index-g_t_002bv-89"></a></var><br>
-<blockquote><p><a name="index-g_t_002bv-90"></a>Constrains its arguments to be numbers. Returns <code>0</code> if called with no
+&mdash; Function: <b>+v</b><var> &amp;rest xs<a name="index-g_t_002bv-117"></a></var><br>
+<blockquote><p><a name="index-g_t_002bv-118"></a>Constrains its arguments to be numbers. Returns <code>0</code> if called with no
 arguments. If called with a single argument, returns its value. If called with
 more than two arguments, behaves as nested sequence of two-argument calls:
 
@@ -1341,8 +1513,8 @@ argument equals zero.
    <p><a name="Function-_002dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>-v</b><var> x &amp;rest xs<a name="index-g_t_002dv-91"></a></var><br>
-<blockquote><p><a name="index-g_t_002dv-92"></a>Constrains its arguments to be numbers. If called with a single argument,
+&mdash; Function: <b>-v</b><var> x &amp;rest xs<a name="index-g_t_002dv-119"></a></var><br>
+<blockquote><p><a name="index-g_t_002dv-120"></a>Constrains its arguments to be numbers. If called with a single argument,
 behaves as if the two argument call:
 
      <pre class="lisp">          
@@ -1380,8 +1552,8 @@ difference of their values. If <code>x2</code> is known to be zero, returns the 
    <p><a name="Function-_002av"></a>
 
 <div class="defun">
-&mdash; Function: <b>*v</b><var> &amp;rest xs<a name="index-g_t_002av-93"></a></var><br>
-<blockquote><p><a name="index-g_t_002av-94"></a>Constrains its arguments to be numbers. If called with no arugments,
+&mdash; Function: <b>*v</b><var> &amp;rest xs<a name="index-g_t_002av-121"></a></var><br>
+<blockquote><p><a name="index-g_t_002av-122"></a>Constrains its arguments to be numbers. If called with no arugments,
 returns <code>1</code>. If called with a single argument, returns its value. If called with
 more than two arguments, behaves as nested sequence of two-argument calls:
 
@@ -1416,8 +1588,8 @@ argument equals zero or one.
    <p><a name="Function-_002fv"></a>
 
 <div class="defun">
-&mdash; Function: <b>/v</b><var> x &amp;rest xs<a name="index-g_t_002fv-95"></a></var><br>
-<blockquote><p><a name="index-g_t_002fv-96"></a>Constrains its arguments to be numbers. If called with a single argument,
+&mdash; Function: <b>/v</b><var> x &amp;rest xs<a name="index-g_t_002fv-123"></a></var><br>
+<blockquote><p><a name="index-g_t_002fv-124"></a>Constrains its arguments to be numbers. If called with a single argument,
 behaves as the two argument call:
 
      <pre class="lisp">          
@@ -1454,11 +1626,97 @@ value of <code>x1</code>. Otherwise returns number variable <code>v</code>.
 or <code>x2</code> equals one. 
 </p></blockquote></div>
 
+   <p><a name="Function-_003cv"></a>
+
+<div class="defun">
+&mdash; Function: <b>&lt;v</b><var> x &amp;rest xs<a name="index-g_t_003cv-125"></a></var><br>
+<blockquote><p><a name="index-g_t_003cv-126"></a>Returns a boolean value which is constrained to be <code>t</code> if each argument Xi is
+less than the following argument Xi+1 and constrained to be <code>nil</code> if some
+argument Xi is greater than or equal to the following argument Xi+1.
+
+        <p>This function takes one or more arguments. All of the arguments are restricted
+to be real.
+
+        <p>Returns <code>t</code> when called with one argument. A call such as <code>(&lt;v x1 x2 ... xn)</code>
+with more than two arguments behaves like a conjunction of two argument calls:
+
+     <pre class="lisp">          
+            (ANDV (&lt;V X1 X2) ... (&lt;V Xi Xi+1 ) ... (&lt;V Xn-1 Xn))
+     </pre>
+        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is known to be less than <code>x2</code> at
+the time of call, <code>nil</code> if <code>x1</code> is known to be greater than or equal to <code>x2</code> at the
+time of call, and otherwise a new boolean variable <code>v</code>.
+
+        <p>A real value <code>x1</code> is known to be less than a real value <code>x2</code> if <code>x1</code> has an upper
+bound, <code>x2</code> has a lower bound and the upper bound of <code>x1</code> is less than the lower
+bound of <code>x2</code>.
+
+        <p>A real value <code>x1</code> is known to be greater than or equal to a real value <code>x2</code> if <code>x1</code>
+has a lower bound, <code>x2</code> has an upper bound and the lower bound of <code>x1</code> is greater
+than or equal to the upper bound of <code>x2</code>.
+
+        <p>When a new variable is created, the values of <code>x1</code>, <code>x2</code> and v are mutually
+constrained via noticers so that <code>v</code> is equal to <code>t</code> if and only if <code>x1</code> is known to
+be less than <code>x2</code> and <code>v</code> is equal to <code>nil</code> if and only if <code>x1</code> is known to be greater
+than or equal to <code>x2</code>.
+
+          <ul>
+<li>If it later becomes known that <code>x1</code> is less than <code>x2</code>, noticers attached to <code>x1</code>
+  and <code>x2</code> restrict <code>v</code> to equal <code>t</code>. Likewise, if it later becomes known that <code>x1</code> is
+  greater than or equal to <code>x2</code>, noticers attached to <code>x1</code> and <code>x2</code> restrict <code>v</code> to
+  equal <code>nil</code>.
+
+          <li>If <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x1</code>
+  to be less than <code>x2</code>. Likewise, if <code>v</code> ever becomes known to equal <code>nil</code> then a
+  noticer attached to <code>v</code> restricts <code>x1</code> to be greater than or equal to <code>x2</code>.
+
+        </ul>
+        Restricting a real value <code>x1</code> to be less than a real value <code>x2</code> is performed by
+attaching noticers to <code>x1</code> and <code>x2</code>. The noticer attached to <code>x1</code> continually
+restricts the lower bound of <code>x2</code> to be no lower than the upper bound of <code>x1</code> if
+<code>x1</code> has an upper bound. The noticer attached to <code>x2</code> continually restricts the
+upper bound of <code>x1</code> to be no higher than the lower bound of <code>x2</code> if <code>x2</code> has a lower
+bound. Since these restrictions only guarantee that <code>x1</code> be less than or equal
+to <code>x2</code>, the constraint that <code>x1</code> be strictly less than <code>x2</code> is enforced by having
+the noticers fail when both <code>x1</code> and <code>x2</code> become known to be equal.
+
+        <p>Restricting a real value <code>x1</code> to be greater than or equal to a real value <code>x2</code> is
+performed by an analogous set of noticers without this last equality check. 
+</p></blockquote></div>
+
+   <p><a name="Function-_003c_003dv"></a>
+
+<div class="defun">
+&mdash; Function: <b>&lt;=v</b><var> x &amp;rest xs<a name="index-g_t_003c_003dv-127"></a></var><br>
+<blockquote><p><a name="index-g_t_003c_003dv-128"></a>All arguments are constrained to be real. Returns <code>t</code> when called with one
+argument. A call such as <code>(&lt;=v x1 x2 ... xn) </code>with more than two arguments
+behaves like a conjunction of two argument calls:
+
+     <pre class="lisp">          
+            (ANDV (&lt;=V X1 X2) ... (&lt;=V Xi Xi+1) ... (&lt;=V Xn-1 Xn))
+     </pre>
+        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is know to be less than or equal to <code>x2</code>
+at the time of the call, <code>nil</code> if <code>x1</code> is known to be greater than <code>x2</code>, and otherwise a new
+boolean variable <code>v</code>.
+
+        <p>Values of <code>v</code>, <code>x1</code>, and <code>x2</code> are mutually constrained:
+
+          <ul>
+<li><code>v</code> is equal to <code>t</code> iff <code>x1</code> is known to be less than or equal to <code>x2</code>.
+
+          <li><code>v</code> is equal to <code>nil</code> iff <code>x2</code> is known to be greater than <code>x2</code>.
+
+          <li>If <code>v</code> is known to be <code>t</code>, <code>x1</code> is constrained to be less than or equal to <code>x2</code>.
+
+          <li>If <code>v</code> is known to be <code>nil</code>, <code>x1</code> is constrained to be greater than <code>x2</code>. 
+</ul>
+        </p></blockquote></div>
+
    <p><a name="Function-_003dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>=v</b><var> x &amp;rest xs<a name="index-g_t_003dv-97"></a></var><br>
-<blockquote><p><a name="index-g_t_003dv-98"></a>Returns a boolean value which is constrained to be <code>t</code> if all of the
+&mdash; Function: <b>=v</b><var> x &amp;rest xs<a name="index-g_t_003dv-129"></a></var><br>
+<blockquote><p><a name="index-g_t_003dv-130"></a>Returns a boolean value which is constrained to be <code>t</code> if all of the
 arguments are numerically equal, and constrained to be <code>nil</code> if two or more of
 the arguments numerically differ.
 
@@ -1516,11 +1774,67 @@ restrictions and fail when any assertion causes <code>x1</code> to be known to b
 <code>x2</code>. 
 </p></blockquote></div>
 
+   <p><a name="Function-_003e_003dv"></a>
+
+<div class="defun">
+&mdash; Function: <b>&gt;=v</b><var> x &amp;rest xs<a name="index-g_t_003e_003dv-131"></a></var><br>
+<blockquote><p><a name="index-g_t_003e_003dv-132"></a>All arguments are constrained to be real. Returns <code>t</code> when called
+with one argument. A call such as <code>(&gt;=v x1 x2 ... xn) </code>with more than two
+arguments behaves like a conjunction of two argument calls:
+
+     <pre class="lisp">          
+            (ANDV (&gt;=V X1 X2) ... (&gt;=V Xi Xi+1) ... (&gt;=V Xn-1 Xn))
+     </pre>
+        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is know to be greater than or
+equal to <code>x2</code> at the time of the call, <code>nil</code> if <code>x1</code> is known to be less than <code>x2</code>,
+and otherwise a new boolean variable <code>v</code>.
+
+        <p>Values of <code>v</code>, <code>x1</code>, and <code>x2</code> are mutually constrained:
+
+          <ul>
+<li><code>v</code> is equal to <code>t</code> iff <code>x1</code> is known to be greater than or equal to <code>x2</code>.
+
+          <li><code>v</code> is equal to <code>nil</code> iff <code>x2</code> is know to be less than <code>x2</code>.
+
+          <li>If <code>v</code> is known to be <code>t</code>, <code>x1</code> is constrained to be greater than or equal to <code>x2</code>.
+
+          <li>If <code>v</code> is known to be <code>nil</code>, <code>x1</code> is constrained to be less than <code>x2</code>. 
+</ul>
+        </p></blockquote></div>
+
+   <p><a name="Function-_003ev"></a>
+
+<div class="defun">
+&mdash; Function: <b>&gt;v</b><var> x &amp;rest xs<a name="index-g_t_003ev-133"></a></var><br>
+<blockquote><p><a name="index-g_t_003ev-134"></a>All arguments are constrained to be real. Returns <code>t</code> when called with one
+argument. A call such as <code>(&gt;v x1 x2 ... xn) </code>with more than two arguments
+behaves like a conjunction of two argument calls:
+
+     <pre class="lisp">          
+            (ANDV (&gt; X1 X2) ... (&gt; Xi Xi+1) ... (&gt; Xn-1 Xn))
+     </pre>
+        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is know to be greater than <code>x2</code>
+at the time of the call, <code>nil</code> if <code>x1</code> is known to be less than or equal to <code>x2</code>,
+and otherwise a new boolean variable <code>v</code>.
+
+        <p>Values of <code>v</code>, <code>x1</code>, and <code>x2</code> are mutually constrained:
+
+          <ul>
+<li><code>v</code> is equal to <code>t</code> iff <code>x1</code> is known to be greater than <code>x2</code>.
+
+          <li><code>v</code> is equal to <code>nil</code> iff <code>x2</code> is known to be less than or equal to <code>x2</code>.
+
+          <li>If <code>v</code> is known to be <code>t</code>, <code>x1</code> is constrained to be greater than <code>x2</code>.
+
+          <li>If <code>v</code> is known to be <code>nil</code>, <code>x1</code> is constrained to be less than or equal to <code>x2</code>. 
+</ul>
+        </p></blockquote></div>
+
    <p><a name="Function-_002f_003dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>/=v</b><var> x &amp;rest xs<a name="index-g_t_002f_003dv-99"></a></var><br>
-<blockquote><p><a name="index-g_t_002f_003dv-100"></a>Returns a boolean value which is constrained to be <code>t</code> if no two arguments
+&mdash; Function: <b>/=v</b><var> x &amp;rest xs<a name="index-g_t_002f_003dv-135"></a></var><br>
+<blockquote><p><a name="index-g_t_002f_003dv-136"></a>Returns a boolean value which is constrained to be <code>t</code> if no two arguments
 are numerically equal, and constrained to be <code>nil</code> if any two or more arguments
 are numerically equal.
 
@@ -1581,329 +1895,258 @@ restrictions and fail when any assertion causes <code>x1</code> to be known to b
 <code>x2</code>. 
 </p></blockquote></div>
 
-   <p><a name="Function-_003cv"></a>
+<h3 class="section"><a name="TOC21"></a>5.5 Forcing Solutions</h3>
+
+<p><a name="Function-solution"></a>
 
 <div class="defun">
-&mdash; Function: <b>&lt;v</b><var> x &amp;rest xs<a name="index-g_t_003cv-101"></a></var><br>
-<blockquote><p><a name="index-g_t_003cv-102"></a>Returns a boolean value which is constrained to be <code>t</code> if each argument Xi is
-less than the following argument Xi+1 and constrained to be <code>nil</code> if some
-argument Xi is greater than or equal to the following argument Xi+1.
+&mdash; Function: <b>solution</b><var> arguments ordering-force-function<a name="index-solution-137"></a></var><br>
+<blockquote><p><a name="index-solution-138"></a><code>arguments</code> is a list of values. Typically it is a list of
+variables but it may also contain nonvariables.
 
-        <p>This function takes one or more arguments. All of the arguments are restricted
-to be real.
+        <p>The specified <code>ordering-force-function</code> is used to force each of the variables
+in list to be bound.
 
-        <p>Returns <code>t</code> when called with one argument. A call such as <code>(&lt;v x1 x2 ... xn)</code>
-with more than two arguments behaves like a conjunction of two argument calls:
+        <p>Returns a list of the values of the elements of list in the same order that
+they appear in list, irrespective of the forcing order imposed by the
+<code>ordering-force-function</code>.
+
+        <p>The <code>ordering-force-function</code> can be any function which takes a list of values
+as its single argument that is guaranteed to force all variables in that list
+to be bound upon its return. The returned value of the <code>ordering-force-function</code>
+is ignored.
+
+        <p>The user can construct her own <code>ordering-force-function</code> or use one of the
+following alternatives provided with Screamer:
 
      <pre class="lisp">          
-            (ANDV (&lt;V X1 X2) ... (&lt;V Xi Xi+1 ) ... (&lt;V Xn-1 Xn))
+             (STATIC-ORDERING #'LINEAR-FORCE),
+             (STATIC-ORDERING #'DIVIDE-AND-CONQUER-FORCE),
+             (REORDER COST-FUN TERMINATE-TEST ORDER #'LINEAR-FORCE) and
+             (REORDER COST-FUN TERMINATE-TEST ORDER #'DIVIDE-AND-CONQUER-FORCE).
      </pre>
-        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is known to be less than <code>x2</code> at
-the time of call, <code>nil</code> if <code>x1</code> is known to be greater than or equal to <code>x2</code> at the
-time of call, and otherwise a new boolean variable <code>v</code>.
-
-        <p>A real value <code>x1</code> is known to be less than a real value <code>x2</code> if <code>x1</code> has an upper
-bound, <code>x2</code> has a lower bound and the upper bound of <code>x1</code> is less than the lower
-bound of <code>x2</code>.
-
-        <p>A real value <code>x1</code> is known to be greater than or equal to a real value <code>x2</code> if <code>x1</code>
-has a lower bound, <code>x2</code> has an upper bound and the lower bound of <code>x1</code> is greater
-than or equal to the upper bound of <code>x2</code>.
-
-        <p>When a new variable is created, the values of <code>x1</code>, <code>x2</code> and v are mutually
-constrained via noticers so that <code>v</code> is equal to <code>t</code> if and only if <code>x1</code> is known to
-be less than <code>x2</code> and <code>v</code> is equal to <code>nil</code> if and only if <code>x1</code> is known to be greater
-than or equal to <code>x2</code>.
-
-          <ul>
-<li>If it later becomes known that <code>x1</code> is less than <code>x2</code>, noticers attached to <code>x1</code>
-  and <code>x2</code> restrict <code>v</code> to equal <code>t</code>. Likewise, if it later becomes known that <code>x1</code> is
-  greater than or equal to <code>x2</code>, noticers attached to <code>x1</code> and <code>x2</code> restrict <code>v</code> to
-  equal <code>nil</code>.
-
-          <li>If <code>v</code> ever becomes known to equal <code>t</code> then a noticer attached to <code>v</code> restricts <code>x1</code>
-  to be less than <code>x2</code>. Likewise, if <code>v</code> ever becomes known to equal <code>nil</code> then a
-  noticer attached to <code>v</code> restricts <code>x1</code> to be greater than or equal to <code>x2</code>.
-
-        </ul>
-        Restricting a real value <code>x1</code> to be less than a real value <code>x2</code> is performed by
-attaching noticers to <code>x1</code> and <code>x2</code>. The noticer attached to <code>x1</code> continually
-restricts the lower bound of <code>x2</code> to be no lower than the upper bound of <code>x1</code> if
-<code>x1</code> has an upper bound. The noticer attached to <code>x2</code> continually restricts the
-upper bound of <code>x1</code> to be no higher than the lower bound of <code>x2</code> if <code>x2</code> has a lower
-bound. Since these restrictions only guarantee that <code>x1</code> be less than or equal
-to <code>x2</code>, the constraint that <code>x1</code> be strictly less than <code>x2</code> is enforced by having
-the noticers fail when both <code>x1</code> and <code>x2</code> become known to be equal.
-
-        <p>Restricting a real value <code>x1</code> to be greater than or equal to a real value <code>x2</code> is
-performed by an analogous set of noticers without this last equality check. 
+        <p>Future implementation of Screamer may provide additional forcing and ordering
+functions. 
 </p></blockquote></div>
 
-   <p><a name="Function-_003c_003dv"></a>
+   <p><a name="Function-static_002dordering"></a>
 
 <div class="defun">
-&mdash; Function: <b>&lt;=v</b><var> x &amp;rest xs<a name="index-g_t_003c_003dv-103"></a></var><br>
-<blockquote><p><a name="index-g_t_003c_003dv-104"></a>All arguments are constrained to be real. Returns <code>t</code> when called with one
-argument. A call such as <code>(&lt;=v x1 x2 ... xn) </code>with more than two arguments
-behaves like a conjunction of two argument calls:
+&mdash; Function: <b>static-ordering</b><var> force-function<a name="index-static_002dordering-139"></a></var><br>
+<blockquote><p><a name="index-static_002dordering-140"></a>Returns an ordering force function based on <code>force-function</code>.
 
-     <pre class="lisp">          
-            (ANDV (&lt;=V X1 X2) ... (&lt;=V Xi Xi+1) ... (&lt;=V Xn-1 Xn))
-     </pre>
-        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is know to be less than or equal to <code>x2</code>
-at the time of the call, <code>nil</code> if <code>x1</code> is known to be greater than <code>x2</code>, and otherwise a new
-boolean variable <code>v</code>.
+        <p>The ordering force function which is returned is a nondeterministic function
+which takes a single argument <code>x</code>. This argument <code>x</code> can be a list of values where
+each value may be either a variable or a non-variable. The ordering force
+function applies the <code>force-function</code> in turn to each of the variables in <code>x</code>, in
+the order that they appear, repeatedly applying the <code>force-function</code> to a given
+variable until it becomes bound before proceeding to the next variable. The
+ordering force function does not return any meaningful result.
 
-        <p>Values of <code>v</code>, <code>x1</code>, and <code>x2</code> are mutually constrained:
+        <p><code>force-function</code> is any (potentially nondeterministic) function which can be
+applied to a variable as its single argument with the stipulation that a
+finite number of repeated applications will force the variable to be bound. 
+The <code>force-function</code> need not return any useful value.
 
-          <ul>
-<li><code>v</code> is equal to <code>t</code> iff <code>x1</code> is known to be less than or equal to <code>x2</code>.
-
-          <li><code>v</code> is equal to <code>nil</code> iff <code>x2</code> is known to be greater than <code>x2</code>.
-
-          <li>If <code>v</code> is known to be <code>t</code>, <code>x1</code> is constrained to be less than or equal to <code>x2</code>.
-
-          <li>If <code>v</code> is known to be <code>nil</code>, <code>x1</code> is constrained to be greater than <code>x2</code>. 
-</ul>
-        </p></blockquote></div>
-
-   <p><a name="Function-_003ev"></a>
-
-<div class="defun">
-&mdash; Function: <b>&gt;v</b><var> x &amp;rest xs<a name="index-g_t_003ev-105"></a></var><br>
-<blockquote><p><a name="index-g_t_003ev-106"></a>All arguments are constrained to be real. Returns <code>t</code> when called with one
-argument. A call such as <code>(&gt;v x1 x2 ... xn) </code>with more than two arguments
-behaves like a conjunction of two argument calls:
-
-     <pre class="lisp">          
-            (ANDV (&gt; X1 X2) ... (&gt; Xi Xi+1) ... (&gt; Xn-1 Xn))
-     </pre>
-        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is know to be greater than <code>x2</code>
-at the time of the call, <code>nil</code> if <code>x1</code> is known to be less than or equal to <code>x2</code>,
-and otherwise a new boolean variable <code>v</code>.
-
-        <p>Values of <code>v</code>, <code>x1</code>, and <code>x2</code> are mutually constrained:
-
-          <ul>
-<li><code>v</code> is equal to <code>t</code> iff <code>x1</code> is known to be greater than <code>x2</code>.
-
-          <li><code>v</code> is equal to <code>nil</code> iff <code>x2</code> is known to be less than or equal to <code>x2</code>.
-
-          <li>If <code>v</code> is known to be <code>t</code>, <code>x1</code> is constrained to be greater than <code>x2</code>.
-
-          <li>If <code>v</code> is known to be <code>nil</code>, <code>x1</code> is constrained to be less than or equal to <code>x2</code>. 
-</ul>
-        </p></blockquote></div>
-
-   <p><a name="Function-_003e_003dv"></a>
-
-<div class="defun">
-&mdash; Function: <b>&gt;=v</b><var> x &amp;rest xs<a name="index-g_t_003e_003dv-107"></a></var><br>
-<blockquote><p><a name="index-g_t_003e_003dv-108"></a>All arguments are constrained to be real. Returns <code>t</code> when called
-with one argument. A call such as <code>(&gt;=v x1 x2 ... xn) </code>with more than two
-arguments behaves like a conjunction of two argument calls:
-
-     <pre class="lisp">          
-            (ANDV (&gt;=V X1 X2) ... (&gt;=V Xi Xi+1) ... (&gt;=V Xn-1 Xn))
-     </pre>
-        <p>When called with two arguments, returns <code>t</code> if <code>x1</code> is know to be greater than or
-equal to <code>x2</code> at the time of the call, <code>nil</code> if <code>x1</code> is known to be less than <code>x2</code>,
-and otherwise a new boolean variable <code>v</code>.
-
-        <p>Values of <code>v</code>, <code>x1</code>, and <code>x2</code> are mutually constrained:
-
-          <ul>
-<li><code>v</code> is equal to <code>t</code> iff <code>x1</code> is known to be greater than or equal to <code>x2</code>.
-
-          <li><code>v</code> is equal to <code>nil</code> iff <code>x2</code> is know to be less than <code>x2</code>.
-
-          <li>If <code>v</code> is known to be <code>t</code>, <code>x1</code> is constrained to be greater than or equal to <code>x2</code>.
-
-          <li>If <code>v</code> is known to be <code>nil</code>, <code>x1</code> is constrained to be less than <code>x2</code>. 
-</ul>
-        </p></blockquote></div>
-
-   <p><a name="Function-a_002dbooleanv"></a>
-
-<div class="defun">
-&mdash; Function: <b>a-booleanv</b><var> &amp;optional name<a name="index-a_002dbooleanv-109"></a></var><br>
-<blockquote><p><a name="index-a_002dbooleanv-110"></a>Returns a boolean variable. 
+        <p>Screamer currently provides two convenient force-functions, namely
+<code>#'linear-force</code> and <code>#'divide-and-conquer-force</code> though future implementations
+may provide additional ones. (The defined Screamer protocol does not provide
+sufficient hooks for the user to define her own force functions.) 
 </p></blockquote></div>
 
-   <p><a name="Function-a_002dnumberv"></a>
+   <p><a name="Function-reorder"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-numberv</b><var> &amp;optional name<a name="index-a_002dnumberv-111"></a></var><br>
-<blockquote><p><a name="index-a_002dnumberv-112"></a>Returns a variable whose value is constained to be a number. 
+&mdash; Function: <b>reorder</b><var> cost-function terminate? order force-function<a name="index-reorder-141"></a></var><br>
+<blockquote><p><a name="index-reorder-142"></a>Returns an ordering force function based on arguments.
+
+        <p>The <code>force-function</code> is any (potentially nondeterministic) function
+which can be applied to a variable as its single argument with the
+stipulation that a finite number of repeated applications will force
+the variable to be bound. The <code>force-function</code> need not return any useful value.
+
+        <p>The ordering force function which is returned is a nondeterministic function
+which takes a single argument <code>x</code>. This argument <code>x</code> can be a list of values where
+each value may be either a variable or a non-variable.
+
+        <p>The ordering force function repeatedly selects a "best" variable using using
+<code>cost-function</code> and <code>order</code>. Eg. using <code>#'domain-size</code> and <code>#'&lt;</code> as the <code>cost-function</code>
+and <code>order</code>, then the variable with the smallest domain will be forced first.
+
+        <p>Function <code>terminate</code>? is then called with the determined cost of that variable,
+and unless it returns true, <code>force-function</code> is applied to that variable to
+force constrain it.
+
+        <p>Process then iterates until all variables become bound or <code>terminate</code>? returns
+true.
+
+        <p>The ordering force function does not return any meaningful result.
+
+        <p>Screamer currently provides two convenient force-functions, namely
+#'linear-force and #'divide-and-conquer-force though future implementations
+may provide additional ones. (The defined Screamer protocol does not provide
+sufficient hooks for the user to define her own force functions.) 
 </p></blockquote></div>
 
-   <p><a name="Function-a_002dmember_002dofv"></a>
+   <p><a name="Function-linear_002dforce"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-member-ofv</b><var> values &amp;optional name<a name="index-a_002dmember_002dofv-113"></a></var><br>
-<blockquote><p><a name="index-a_002dmember_002dofv-114"></a>Returns a variable whose value is constrained to be one of <code>values</code>. 
-<code>values</code> can be either a vector or a list designator. 
+&mdash; Function: <b>linear-force</b><var> x<a name="index-linear_002dforce-143"></a></var><br>
+<blockquote><p><a name="index-linear_002dforce-144"></a>Returns <code>x</code> if it is not a variable. If <code>x</code> is a bound variable then returns
+its value.
+
+        <p>If <code>x</code> is an unbound variable then it must be known to have a countable set of
+potential values. In this case <code>x</code> is nondeterministically restricted to be
+equal to one of the values in this countable set, thus forcing <code>x</code> to be bound. 
+The dereferenced value of <code>x</code> is then returned.
+
+        <p>An unbound variable is known to have a countable set of potential values
+either if it is known to have a finite domain or if it is known to be integer
+valued.
+
+        <p>An error is signalled if <code>x</code> is not known to have a finite domain and is not
+known to be integer valued.
+
+        <p>Upon backtracking <code>x</code> will be bound to each potential value in turn, failing
+when there remain no untried alternatives.
+
+        <p>Since the set of potential values is required only to be countable, not
+finite, the set of untried alternatives may never be exhausted and
+backtracking need not terminate. This can happen, for instance, when <code>x</code> is
+known to be an integer but lacks either an upper of lower bound.
+
+        <p>The order in which the nondeterministic alternatives are tried is left
+unspecified to give future implementations leeway in incorporating heuristics
+in the process of determining a good search order. 
 </p></blockquote></div>
 
-   <p><a name="Function-a_002drealv"></a>
+   <p><a name="Function-divide_002dand_002dconquer_002dforce"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-realv</b><var> &amp;optional name<a name="index-a_002drealv-115"></a></var><br>
-<blockquote><p><a name="index-a_002drealv-116"></a>Returns a real variable. 
+&mdash; Function: <b>divide-and-conquer-force</b><var> variable<a name="index-divide_002dand_002dconquer_002dforce-145"></a></var><br>
+<blockquote><p><a name="index-divide_002dand_002dconquer_002dforce-146"></a>Returns <code>x</code> if <code>x</code> is not a variable. If <code>x</code> is a bound variable then returns its
+value. Otherwise implements a single binary-branching step of a
+divide-and-conquer search algorithm. There are always two alternatives, the
+second of which is tried upon backtracking.
+
+        <p>If it is known to have a finite domain <code>d</code> then this domain is split into two
+halves and the value of <code>x</code> is nondeterministically restricted to be a member
+one of the halves. If <code>x</code> becomes bound by this restriction then its value is
+returned. Otherwise, <code>x</code> itself is returned.
+
+        <p>If <code>x</code> is not known to have a finite domain but is known to be real and to have
+both lower and upper bounds then nondeterministically either the lower or
+upper bound is restricted to the midpoint between the lower and upper bound. 
+If <code>x</code> becomes bound by this restriction then its dereferenced value is
+returned. Otherwise, <code>x</code> itself is returned.
+
+        <p>An error is signalled if <code>x</code> is not known to be restricted to a finite domain
+and either is not known to be real or is not known to have both a lower and
+upper bound.
+
+        <p>When the set of potential values may be infinite, users of
+<code>divide-and-conquer-force</code> may need to take care to fail when the range size of
+the variable becomes too small, unless other constraints on it are sufficient
+to guarentee failure.
+
+        <p>The method of splitting the domain into two halves is left unspecified to give
+future implementations leeway in incorporating heuristics in the process of
+determining a good search order. All that is specified is that if the domain
+size is even prior to splitting, the halves are of equal size, while if the
+domain size is odd, the halves differ in size by at most one. 
 </p></blockquote></div>
 
-   <p><a name="Function-a_002dreal_002dabovev"></a>
+   <p><a name="Function-domain_002dsize"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-real-abovev</b><var> low &amp;optional name<a name="index-a_002dreal_002dabovev-117"></a></var><br>
-<blockquote><p><a name="index-a_002dreal_002dabovev-118"></a>Returns a real variable whose value is constrained to be greater than or equal to <code>low</code>. 
+&mdash; Function: <b>domain-size</b><var> x<a name="index-domain_002dsize-147"></a></var><br>
+<blockquote><p><a name="index-domain_002dsize-148"></a>Returns the domain size of <code>x</code>.
+
+        <p>If <code>x</code> is an integer variable with an upper and lower bound, its domain size
+is the one greater than the difference of its bounds. Eg. [integer <code>1:2</code>] has
+domain size <code>2</code>.
+
+        <p>If <code>x</code> is a variable with an enumerated domain, its domain size is the size of
+that domain.
+
+        <p>If <code>x</code> is a <code>cons</code>, or a variable whose value is a <code>cons</code>, its domain size is the
+product of the domain sizes of its <code>car</code> and <code>cdr</code>.
+
+        <p>Other types of unbound variables have domain size <code>nil</code>, whereas non-variables
+have domain size of <code>1</code>. 
 </p></blockquote></div>
 
-   <p><a name="Function-a_002dreal_002dbelowv"></a>
+   <p><a name="Function-range_002dsize"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-real-belowv</b><var> high &amp;optional name<a name="index-a_002dreal_002dbelowv-119"></a></var><br>
-<blockquote><p><a name="index-a_002dreal_002dbelowv-120"></a>Returns a real variable whose value is constrained to be less than or equal to <code>high</code>. 
+&mdash; Function: <b>range-size</b><var> x<a name="index-range_002dsize-149"></a></var><br>
+<blockquote><p><a name="index-range_002dsize-150"></a>Returns the range size of <code>x</code>. Range size is the size of the range values
+of <code>x</code> may take.
+
+        <p>If <code>x</code> is an integer or a bound variable whose value is an integer, it has the
+range size <code>0</code>. Reals and bound variables whose values are reals have range size
+<code>0</code>.<code>0</code>.
+
+        <p>Unbound variables known to be reals with an upper and lower bound have a range
+size the difference of their upper and lower bounds.
+
+        <p>Other types of objects and variables have range size <code>nil</code>. 
 </p></blockquote></div>
 
-   <p><a name="Function-a_002dreal_002dbetweenv"></a>
+<h2 class="chapter"><a name="TOC22"></a>6 Miscellany</h2>
+
+<p><a name="Macro-best_002dvalue"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-real-betweenv</b><var> low high &amp;optional name<a name="index-a_002dreal_002dbetweenv-121"></a></var><br>
-<blockquote><p><a name="index-a_002dreal_002dbetweenv-122"></a>Returns a real variable whose value is constrained to be greater than or
-equal to low and less than or equal to high. If the resulting real variable is
-bound, its value is returned instead. Fails if it is known that low is greater
-than high at the time of call.
+&mdash; Macro: <b>best-value</b><var> form1 objective-form &amp;optional form2<a name="index-best_002dvalue-151"></a></var><br>
+<blockquote><p><a name="index-best_002dvalue-152"></a>First evaluates <code>objective-form</code>, which should evaluate to constraint variable <code>v</code>.
 
-        <p>The expression <code>(a-real-betweenv low high) </code>is an abbreviation for:
+        <p>Then repeatedly evaluates <code>form1</code> in non-deterministic context till it fails. If
+previous round of evaluation produced an upper bound <code>b</code> for <code>v</code>, the during the
+next round any change to <code>v</code> must provide an upper bound higher than <code>b</code>, or that
+that change fails.
 
-     <pre class="lisp">          
-           (LET ((V (MAKE-VARIABLE)))
-              (ASSERT! (REALPV V))
-              (ASSERT! (&gt;=V V LOW))
-              (ASSERT! (&lt;=V V HIGH))
-              (VALUE-OF V))
-     </pre>
-        </blockquote></div>
+        <p>If the last successful evaluation of <code>form</code> produced an upper bound for <code>v</code>,
+returns a list of two elements: the the primary value of <code>form1</code> from that
+round, and the upper bound of <code>v</code>.
 
-   <p><a name="Function-an_002dintegerv"></a>
+        <p>Otherwise if <code>form2</code> is provided, returns the result of evaluating it, or else
+calls fails.
 
-<div class="defun">
-&mdash; Function: <b>an-integerv</b><var> &amp;optional name<a name="index-an_002dintegerv-123"></a></var><br>
-<blockquote><p><a name="index-an_002dintegerv-124"></a>Returns an integer variable. 
+        <p>Note: this documentation string is entirely reverse-engineered. Lacking
+information on just how <code>best-value</code> was intended to work, it is hard to tell
+what is a bug, an accident of implementation, and what is a feature. If you
+have any insight into <code>best-value</code>, please send email to
+nikodemus@random-state.net. 
 </p></blockquote></div>
 
-   <p><a name="Function-an_002dinteger_002dabovev"></a>
+   <p><a name="Function-booleanp"></a>
 
 <div class="defun">
-&mdash; Function: <b>an-integer-abovev</b><var> low &amp;optional name<a name="index-an_002dinteger_002dabovev-125"></a></var><br>
-<blockquote><p><a name="index-an_002dinteger_002dabovev-126"></a>Returns an integer variable whose value is constrained to be greater than
-or equal to <code>low</code>. 
-</p></blockquote></div>
-
-   <p><a name="Function-an_002dinteger_002dbelowv"></a>
-
-<div class="defun">
-&mdash; Function: <b>an-integer-belowv</b><var> high &amp;optional name<a name="index-an_002dinteger_002dbelowv-127"></a></var><br>
-<blockquote><p><a name="index-an_002dinteger_002dbelowv-128"></a>Returns an integer variable whose value is constrained to be less than or
-equal to <code>high</code>. 
-</p></blockquote></div>
-
-   <p><a name="Function-an_002dinteger_002dbetweenv"></a>
-
-<div class="defun">
-&mdash; Function: <b>an-integer-betweenv</b><var> low high &amp;optional name<a name="index-an_002dinteger_002dbetweenv-129"></a></var><br>
-<blockquote><p><a name="index-an_002dinteger_002dbetweenv-130"></a>Returns an integer variable whose value is constrained to be greater than
-or equal to <code>low</code> and less than or equal to <code>high</code>. If the resulting integer
-variable is bound, its value is returned instead. Fails if it is known that
-there is no integer between <code>low</code> and <code>high</code> at the time of call.
-
-        <p>The expression <code>(an-integer-betweenv low high) </code>is an abbreviation for:
-
-     <pre class="lisp">          
-           (LET ((V (MAKE-VARIABLE)))
-              (ASSERT! (INTEGERPV V))
-              (ASSERT! (&gt;=V V LOW))
-              (ASSERT! (&lt;=V V HIGH))
-              (VALUE-OF v))
-     </pre>
-        </blockquote></div>
-
-   <p><a name="Function-count_002dtruesv"></a>
-
-<div class="defun">
-&mdash; Function: <b>count-truesv</b><var> &amp;rest xs<a name="index-count_002dtruesv-131"></a></var><br>
-<blockquote><p><a name="index-count_002dtruesv-132"></a>Constrains all its arguments to be boolean. If each argument is known, returns
-the number of <code>t</code> arguments. Otherwise returns a fresh constraint variable <code>v</code>.
-
-        <p><code>v</code> and arguments are mutually constrained:
-
-          <ul>
-<li>Lower bound of <code>v</code> is the number arguments known to be <code>t</code>.
-
-          <li>Upper bound of <code>v</code> is the number arguments minus the number of arguments known to be <code>nil</code>.
-
-          <li>If lower bound of <code>v</code> is constrained to be equal to number of arguments known
-   to be <code>nil</code>, all arguments not known to be <code>nil</code> are constrained to be <code>t</code>.
-
-          <li>If Upper bound of <code>v</code> is constrained to be equal to number of arguments known
-   to be <code>t</code>, all arguments not known to be <code>t</code> are constrained to be <code>nil</code>. 
-</ul>
-        </p></blockquote></div>
-
-   <p><a name="Variable-_002amaximum_002ddiscretization_002drange_002a"></a>
-
-<div class="defun">
-&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-133"></a></var><br>
-<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-134"></a>Discretize integer variables whose range is not greater than this number. 
-Discretize all integer variables if <code>nil</code>. Must be an integer or <code>nil</code>. 
-</p></blockquote></div>
-
-   <p><a name="Variable-_002aminimum_002dshrink_002dratio_002a"></a>
-
-<div class="defun">
-&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-135"></a></var><br>
-<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-136"></a>Ignore propagations which reduce the range of a variable by less than this
-ratio. 
-</p></blockquote></div>
-
-   <p><a name="Variable-_002astrategy_002a"></a>
-
-<div class="defun">
-&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-137"></a></var><br>
-<blockquote><p><a name="index-g_t_002astrategy_002a-138"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
-Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
-</p></blockquote></div>
-
-<h2 class="chapter"><a name="TOC17"></a>6 Miscellany</h2>
-
-<p><a name="Function-booleanp"></a>
-
-<div class="defun">
-&mdash; Function: <b>booleanp</b><var> x<a name="index-booleanp-139"></a></var><br>
-<blockquote><p><a name="index-booleanp-140"></a>Returns true iff <code>x</code> is <code>t</code> or <code>nil</code>. 
+&mdash; Function: <b>booleanp</b><var> x<a name="index-booleanp-153"></a></var><br>
+<blockquote><p><a name="index-booleanp-154"></a>Returns true iff <code>x</code> is <code>t</code> or <code>nil</code>. 
 </p></blockquote></div>
 
    <p><a name="Function-count_002dtrues"></a>
 
 <div class="defun">
-&mdash; Function: <b>count-trues</b><var> &amp;rest xs<a name="index-count_002dtrues-141"></a></var><br>
-<blockquote><p><a name="index-count_002dtrues-142"></a>Returns the number of time a non-NIL value occurs in its arguments. 
+&mdash; Function: <b>count-trues</b><var> &amp;rest xs<a name="index-count_002dtrues-155"></a></var><br>
+<blockquote><p><a name="index-count_002dtrues-156"></a>Returns the number of time a non-NIL value occurs in its arguments. 
 </p></blockquote></div>
 
    <p><a name="Function-purge"></a>
 
 <div class="defun">
-&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-143"></a></var><br>
-<blockquote><p><a name="index-purge-144"></a>Removes any information about <code>function-name</code> from Screamer's
+&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-157"></a></var><br>
+<blockquote><p><a name="index-purge-158"></a>Removes any information about <code>function-name</code> from Screamer's
 who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Function-unwind_002dtrail"></a>
 
 <div class="defun">
-&mdash; Function: <b>unwind-trail</b><var><a name="index-unwind_002dtrail-145"></a></var><br>
-<blockquote><p><a name="index-unwind_002dtrail-146"></a><code>deprecated</code>.
+&mdash; Function: <b>unwind-trail</b><var><a name="index-unwind_002dtrail-159"></a></var><br>
+<blockquote><p><a name="index-unwind_002dtrail-160"></a><code>deprecated</code>.
 
         <p>Calls all functions installed using <code>trail</code>, and removes them from the trail.
 
@@ -1916,24 +2159,24 @@ Screamer.
    <p><a name="Function-unwedge_002dscreamer"></a>
 
 <div class="defun">
-&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-147"></a></var><br>
-<blockquote><p><a name="index-unwedge_002dscreamer-148"></a>Removes any information about all user defined functions from
+&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-161"></a></var><br>
+<blockquote><p><a name="index-unwedge_002dscreamer-162"></a>Removes any information about all user defined functions from
 Screamer's who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002adynamic_002dextent_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-149"></a></var><br>
-<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-150"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
+&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-163"></a></var><br>
+<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-164"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
 disable it. Default is platform dependent. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002ascreamer_002dversion_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-151"></a></var><br>
-<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-152"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
+&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-165"></a></var><br>
+<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-166"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
 while we're considering how to express versions for this copy of Screamer in
 the future. 
 </p></blockquote></div>
@@ -1941,8 +2184,32 @@ the future.
    <p><a name="Variable-_002aiscream_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-153"></a></var><br>
-<blockquote><p><a name="index-g_t_002aiscream_003f_002a-154"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
+&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-167"></a></var><br>
+<blockquote><p><a name="index-g_t_002aiscream_003f_002a-168"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
+</p></blockquote></div>
+
+   <p><a name="Variable-_002amaximum_002ddiscretization_002drange_002a"></a>
+
+<div class="defun">
+&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-169"></a></var><br>
+<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-170"></a>Discretize integer variables whose range is not greater than this number. 
+Discretize all integer variables if <code>nil</code>. Must be an integer or <code>nil</code>. 
+</p></blockquote></div>
+
+   <p><a name="Variable-_002aminimum_002dshrink_002dratio_002a"></a>
+
+<div class="defun">
+&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-171"></a></var><br>
+<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-172"></a>Ignore propagations which reduce the range of a variable by less than this
+ratio. 
+</p></blockquote></div>
+
+   <p><a name="Variable-_002astrategy_002a"></a>
+
+<div class="defun">
+&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-173"></a></var><br>
+<blockquote><p><a name="index-g_t_002astrategy_002a-174"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
+Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
 </p></blockquote></div>
 
 </body></html>
