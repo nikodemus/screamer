@@ -5503,10 +5503,35 @@ V and arguments are mutually constrained:
 ;;;       before KNOWN?-CONSTRAINT to avoid forward references to
 ;;;       nondeterministic functions.
 
-(defun solution (x force-function)
+(defun solution (arguments ordering-force-function)
+  "ARGUMENTS is a list of values. Typically it is a list of
+variables but it may also contain nonvariables.
+
+The specified ORDERING-FORCE-FUNCTION is used to force each of the variables
+in list to be bound.
+
+Returns a list of the values of the elements of list in the same order that
+they appear in list, irrespective of the forcing order imposed by the
+ORDERING-FORCE-FUNCTION.
+
+The ORDERING-FORCE-FUNCTION can be any function which takes a list of values
+as its single argument that is guaranteed to force all variables in that list
+to be bound upon its return. The returned value of the ORDERING-FORCE-FUNCTION
+is ignored.
+
+The user can construct her own ORDERING-FORCE-FUNCTION or use one of the
+following alternatives provided with Screamer:
+
+   \(STATIC-ORDERING #'LINEAR-FORCE),
+   \(STATIC-ORDERING #'DIVIDE-AND-CONQUER-FORCE),
+   \(REORDER COST-FUN TERMINATE-TEST ORDER #'LINEAR-FORCE) and
+   \(REORDER COST-FUN TERMINATE-TEST ORDER #'DIVIDE-AND-CONQUER-FORCE).
+
+Future implementation of Screamer may provide additional forcing and ordering
+functions."
   (funcall-nondeterministic
-   (value-of force-function) (variables-in (value-of x)))
-  (apply-substitution x))
+   (value-of ordering-force-function) (variables-in (value-of arguments)))
+  (apply-substitution arguments))
 
 (defun linear-force (x)
   "Returns X if it is not a variable. If X is a bound variable then returns
@@ -7081,6 +7106,34 @@ Other types of objects and variables have range size NIL."
        variables cost-function terminate? order force-function))))
 
 (defun reorder (cost-function terminate? order force-function)
+  "Returns an ordering force function based on arguments.
+
+The FORCE-FUNCTION is any (potentially nondeterministic) function
+which can be applied to a variable as its single argument with the
+stipulation that a finite number of repeated applications will force
+the variable to be bound. The FORCE-FUNCTION need not return any useful value.
+
+The ordering force function which is returned is a nondeterministic function
+which takes a single argument X. This argument X can be a list of values where
+each value may be either a variable or a non-variable.
+
+The ordering force function repeatedly selects a \"best\" variable using using
+COST-FUNCTION and ORDER. Eg. using #'DOMAIN-SIZE and #'< as the COST-FUNCTION
+and ORDER, then the variable with the smallest domain will be forced first.
+
+Function TERMINATE? is then called with the determined cost of that variable,
+and unless it returns true, FORCE-FUNCTION is applied to that variable to
+force constrain it.
+
+Process then iterates until all variables become bound or TERMINATE? returns
+true.
+
+The ordering force function does not return any meaningful result.
+
+Screamer currently provides two convenient force-functions, namely
+#'linear-force and #'divide-and-conquer-force though future implementations
+may provide additional ones. \(The defined Screamer protocol does not provide
+sufficient hooks for the user to define her own force functions.)"
   ;; note: This closure will heap cons.
   (let ((cost-function (value-of cost-function))
         (terminate? (value-of terminate?))

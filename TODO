@@ -34,8 +34,6 @@
 ******* Restricts vs constrains.
 ******* Don't talk about noticers: they're an implementation detail.
 ***** Still missing exported symbols:
-******* reorder
-******* solution
 ******* define-screamer-package
 * Performance
 *** TODO Rewrite dynamic-extent continuations using FLET
