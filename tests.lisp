@@ -197,3 +197,19 @@
   (is (= 42
          (let ((x (a-member-ofv '(:a 42))))
            (maxv x)))))
+
+(deftest share!-bugs ()
+  (flet ((foo (list1 list2)
+           (let ((v1 (a-member-ofv list1))
+                 (v2 (a-member-ofv list2)))
+             (assert! (equalv v1 v2))
+             (value-of v1))))
+    (is (eq :a (foo '(:a :b) '(:c :d :a))))
+    (is (eq t (foo '(t nil) '(t :a))))
+    (is (eql 3 (foo '(1 2 3) '(nil t 3))))
+    (is (eql 3 (foo '(1 2 3) '(nil t 3 4))))
+    (is (eql 3 (foo '(nil t 3 4 -1) '(1 2 3))))
+    (let ((xs (all-values
+                (linear-force (foo '(nil t 3 4 -1) '(1 2 3 t))))))
+      (is (or (equal '(3 t) xs)
+              (equal '(t 3) xs))))))
