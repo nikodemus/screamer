@@ -215,3 +215,13 @@
            (assert! y)
            (assert! (notv z))
            (value-of n)))))
+
+(deftest test-minv.1 ()
+  (is (= 42
+         (let ((x (a-member-ofv '(:a 42))))
+           (minv x)))))
+
+(deftest test-maxv.1 ()
+  (is (= 42
+         (let ((x (a-member-ofv '(:a 42))))
+           (maxv x)))))

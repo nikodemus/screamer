@@ -461,6 +461,8 @@ of Screamer.
 @include include/fun-screamer-integerpv.texinfo
 @include include/fun-screamer-memberv.texinfo
 @include include/fun-screamer-notv.texinfo
+@include include/fun-screamer-minv.texinfo
+@include include/fun-screamer-maxv.texinfo
 @include include/fun-screamer-equalv.texinfo
 @include include/fun-screamer-plus-v.texinfo
 @include include/fun-screamer---v.texinfo
