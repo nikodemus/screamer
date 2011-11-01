@@ -1219,11 +1219,59 @@ fails if its argument is not <code>t</code>, <code>nil</code>, or variable that 
 boolean. 
 </p></blockquote></div>
 
+   <p><a name="Function-minv"></a>
+
+<div class="defun">
+&mdash; Function: <b>minv</b><var> x &amp;rest xs<a name="index-minv-83"></a></var><br>
+<blockquote><p><a name="index-minv-84"></a>Constrains its arguments to be real. If called with a single argument,
+returns its value. If called with multiple arguments, behaves as if a
+combination of two argument calls:
+
+     <pre class="lisp">          
+            (MINV X1 X2 ... Xn) == (MINV (MINV X1 X2) ... Xn)
+     </pre>
+        <p>If called with two arguments, and either is known to be less than or equal to
+the other, returns the value of that argument. Otherwise returns a real variable
+<code>v</code>, mutually constrained with the arguments:
+
+          <ul>
+<li>Minimum of the values of <code>x1</code> and <code>x2</code> is constrained to equal <code>v</code>. This
+    includes constraining their bounds appropriately. If it becomes know that
+    cannot be true. <code>fail</code> is called.
+
+          <li>If both arguments are integers, <code>v</code> is constrained to be an integer. 
+</ul>
+        </p></blockquote></div>
+
+   <p><a name="Function-maxv"></a>
+
+<div class="defun">
+&mdash; Function: <b>maxv</b><var> x &amp;rest xs<a name="index-maxv-85"></a></var><br>
+<blockquote><p><a name="index-maxv-86"></a>Constrains its arguments to be real. If called with a single argument,
+returns its value. If called with multiple arguments, behaves as if a
+combination of two argument calls:
+
+     <pre class="lisp">          
+            (MAXV X1 X2 ... Xn) == (MAXV (MAXV X1 X2) ... Xn)
+     </pre>
+        <p>If called with two arguments, and either is known to be greater than or equal
+to the other, returns the value of that argument. Otherwise returns a real
+variable <code>v</code>, mutually constrained with the arguments:
+
+          <ul>
+<li>Maximum of the values of <code>x1</code> and <code>x2</code> is constrained to equal <code>v</code>. This
+    includes constraining their bounds appropriately. If it becomes know that
+    cannot be true. <code>fail</code> is called.
+
+          <li>If both arguments are integers, <code>v</code> is constrained to be an integer. 
+</ul>
+        </p></blockquote></div>
+
    <p><a name="Function-equalv"></a>
 
 <div class="defun">
-&mdash; Function: <b>equalv</b><var> x y<a name="index-equalv-83"></a></var><br>
-<blockquote><p><a name="index-equalv-84"></a>Returns <code>t</code> if the aggregate object <code>x</code> is known to equal the aggregate object
+&mdash; Function: <b>equalv</b><var> x y<a name="index-equalv-87"></a></var><br>
+<blockquote><p><a name="index-equalv-88"></a>Returns <code>t</code> if the aggregate object <code>x</code> is known to equal the aggregate object
 <code>y</code>, <code>nil</code> if the aggregate object <code>x</code> is known not to equal the aggregate object <code>y</code>,
 and a new boolean variable <code>v</code> if it is not known whether or not <code>x</code> equals <code>y</code> when
 <code>equalv</code> is called.
@@ -1258,8 +1306,8 @@ disunification operator available in Prolog-II.
    <p><a name="Function-_002bv"></a>
 
 <div class="defun">
-&mdash; Function: <b>+v</b><var> &amp;rest xs<a name="index-g_t_002bv-85"></a></var><br>
-<blockquote><p><a name="index-g_t_002bv-86"></a>Constrains its arguments to be numbers. Returns <code>0</code> if called with no
+&mdash; Function: <b>+v</b><var> &amp;rest xs<a name="index-g_t_002bv-89"></a></var><br>
+<blockquote><p><a name="index-g_t_002bv-90"></a>Constrains its arguments to be numbers. Returns <code>0</code> if called with no
 arguments. If called with a single argument, returns its value. If called with
 more than two arguments, behaves as nested sequence of two-argument calls:
 
@@ -1293,8 +1341,8 @@ argument equals zero.
    <p><a name="Function-_002dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>-v</b><var> x &amp;rest xs<a name="index-g_t_002dv-87"></a></var><br>
-<blockquote><p><a name="index-g_t_002dv-88"></a>Constrains its arguments to be numbers. If called with a single argument,
+&mdash; Function: <b>-v</b><var> x &amp;rest xs<a name="index-g_t_002dv-91"></a></var><br>
+<blockquote><p><a name="index-g_t_002dv-92"></a>Constrains its arguments to be numbers. If called with a single argument,
 behaves as if the two argument call:
 
      <pre class="lisp">          
@@ -1332,8 +1380,8 @@ difference of their values. If <code>x2</code> is known to be zero, returns the 
    <p><a name="Function-_002av"></a>
 
 <div class="defun">
-&mdash; Function: <b>*v</b><var> &amp;rest xs<a name="index-g_t_002av-89"></a></var><br>
-<blockquote><p><a name="index-g_t_002av-90"></a>Constrains its arguments to be numbers. If called with no arugments,
+&mdash; Function: <b>*v</b><var> &amp;rest xs<a name="index-g_t_002av-93"></a></var><br>
+<blockquote><p><a name="index-g_t_002av-94"></a>Constrains its arguments to be numbers. If called with no arugments,
 returns <code>1</code>. If called with a single argument, returns its value. If called with
 more than two arguments, behaves as nested sequence of two-argument calls:
 
@@ -1368,8 +1416,8 @@ argument equals zero or one.
    <p><a name="Function-_002fv"></a>
 
 <div class="defun">
-&mdash; Function: <b>/v</b><var> x &amp;rest xs<a name="index-g_t_002fv-91"></a></var><br>
-<blockquote><p><a name="index-g_t_002fv-92"></a>Constrains its arguments to be numbers. If called with a single argument,
+&mdash; Function: <b>/v</b><var> x &amp;rest xs<a name="index-g_t_002fv-95"></a></var><br>
+<blockquote><p><a name="index-g_t_002fv-96"></a>Constrains its arguments to be numbers. If called with a single argument,
 behaves as the two argument call:
 
      <pre class="lisp">          
@@ -1409,8 +1457,8 @@ or <code>x2</code> equals one.
    <p><a name="Function-_003dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>=v</b><var> x &amp;rest xs<a name="index-g_t_003dv-93"></a></var><br>
-<blockquote><p><a name="index-g_t_003dv-94"></a>Returns a boolean value which is constrained to be <code>t</code> if all of the
+&mdash; Function: <b>=v</b><var> x &amp;rest xs<a name="index-g_t_003dv-97"></a></var><br>
+<blockquote><p><a name="index-g_t_003dv-98"></a>Returns a boolean value which is constrained to be <code>t</code> if all of the
 arguments are numerically equal, and constrained to be <code>nil</code> if two or more of
 the arguments numerically differ.
 
@@ -1471,8 +1519,8 @@ restrictions and fail when any assertion causes <code>x1</code> to be known to b
    <p><a name="Function-_002f_003dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>/=v</b><var> x &amp;rest xs<a name="index-g_t_002f_003dv-95"></a></var><br>
-<blockquote><p><a name="index-g_t_002f_003dv-96"></a>Returns a boolean value which is constrained to be <code>t</code> if no two arguments
+&mdash; Function: <b>/=v</b><var> x &amp;rest xs<a name="index-g_t_002f_003dv-99"></a></var><br>
+<blockquote><p><a name="index-g_t_002f_003dv-100"></a>Returns a boolean value which is constrained to be <code>t</code> if no two arguments
 are numerically equal, and constrained to be <code>nil</code> if any two or more arguments
 are numerically equal.
 
@@ -1536,8 +1584,8 @@ restrictions and fail when any assertion causes <code>x1</code> to be known to b
    <p><a name="Function-_003cv"></a>
 
 <div class="defun">
-&mdash; Function: <b>&lt;v</b><var> x &amp;rest xs<a name="index-g_t_003cv-97"></a></var><br>
-<blockquote><p><a name="index-g_t_003cv-98"></a>Returns a boolean value which is constrained to be <code>t</code> if each argument Xi is
+&mdash; Function: <b>&lt;v</b><var> x &amp;rest xs<a name="index-g_t_003cv-101"></a></var><br>
+<blockquote><p><a name="index-g_t_003cv-102"></a>Returns a boolean value which is constrained to be <code>t</code> if each argument Xi is
 less than the following argument Xi+1 and constrained to be <code>nil</code> if some
 argument Xi is greater than or equal to the following argument Xi+1.
 
@@ -1594,8 +1642,8 @@ performed by an analogous set of noticers without this last equality check.
    <p><a name="Function-_003c_003dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>&lt;=v</b><var> x &amp;rest xs<a name="index-g_t_003c_003dv-99"></a></var><br>
-<blockquote><p><a name="index-g_t_003c_003dv-100"></a>All arguments are constrained to be real. Returns <code>t</code> when called with one
+&mdash; Function: <b>&lt;=v</b><var> x &amp;rest xs<a name="index-g_t_003c_003dv-103"></a></var><br>
+<blockquote><p><a name="index-g_t_003c_003dv-104"></a>All arguments are constrained to be real. Returns <code>t</code> when called with one
 argument. A call such as <code>(&lt;=v x1 x2 ... xn) </code>with more than two arguments
 behaves like a conjunction of two argument calls:
 
@@ -1622,8 +1670,8 @@ boolean variable <code>v</code>.
    <p><a name="Function-_003ev"></a>
 
 <div class="defun">
-&mdash; Function: <b>&gt;v</b><var> x &amp;rest xs<a name="index-g_t_003ev-101"></a></var><br>
-<blockquote><p><a name="index-g_t_003ev-102"></a>All arguments are constrained to be real. Returns <code>t</code> when called with one
+&mdash; Function: <b>&gt;v</b><var> x &amp;rest xs<a name="index-g_t_003ev-105"></a></var><br>
+<blockquote><p><a name="index-g_t_003ev-106"></a>All arguments are constrained to be real. Returns <code>t</code> when called with one
 argument. A call such as <code>(&gt;v x1 x2 ... xn) </code>with more than two arguments
 behaves like a conjunction of two argument calls:
 
@@ -1650,8 +1698,8 @@ and otherwise a new boolean variable <code>v</code>.
    <p><a name="Function-_003e_003dv"></a>
 
 <div class="defun">
-&mdash; Function: <b>&gt;=v</b><var> x &amp;rest xs<a name="index-g_t_003e_003dv-103"></a></var><br>
-<blockquote><p><a name="index-g_t_003e_003dv-104"></a>All arguments are constrained to be real. Returns <code>t</code> when called
+&mdash; Function: <b>&gt;=v</b><var> x &amp;rest xs<a name="index-g_t_003e_003dv-107"></a></var><br>
+<blockquote><p><a name="index-g_t_003e_003dv-108"></a>All arguments are constrained to be real. Returns <code>t</code> when called
 with one argument. A call such as <code>(&gt;=v x1 x2 ... xn) </code>with more than two
 arguments behaves like a conjunction of two argument calls:
 
@@ -1678,51 +1726,51 @@ and otherwise a new boolean variable <code>v</code>.
    <p><a name="Function-a_002dbooleanv"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-booleanv</b><var> &amp;optional name<a name="index-a_002dbooleanv-105"></a></var><br>
-<blockquote><p><a name="index-a_002dbooleanv-106"></a>Returns a boolean variable. 
+&mdash; Function: <b>a-booleanv</b><var> &amp;optional name<a name="index-a_002dbooleanv-109"></a></var><br>
+<blockquote><p><a name="index-a_002dbooleanv-110"></a>Returns a boolean variable. 
 </p></blockquote></div>
 
    <p><a name="Function-a_002dnumberv"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-numberv</b><var> &amp;optional name<a name="index-a_002dnumberv-107"></a></var><br>
-<blockquote><p><a name="index-a_002dnumberv-108"></a>Returns a variable whose value is constained to be a number. 
+&mdash; Function: <b>a-numberv</b><var> &amp;optional name<a name="index-a_002dnumberv-111"></a></var><br>
+<blockquote><p><a name="index-a_002dnumberv-112"></a>Returns a variable whose value is constained to be a number. 
 </p></blockquote></div>
 
    <p><a name="Function-a_002dmember_002dofv"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-member-ofv</b><var> values &amp;optional name<a name="index-a_002dmember_002dofv-109"></a></var><br>
-<blockquote><p><a name="index-a_002dmember_002dofv-110"></a>Returns a variable whose value is constrained to be one of <code>values</code>. 
+&mdash; Function: <b>a-member-ofv</b><var> values &amp;optional name<a name="index-a_002dmember_002dofv-113"></a></var><br>
+<blockquote><p><a name="index-a_002dmember_002dofv-114"></a>Returns a variable whose value is constrained to be one of <code>values</code>. 
 <code>values</code> can be either a vector or a list designator. 
 </p></blockquote></div>
 
    <p><a name="Function-a_002drealv"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-realv</b><var> &amp;optional name<a name="index-a_002drealv-111"></a></var><br>
-<blockquote><p><a name="index-a_002drealv-112"></a>Returns a real variable. 
+&mdash; Function: <b>a-realv</b><var> &amp;optional name<a name="index-a_002drealv-115"></a></var><br>
+<blockquote><p><a name="index-a_002drealv-116"></a>Returns a real variable. 
 </p></blockquote></div>
 
    <p><a name="Function-a_002dreal_002dabovev"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-real-abovev</b><var> low &amp;optional name<a name="index-a_002dreal_002dabovev-113"></a></var><br>
-<blockquote><p><a name="index-a_002dreal_002dabovev-114"></a>Returns a real variable whose value is constrained to be greater than or equal to <code>low</code>. 
+&mdash; Function: <b>a-real-abovev</b><var> low &amp;optional name<a name="index-a_002dreal_002dabovev-117"></a></var><br>
+<blockquote><p><a name="index-a_002dreal_002dabovev-118"></a>Returns a real variable whose value is constrained to be greater than or equal to <code>low</code>. 
 </p></blockquote></div>
 
    <p><a name="Function-a_002dreal_002dbelowv"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-real-belowv</b><var> high &amp;optional name<a name="index-a_002dreal_002dbelowv-115"></a></var><br>
-<blockquote><p><a name="index-a_002dreal_002dbelowv-116"></a>Returns a real variable whose value is constrained to be less than or equal to <code>high</code>. 
+&mdash; Function: <b>a-real-belowv</b><var> high &amp;optional name<a name="index-a_002dreal_002dbelowv-119"></a></var><br>
+<blockquote><p><a name="index-a_002dreal_002dbelowv-120"></a>Returns a real variable whose value is constrained to be less than or equal to <code>high</code>. 
 </p></blockquote></div>
 
    <p><a name="Function-a_002dreal_002dbetweenv"></a>
 
 <div class="defun">
-&mdash; Function: <b>a-real-betweenv</b><var> low high &amp;optional name<a name="index-a_002dreal_002dbetweenv-117"></a></var><br>
-<blockquote><p><a name="index-a_002dreal_002dbetweenv-118"></a>Returns a real variable whose value is constrained to be greater than or
+&mdash; Function: <b>a-real-betweenv</b><var> low high &amp;optional name<a name="index-a_002dreal_002dbetweenv-121"></a></var><br>
+<blockquote><p><a name="index-a_002dreal_002dbetweenv-122"></a>Returns a real variable whose value is constrained to be greater than or
 equal to low and less than or equal to high. If the resulting real variable is
 bound, its value is returned instead. Fails if it is known that low is greater
 than high at the time of call.
@@ -1741,31 +1789,31 @@ than high at the time of call.
    <p><a name="Function-an_002dintegerv"></a>
 
 <div class="defun">
-&mdash; Function: <b>an-integerv</b><var> &amp;optional name<a name="index-an_002dintegerv-119"></a></var><br>
-<blockquote><p><a name="index-an_002dintegerv-120"></a>Returns an integer variable. 
+&mdash; Function: <b>an-integerv</b><var> &amp;optional name<a name="index-an_002dintegerv-123"></a></var><br>
+<blockquote><p><a name="index-an_002dintegerv-124"></a>Returns an integer variable. 
 </p></blockquote></div>
 
    <p><a name="Function-an_002dinteger_002dabovev"></a>
 
 <div class="defun">
-&mdash; Function: <b>an-integer-abovev</b><var> low &amp;optional name<a name="index-an_002dinteger_002dabovev-121"></a></var><br>
-<blockquote><p><a name="index-an_002dinteger_002dabovev-122"></a>Returns an integer variable whose value is constrained to be greater than
+&mdash; Function: <b>an-integer-abovev</b><var> low &amp;optional name<a name="index-an_002dinteger_002dabovev-125"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dabovev-126"></a>Returns an integer variable whose value is constrained to be greater than
 or equal to <code>low</code>. 
 </p></blockquote></div>
 
    <p><a name="Function-an_002dinteger_002dbelowv"></a>
 
 <div class="defun">
-&mdash; Function: <b>an-integer-belowv</b><var> high &amp;optional name<a name="index-an_002dinteger_002dbelowv-123"></a></var><br>
-<blockquote><p><a name="index-an_002dinteger_002dbelowv-124"></a>Returns an integer variable whose value is constrained to be less than or
+&mdash; Function: <b>an-integer-belowv</b><var> high &amp;optional name<a name="index-an_002dinteger_002dbelowv-127"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dbelowv-128"></a>Returns an integer variable whose value is constrained to be less than or
 equal to <code>high</code>. 
 </p></blockquote></div>
 
    <p><a name="Function-an_002dinteger_002dbetweenv"></a>
 
 <div class="defun">
-&mdash; Function: <b>an-integer-betweenv</b><var> low high &amp;optional name<a name="index-an_002dinteger_002dbetweenv-125"></a></var><br>
-<blockquote><p><a name="index-an_002dinteger_002dbetweenv-126"></a>Returns an integer variable whose value is constrained to be greater than
+&mdash; Function: <b>an-integer-betweenv</b><var> low high &amp;optional name<a name="index-an_002dinteger_002dbetweenv-129"></a></var><br>
+<blockquote><p><a name="index-an_002dinteger_002dbetweenv-130"></a>Returns an integer variable whose value is constrained to be greater than
 or equal to <code>low</code> and less than or equal to <code>high</code>. If the resulting integer
 variable is bound, its value is returned instead. Fails if it is known that
 there is no integer between <code>low</code> and <code>high</code> at the time of call.
@@ -1784,8 +1832,8 @@ there is no integer between <code>low</code> and <code>high</code> at the time o
    <p><a name="Function-count_002dtruesv"></a>
 
 <div class="defun">
-&mdash; Function: <b>count-truesv</b><var> &amp;rest xs<a name="index-count_002dtruesv-127"></a></var><br>
-<blockquote><p><a name="index-count_002dtruesv-128"></a>Constrains all its arguments to be boolean. If each argument is known, returns
+&mdash; Function: <b>count-truesv</b><var> &amp;rest xs<a name="index-count_002dtruesv-131"></a></var><br>
+<blockquote><p><a name="index-count_002dtruesv-132"></a>Constrains all its arguments to be boolean. If each argument is known, returns
 the number of <code>t</code> arguments. Otherwise returns a fresh constraint variable <code>v</code>.
 
         <p><code>v</code> and arguments are mutually constrained:
@@ -1806,24 +1854,24 @@ the number of <code>t</code> arguments. Otherwise returns a fresh constraint var
    <p><a name="Variable-_002amaximum_002ddiscretization_002drange_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-129"></a></var><br>
-<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-130"></a>Discretize integer variables whose range is not greater than this number. 
+&mdash; Variable: <b>*maximum-discretization-range*</b><var><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-133"></a></var><br>
+<blockquote><p><a name="index-g_t_002amaximum_002ddiscretization_002drange_002a-134"></a>Discretize integer variables whose range is not greater than this number. 
 Discretize all integer variables if <code>nil</code>. Must be an integer or <code>nil</code>. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002aminimum_002dshrink_002dratio_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-131"></a></var><br>
-<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-132"></a>Ignore propagations which reduce the range of a variable by less than this
+&mdash; Variable: <b>*minimum-shrink-ratio*</b><var><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-135"></a></var><br>
+<blockquote><p><a name="index-g_t_002aminimum_002dshrink_002dratio_002a-136"></a>Ignore propagations which reduce the range of a variable by less than this
 ratio. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002astrategy_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-133"></a></var><br>
-<blockquote><p><a name="index-g_t_002astrategy_002a-134"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
+&mdash; Variable: <b>*strategy*</b><var><a name="index-g_t_002astrategy_002a-137"></a></var><br>
+<blockquote><p><a name="index-g_t_002astrategy_002a-138"></a>Strategy to use for <code>funcallv</code> and <code>applyv</code>. Either <code>:gfc</code> for Generalized
 Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc</code>. 
 </p></blockquote></div>
 
@@ -1832,30 +1880,30 @@ Forward Checking, or <code>:ac</code> for Arc Consistency. Default is <code>:gfc
 <p><a name="Function-booleanp"></a>
 
 <div class="defun">
-&mdash; Function: <b>booleanp</b><var> x<a name="index-booleanp-135"></a></var><br>
-<blockquote><p><a name="index-booleanp-136"></a>Returns true iff <code>x</code> is <code>t</code> or <code>nil</code>. 
+&mdash; Function: <b>booleanp</b><var> x<a name="index-booleanp-139"></a></var><br>
+<blockquote><p><a name="index-booleanp-140"></a>Returns true iff <code>x</code> is <code>t</code> or <code>nil</code>. 
 </p></blockquote></div>
 
    <p><a name="Function-count_002dtrues"></a>
 
 <div class="defun">
-&mdash; Function: <b>count-trues</b><var> &amp;rest xs<a name="index-count_002dtrues-137"></a></var><br>
-<blockquote><p><a name="index-count_002dtrues-138"></a>Returns the number of time a non-NIL value occurs in its arguments. 
+&mdash; Function: <b>count-trues</b><var> &amp;rest xs<a name="index-count_002dtrues-141"></a></var><br>
+<blockquote><p><a name="index-count_002dtrues-142"></a>Returns the number of time a non-NIL value occurs in its arguments. 
 </p></blockquote></div>
 
    <p><a name="Function-purge"></a>
 
 <div class="defun">
-&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-139"></a></var><br>
-<blockquote><p><a name="index-purge-140"></a>Removes any information about <code>function-name</code> from Screamer's
+&mdash; Function: <b>purge</b><var> function-name<a name="index-purge-143"></a></var><br>
+<blockquote><p><a name="index-purge-144"></a>Removes any information about <code>function-name</code> from Screamer's
 who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Function-unwind_002dtrail"></a>
 
 <div class="defun">
-&mdash; Function: <b>unwind-trail</b><var><a name="index-unwind_002dtrail-141"></a></var><br>
-<blockquote><p><a name="index-unwind_002dtrail-142"></a><code>deprecated</code>.
+&mdash; Function: <b>unwind-trail</b><var><a name="index-unwind_002dtrail-145"></a></var><br>
+<blockquote><p><a name="index-unwind_002dtrail-146"></a><code>deprecated</code>.
 
         <p>Calls all functions installed using <code>trail</code>, and removes them from the trail.
 
@@ -1868,24 +1916,24 @@ Screamer.
    <p><a name="Function-unwedge_002dscreamer"></a>
 
 <div class="defun">
-&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-143"></a></var><br>
-<blockquote><p><a name="index-unwedge_002dscreamer-144"></a>Removes any information about all user defined functions from
+&mdash; Function: <b>unwedge-screamer</b><var><a name="index-unwedge_002dscreamer-147"></a></var><br>
+<blockquote><p><a name="index-unwedge_002dscreamer-148"></a>Removes any information about all user defined functions from
 Screamer's who-calls database. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002adynamic_002dextent_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-145"></a></var><br>
-<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-146"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
+&mdash; Variable: <b>*dynamic-extent?*</b><var><a name="index-g_t_002adynamic_002dextent_003f_002a-149"></a></var><br>
+<blockquote><p><a name="index-g_t_002adynamic_002dextent_003f_002a-150"></a>Set to <code>t</code> to enable the dynamic extent optimization, <code>nil</code> to
 disable it. Default is platform dependent. 
 </p></blockquote></div>
 
    <p><a name="Variable-_002ascreamer_002dversion_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-147"></a></var><br>
-<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-148"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
+&mdash; Variable: <b>*screamer-version*</b><var><a name="index-g_t_002ascreamer_002dversion_002a-151"></a></var><br>
+<blockquote><p><a name="index-g_t_002ascreamer_002dversion_002a-152"></a>The version of Screamer which is loaded. This is currently still <code>3</code>.<code>20</code>,
 while we're considering how to express versions for this copy of Screamer in
 the future. 
 </p></blockquote></div>
@@ -1893,8 +1941,8 @@ the future.
    <p><a name="Variable-_002aiscream_003f_002a"></a>
 
 <div class="defun">
-&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-149"></a></var><br>
-<blockquote><p><a name="index-g_t_002aiscream_003f_002a-150"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
+&mdash; Variable: <b>*iscream?*</b><var><a name="index-g_t_002aiscream_003f_002a-153"></a></var><br>
+<blockquote><p><a name="index-g_t_002aiscream_003f_002a-154"></a><code>t</code> if Screamer is running under ILisp/GNUEmacs with iscream.el loaded. 
 </p></blockquote></div>
 
 </body></html>
