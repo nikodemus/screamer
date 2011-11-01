@@ -6025,14 +6025,54 @@ or X2 equals one."
   (if (null xs) (/v2 1 x) (/v-internal x xs)))
 
 (defun minv-internal (x xs)
-  (if (null xs) x (minv-internal (minv2 x (first xs)) (rest xs))))
+  (cond ((null xs)
+         (assert!-realpv x)
+         (value-of x))
+        (t
+         (minv-internal (minv2 x (first xs)) (rest xs)))))
 
-(defun minv (x &rest xs) (if (null xs) x (minv-internal x xs)))
+(defun minv (x &rest xs)
+  "Constrains its arguments to be real. If called with a single argument,
+returns its value. If called with multiple arguments, behaves as if a
+combination of two argument calls:
+
+  \(MINV X1 X2 ... Xn) == (MINV (MINV X1 X2) ... Xn)
+
+If called with two arguments, and either is known to be less than or equal to
+the other, returns the value of that argument. Otherwise returns a real variable
+V, mutually constrained with the arguments:
+
+  * Minimum of the values of X1 and X2 is constrained to equal V. This
+    includes constraining their bounds appropriately. If it becomes know that
+    cannot be true. FAIL is called.
+
+  * If both arguments are integers, V is constrained to be an integer."
+  (minv-internal x xs))
 
 (defun maxv-internal (x xs)
-  (if (null xs) x (maxv-internal (maxv2 x (first xs)) (rest xs))))
+  (cond ((null xs)
+         (assert!-realpv x)
+         (value-of x))
+        (t
+         (maxv-internal (maxv2 x (first xs)) (rest xs)))))
 
-(defun maxv (x &rest xs) (if (null xs) x (maxv-internal x xs)))
+(defun maxv (x &rest xs)
+  "Constrains its arguments to be real. If called with a single argument,
+returns its value. If called with multiple arguments, behaves as if a
+combination of two argument calls:
+
+  \(MAXV X1 X2 ... Xn) == (MAXV (MAXV X1 X2) ... Xn)
+
+If called with two arguments, and either is known to be greater than or equal
+to the other, returns the value of that argument. Otherwise returns a real
+variable V, mutually constrained with the arguments:
+
+  * Maximum of the values of X1 and X2 is constrained to equal V. This
+    includes constraining their bounds appropriately. If it becomes know that
+    cannot be true. FAIL is called.
+
+  * If both arguments are integers, V is constrained to be an integer."
+  (maxv-internal x xs))
 
 ;;; Lifted Arithmetic Comparison Functions (KNOWN? optimized)
 
