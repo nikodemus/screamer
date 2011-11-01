@@ -487,6 +487,7 @@ of Screamer.
 @include include/fun-screamer-an-integer-abovev.texinfo
 @include include/fun-screamer-an-integer-belowv.texinfo
 @include include/fun-screamer-an-integer-betweenv.texinfo
+@include include/fun-screamer-static-ordering.texinfo
 @include include/fun-screamer-domain-size.texinfo
 @include include/fun-screamer-range-size.texinfo
 @include include/fun-screamer-count-truesv.texinfo

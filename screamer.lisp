@@ -5564,6 +5564,25 @@ in the process of determining a good search order."
               (t (static-ordering-internal (rest variables) force-function))))))
 
 (defun static-ordering (force-function)
+  "Returns an ordering force function based on FORCE-FUNCTION.
+
+The ordering force function which is returned is a nondeterministic function
+which takes a single argument X. This argument X can be a list of values where
+each value may be either a variable or a non-variable. The ordering force
+function applies the FORCE-FUNCTION in turn to each of the variables in X, in
+the order that they appear, repeatedly applying the FORCE-FUNCTION to a given
+variable until it becomes bound before proceeding to the next variable. The
+ordering force function does not return any meaningful result.
+
+FORCE-FUNCTION is any (potentially nondeterministic) function which can be
+applied to a variable as its single argument with the stipulation that a
+finite number of repeated applications will force the variable to be bound.
+The FORCE-FUNCTION need not return any useful value.
+
+Screamer currently provides two convenient force-functions, namely
+#'LINEAR-FORCE and #'DIVIDE-AND-CONQUER-FORCE though future implementations
+may provide additional ones. \(The defined Screamer protocol does not provide
+sufficient hooks for the user to define her own force functions.)"
   ;; note: This closure will heap cons.
   (let ((force-function (value-of force-function)))
     #'(lambda (variables) (static-ordering-internal variables force-function))))
