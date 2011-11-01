@@ -3350,13 +3350,17 @@ Prolog."
   "The primitive GROUND? is an extension of the primitive BOUND? which
 can recursively determine whether an entire aggregate object is
 bound. Returns T if X is bound and either the value of X is atomic or
-all of the slots in the value of X are also bound. Otherwise returns
-nil."
+a CONS tree where all atoms are bound.
+
+Otherwise returns nil."
   (let ((x (value-of x)))
     (and (not (variable? x))
          (or (not (consp x)) (and (ground? (car x)) (ground? (cdr x)))))))
 
 (defun apply-substitution (x)
+  "If X is a CONS, or a variable whose value is a CONS, returns
+a freshly consed copy of the tree with all variables dereferenced.
+Otherwise returns the value of X."
   (let ((x (value-of x)))
     (if (consp x)
         (cons (apply-substitution (car x)) (apply-substitution (cdr x)))
@@ -5492,13 +5496,64 @@ V and arguments are mutually constrained:
 ;;;       before KNOWN?-CONSTRAINT to avoid forward references to
 ;;;       nondeterministic functions.
 
-(defun solution (x force-function)
-  (funcall-nondeterministic
-   (value-of force-function) (variables-in (value-of x)))
-  (apply-substitution x))
+(defun solution (arguments ordering-force-function)
+  "ARGUMENTS is a list of values. Typically it is a list of
+variables but it may also contain nonvariables.
 
-(defun linear-force (variable)
-  (let ((variable (value-of variable)))
+The specified ORDERING-FORCE-FUNCTION is used to force each of the variables
+in list to be bound.
+
+Returns a list of the values of the elements of list in the same order that
+they appear in list, irrespective of the forcing order imposed by the
+ORDERING-FORCE-FUNCTION.
+
+The ORDERING-FORCE-FUNCTION can be any function which takes a list of values
+as its single argument that is guaranteed to force all variables in that list
+to be bound upon its return. The returned value of the ORDERING-FORCE-FUNCTION
+is ignored.
+
+The user can construct her own ORDERING-FORCE-FUNCTION or use one of the
+following alternatives provided with Screamer:
+
+   \(STATIC-ORDERING #'LINEAR-FORCE),
+   \(STATIC-ORDERING #'DIVIDE-AND-CONQUER-FORCE),
+   \(REORDER COST-FUN TERMINATE-TEST ORDER #'LINEAR-FORCE) and
+   \(REORDER COST-FUN TERMINATE-TEST ORDER #'DIVIDE-AND-CONQUER-FORCE).
+
+Future implementation of Screamer may provide additional forcing and ordering
+functions."
+  (funcall-nondeterministic
+   (value-of ordering-force-function) (variables-in (value-of arguments)))
+  (apply-substitution arguments))
+
+(defun linear-force (x)
+  "Returns X if it is not a variable. If X is a bound variable then returns
+its value.
+
+If X is an unbound variable then it must be known to have a countable set of
+potential values. In this case X is nondeterministically restricted to be
+equal to one of the values in this countable set, thus forcing X to be bound.
+The dereferenced value of X is then returned.
+
+An unbound variable is known to have a countable set of potential values
+either if it is known to have a finite domain or if it is known to be integer
+valued.
+
+An error is signalled if X is not known to have a finite domain and is not
+known to be integer valued.
+
+Upon backtracking X will be bound to each potential value in turn, failing
+when there remain no untried alternatives.
+
+Since the set of potential values is required only to be countable, not
+finite, the set of untried alternatives may never be exhausted and
+backtracking need not terminate. This can happen, for instance, when X is
+known to be an integer but lacks either an upper of lower bound.
+
+The order in which the nondeterministic alternatives are tried is left
+unspecified to give future implementations leeway in incorporating heuristics
+in the process of determining a good search order."
+  (let ((variable (value-of x)))
     (if (variable? variable)
         (restrict-value!
          variable
@@ -5527,6 +5582,25 @@ V and arguments are mutually constrained:
               (t (static-ordering-internal (rest variables) force-function))))))
 
 (defun static-ordering (force-function)
+  "Returns an ordering force function based on FORCE-FUNCTION.
+
+The ordering force function which is returned is a nondeterministic function
+which takes a single argument X. This argument X can be a list of values where
+each value may be either a variable or a non-variable. The ordering force
+function applies the FORCE-FUNCTION in turn to each of the variables in X, in
+the order that they appear, repeatedly applying the FORCE-FUNCTION to a given
+variable until it becomes bound before proceeding to the next variable. The
+ordering force function does not return any meaningful result.
+
+FORCE-FUNCTION is any (potentially nondeterministic) function which can be
+applied to a variable as its single argument with the stipulation that a
+finite number of repeated applications will force the variable to be bound.
+The FORCE-FUNCTION need not return any useful value.
+
+Screamer currently provides two convenient force-functions, namely
+#'LINEAR-FORCE and #'DIVIDE-AND-CONQUER-FORCE though future implementations
+may provide additional ones. \(The defined Screamer protocol does not provide
+sufficient hooks for the user to define her own force functions.)"
   ;; note: This closure will heap cons.
   (let ((force-function (value-of force-function)))
     #'(lambda (variables) (static-ordering-internal variables force-function))))
@@ -6869,6 +6943,36 @@ VALUES can be either a vector or a list designator."
 ;;;       functions.
 
 (defun divide-and-conquer-force (variable)
+  "Returns X if X is not a variable. If X is a bound variable then returns its
+value. Otherwise implements a single binary-branching step of a
+divide-and-conquer search algorithm. There are always two alternatives, the
+second of which is tried upon backtracking.
+
+If it is known to have a finite domain D then this domain is split into two
+halves and the value of X is nondeterministically restricted to be a member
+one of the halves. If X becomes bound by this restriction then its value is
+returned. Otherwise, X itself is returned.
+
+If X is not known to have a finite domain but is known to be real and to have
+both lower and upper bounds then nondeterministically either the lower or
+upper bound is restricted to the midpoint between the lower and upper bound.
+If X becomes bound by this restriction then its dereferenced value is
+returned. Otherwise, X itself is returned.
+
+An error is signalled if X is not known to be restricted to a finite domain
+and either is not known to be real or is not known to have both a lower and
+upper bound.
+
+When the set of potential values may be infinite, users of
+DIVIDE-AND-CONQUER-FORCE may need to take care to fail when the range size of
+the variable becomes too small, unless other constraints on it are sufficient
+to guarentee failure.
+
+The method of splitting the domain into two halves is left unspecified to give
+future implementations leeway in incorporating heuristics in the process of
+determining a good search order. All that is specified is that if the domain
+size is even prior to splitting, the halves are of equal size, while if the
+domain size is odd, the halves differ in size by at most one."
   (let ((variable (value-of variable)))
     (if (variable? variable)
         (cond
@@ -6914,6 +7018,20 @@ VALUES can be either a vector or a list designator."
 ;;;       function.
 
 (defun domain-size (x)
+  "Returns the domain size of X.
+
+If X is an integer variable with an upper and lower bound, its domain size
+is the one greater than the difference of its bounds. Eg. [integer 1:2] has
+domain size 2.
+
+If X is a variable with an enumerated domain, its domain size is the size of
+that domain.
+
+If X is a CONS, or a variable whose value is a CONS, its domain size is the
+product of the domain sizes of its CAR and CDR.
+
+Other types of unbound variables have domain size NIL, whereas non-variables
+have domain size of 1."
   (let ((x (value-of x)))
     (typecase x
       (cons (infinity-* (domain-size (car x)) (domain-size (cdr x))))
@@ -6928,6 +7046,17 @@ VALUES can be either a vector or a list designator."
       (otherwise 1))))
 
 (defun range-size (x)
+  "Returns the range size of X. Range size is the size of the range values
+of X may take.
+
+If X is an integer or a bound variable whose value is an integer, it has the
+range size 0. Reals and bound variables whose values are reals have range size
+0.0.
+
+Unbound variables known to be reals with an upper and lower bound have a range
+size the difference of their upper and lower bounds.
+
+Other types of objects and variables have range size NIL."
   (let ((x (value-of x)))
     (typecase x
       (integer 0)
@@ -6970,6 +7099,34 @@ VALUES can be either a vector or a list designator."
        variables cost-function terminate? order force-function))))
 
 (defun reorder (cost-function terminate? order force-function)
+  "Returns an ordering force function based on arguments.
+
+The FORCE-FUNCTION is any (potentially nondeterministic) function
+which can be applied to a variable as its single argument with the
+stipulation that a finite number of repeated applications will force
+the variable to be bound. The FORCE-FUNCTION need not return any useful value.
+
+The ordering force function which is returned is a nondeterministic function
+which takes a single argument X. This argument X can be a list of values where
+each value may be either a variable or a non-variable.
+
+The ordering force function repeatedly selects a \"best\" variable using using
+COST-FUNCTION and ORDER. Eg. using #'DOMAIN-SIZE and #'< as the COST-FUNCTION
+and ORDER, then the variable with the smallest domain will be forced first.
+
+Function TERMINATE? is then called with the determined cost of that variable,
+and unless it returns true, FORCE-FUNCTION is applied to that variable to
+force constrain it.
+
+Process then iterates until all variables become bound or TERMINATE? returns
+true.
+
+The ordering force function does not return any meaningful result.
+
+Screamer currently provides two convenient force-functions, namely
+#'linear-force and #'divide-and-conquer-force though future implementations
+may provide additional ones. \(The defined Screamer protocol does not provide
+sufficient hooks for the user to define her own force functions.)"
   ;; note: This closure will heap cons.
   (let ((cost-function (value-of cost-function))
         (terminate? (value-of terminate?))
@@ -6979,8 +7136,31 @@ VALUES can be either a vector or a list designator."
         (reorder-internal
          variables cost-function terminate? order force-function))))
 
+;;; FIXME: This doesn't make any sense. See branch "maybe" for an alternative
+;;; expression. Also: why are we trying to increase the upper bound, and not
+;;; the lower bound? Should the API also not allow us to minimize a variable
+;;; towards either zero or negative infinity? --ns 2011-11-01
 (defmacro-compile-time best-value
     (form1 objective-form &optional (form2 nil form2?))
+  "First evaluates OBJECTIVE-FORM, which should evaluate to constraint variable V.
+
+Then repeatedly evaluates FORM1 in non-deterministic context till it fails. If
+previous round of evaluation produced an upper bound B for V, the during the
+next round any change to V must provide an upper bound higher than B, or that
+that change fails.
+
+If the last successful evaluation of FORM produced an upper bound for V,
+returns a list of two elements: the the primary value of FORM1 from that
+round, and the upper bound of V.
+
+Otherwise if FORM2 is provided, returns the result of evaluating it, or else
+calls fails.
+
+Note: this documentation string is entirely reverse-engineered. Lacking
+information on just how BEST-VALUE was intended to work, it is hard to tell
+what is a bug, an accident of implementation, and what is a feature. If you
+have any insight into BEST-VALUE, please send email to
+nikodemus@random-state.net."
   (let ((bound (gensym "BOUND-"))
         (best (gensym "BEST-"))
         (objective (gensym "OBJECTIVE-")))
@@ -6989,7 +7169,9 @@ VALUES can be either a vector or a list designator."
            (,objective (variablize ,objective-form)))
        (attach-noticer!
         #'(lambda ()
-            (if (and ,bound (<= (variable-upper-bound ,objective) ,bound)) (fail)))
+            (let ((upper (variable-upper-bound ,objective)))
+              (when (and ,bound upper (<= upper ,bound))
+                (fail))))
         ,objective)
        (for-effects
          (let ((value ,form1))
@@ -7014,6 +7196,18 @@ VALUES can be either a vector or a list designator."
     (t (values template variables))))
 
 (defun template (template)
+  "Copies an aggregate object, replacing any symbol beginning with a question
+mark with a newly created variable.
+
+If the same symbol appears more than once in X, only one variable is created
+for that symbol, the same variable replacing any occurrences of that symbol.
+Thus \(TEMPLATE '(A B (?C D ?E) ?E)) has the same effect as:
+
+  \(LET ((?C (MAKE-VARIABLE))
+        \(?E (MAKE-VARIABLE)))
+    \(LIST 'A 'B (LIST C 'D E) E)).
+
+This is useful for creating patterns to be unified with other structures."
   (template-internal (value-of template) '()))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
