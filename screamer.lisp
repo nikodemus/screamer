@@ -6987,8 +6987,31 @@ VALUES can be either a vector or a list designator."
         (reorder-internal
          variables cost-function terminate? order force-function))))
 
+;;; FIXME: This doesn't make any sense. See branch "maybe" for an alternative
+;;; expression. Also: why are we trying to increase the upper bound, and not
+;;; the lower bound? Should the API also not allow us to minimize a variable
+;;; towards either zero or negative infinity? --ns 2011-11-01
 (defmacro-compile-time best-value
     (form1 objective-form &optional (form2 nil form2?))
+  "First evaluates OBJECTIVE-FORM, which should evaluate to constraint variable V.
+
+Then repeatedly evaluates FORM1 in non-deterministic context till it fails. If
+previous round of evaluation produced an upper bound B for V, the during the
+next round any change to V must provide an upper bound higher than B, or that
+that change fails.
+
+If the last successful evaluation of FORM produced an upper bound for V,
+returns a list of two elements: the the primary value of FORM1 from that
+round, and the upper bound of V.
+
+Otherwise if FORM2 is provided, returns the result of evaluating it, or else
+calls fails.
+
+Note: this documentation string is entirely reverse-engineered. Lacking
+information on just how BEST-VALUE was intended to work, it is hard to tell
+what is a bug, an accident of implementation, and what is a feature. If you
+have any insight into BEST-VALUE, please send email to
+nikodemus@random-state.net."
   (let ((bound (gensym "BOUND-"))
         (best (gensym "BEST-"))
         (objective (gensym "OBJECTIVE-")))
@@ -6997,7 +7020,9 @@ VALUES can be either a vector or a list designator."
            (,objective (variablize ,objective-form)))
        (attach-noticer!
         #'(lambda ()
-            (if (and ,bound (<= (variable-upper-bound ,objective) ,bound)) (fail)))
+            (let ((upper (variable-upper-bound ,objective)))
+              (when (and ,bound upper (<= upper ,bound))
+                (fail))))
         ,objective)
        (for-effects
          (let ((value ,form1))

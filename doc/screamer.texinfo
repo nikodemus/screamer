@@ -486,9 +486,11 @@ of Screamer.
 @include include/fun-screamer-an-integer-belowv.texinfo
 @include include/fun-screamer-an-integer-betweenv.texinfo
 @include include/fun-screamer-count-truesv.texinfo
+@include include/macro-screamer-best-value.texinfo
 @include include/var-screamer-star-maximum-discretization-range-star.texinfo
 @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
 @include include/var-screamer-star-strategy-star.texinfo
+@include include/var-screamer-template.texinfo
 
 @chapter Miscellany
 

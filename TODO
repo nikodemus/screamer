@@ -25,6 +25,7 @@
 ******* Make iscream.el work under Slime.
 ******* Change COUNT-FAILURES to make the number easier to access.
 ******* Consider adding a separate type for gaussian integers.
+******* Make BEST-VALUE make sense.
 * Documentation
 *** WIP A web-friendly manual
 ***** Cleanups
@@ -41,7 +42,6 @@
 ******* range-size
 ******* reorder
 ******* solution
-******* best-value
 ******* template
 ******* define-screamer-package
 * Performance
