@@ -6951,6 +6951,20 @@ VALUES can be either a vector or a list designator."
 ;;;       function.
 
 (defun domain-size (x)
+  "Returns the domain size of X.
+
+If X is an integer variable with an upper and lower bound, its domain size
+is the one greater than the difference of its bounds. Eg. [integer 1:2] has
+domain size 2.
+
+If X is a variable with an enumerated domain, its domain size is the size of
+that domain.
+
+If X is a CONS, or a variable whose value is a CONS, its domain size is the
+product of the domain sizes of its CAR and CDR.
+
+Other types of unbound variables have domain size NIL, whereas non-variables
+have domain size of 1."
   (let ((x (value-of x)))
     (typecase x
       (cons (infinity-* (domain-size (car x)) (domain-size (cdr x))))
@@ -6965,6 +6979,17 @@ VALUES can be either a vector or a list designator."
       (otherwise 1))))
 
 (defun range-size (x)
+  "Returns the range size of X. Range size is the size of the range values
+of X may take.
+
+If X is an integer or a bound variable whose value is an integer, it has the
+range size 0. Reals and bound variables whose values are reals have range size
+0.0.
+
+Unbound variables known to be reals with an upper and lower bound have a range
+size the difference of their upper and lower bounds.
+
+Other types of objects and variables have range size NIL."
   (let ((x (value-of x)))
     (typecase x
       (integer 0)

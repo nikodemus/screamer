@@ -36,8 +36,6 @@
 ***** Still missing exported symbols:
 ******* divide-and-conquer-force
 ******* static-ordering
-******* domain-size
-******* range-size
 ******* reorder
 ******* solution
 ******* define-screamer-package
