@@ -5890,22 +5890,139 @@ disunification operator available in Prolog-II."
 (defun +v-internal (xs)
   (if (null xs) 0 (+v2 (first xs) (+v-internal (rest xs)))))
 
-(defun +v (&rest xs) (+v-internal xs))
+(defun +v (&rest xs)
+  "Constrains its arguments to be numbers. Returns 0 if called with no
+arguments. If called with a single argument, returns its value. If called with
+more than two arguments, behaves as nested sequence of two-argument calls:
+
+  \(+V X1 X2 ... Xn) = \(+V X1 (+V X2 (+V ...)))
+
+When called with two arguments, if both arguments are bound, returns the sum
+of their values. If either argument is known to be zero, returns the value of
+the remaining argument. Otherwise returns number variable V.
+
+  * Sum of X1 and X2 is constrained to equal V. This includes constraining
+    their bounds appropriately. If it becomes known that cannot be true, FAIL
+    is called.
+
+  * If both arguments are known to be reals, V is constrained to be real.
+
+  * If both arguments are known to be integers, V is constained to be integer.
+
+  * If one argument is known to be a non-integer, and the other is known to
+    be a real, V is constrained to be a non-integer.
+
+  * If one argument is known to be a non-real, and the other is known
+    to be a real, V is constrained to be non-real.
+
+Note: Numeric contagion rules of Common Lisp are not applied if either
+argument equals zero."
+  (+v-internal xs))
 
 (defun -v-internal (x xs)
   (if (null xs) x (-v-internal (-v2 x (first xs)) (rest xs))))
 
-(defun -v (x &rest xs) (if (null xs) (-v2 0 x) (-v-internal x xs)))
+(defun -v (x &rest xs)
+  "Constrains its arguments to be numbers. If called with a single argument,
+behaves as if the two argument call:
+
+  \(-V 0 X)
+
+If called with more than two arguments, behaves as nested sequence of
+two-argument calls:
+
+  \(-V X1 X2 ... Xn) = \(-V X1 (-V X2 (-V ...)))
+
+When called with two arguments, if both arguments are bound, returns the
+difference of their values. If X2 is known to be zero, returns the value of
+X1. Otherwise returns number variable V.
+
+  * Difference of X1 and X2 is constrained to equal V. This includes
+    constraining their bounds appropriately. If it becomes known that cannot
+    be true, FAIL is called.
+
+  * If both arguments are known to be reals, V is constrained to be real.
+
+  * If both arguments are known to be integers, V is constained to be integer.
+
+  * If one argument is known to be a non-integer, and the other is known to
+    be a real, V is constrained to be a non-integer.
+
+  * If one argument is known to be a non-real, and the other is known
+    to be a real, V is constrained to be non-real.
+
+Note: Numeric contagion rules of Common Lisp are not applied if X2 equals zero."
+  (if (null xs) (-v2 0 x) (-v-internal x xs)))
 
 (defun *v-internal (xs)
   (if (null xs) 1 (*v2 (first xs) (*v-internal (rest xs)))))
 
-(defun *v (&rest xs) (*v-internal xs))
+(defun *v (&rest xs)
+  "Constrains its arguments to be numbers. If called with no arugments,
+returns 1. If called with a single argument, returns its value. If called with
+more than two arguments, behaves as nested sequence of two-argument calls:
+
+  \(*V X1 X2 ... Xn) = \(*V X1 (*V X2 (*V ...)))
+
+When called with two arguments, if both arguments are bound, returns the
+product of their values. If either argument is known to equal zero, returns
+zero. If either argument is known to equal one, returns the value of the other.
+Otherwise returns number variable V.
+
+  * Product of X1 and X2 is constrained to equal V. This includes constraining
+    their bounds appropriately. If it becomes known that cannot be true, FAIL
+    is called.
+
+  * If both arguments are known to be reals, V is constrained to be real.
+
+  * If both arguments are known to be integers, V is constained to be integer.
+
+  * If V is known to be an integer, and either X1 or X2 is known to be real,
+    both X1 and X2 are constrained to be integers.
+
+  * If V is known to be an reals, and either X1 or X2 is known to be real,
+    both X1 and X2 are constrained to be reals.
+
+Note: Numeric contagion rules of Common Lisp are not applied if either
+argument equals zero or one."
+  (*v-internal xs))
 
 (defun /v-internal (x xs)
   (if (null xs) x (/v-internal (/v2 x (first xs)) (rest xs))))
 
-(defun /v (x &rest xs) (if (null xs) (/v2 1 x) (/v-internal x xs)))
+(defun /v (x &rest xs)
+  "Constrains its arguments to be numbers. If called with a single argument,
+behaves as the two argument call:
+
+  \(/V 1 X)
+
+If called with more than two arguments, behaves as nested sequence of
+two-argument calls:
+
+  \(/V X1 X2 ... Xn) = \(/V ... (/V (/V X1 X2) X3) ... Xn)
+
+When called with two arguments, if both arguments are bound, returns the
+division of their values. If X1 is known to equal zero, returns 0. If X2 is
+known to equal zero, FAIL is called. If X2 is known to equal one, returns the
+value of X1. Otherwise returns number variable V.
+
+  * Division of X1 and X2 is constrained to equal V. This includes
+    constraining their bounds appropriately. If it becomes known that cannot
+    be true, FAIL is called.
+
+  * If both arguments are known to be reals, V is constrained to be real.
+
+  * If both arguments are known to be integers, V is constained to be integer.
+
+  * If V is known to be an integer, and either X1 or X2 is known to be real,
+    both X1 and X2 are constrained to be integers.
+
+  * If V is known to be an reals, and either X1 or X2 is known to be real,
+    both X1 and X2 are constrained to be reals.
+
+Note: Numeric contagion rules of Common Lisp are not applied if X1 equals zero
+or X2 equals one."
+  (if (null xs) (/v2 1 x) (/v-internal x xs)))
 
 (defun minv-internal (x xs)
   (if (null xs) x (minv-internal (minv2 x (first xs)) (rest xs))))
