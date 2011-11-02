@@ -12,7 +12,7 @@ index.html: ../doc/screamer.html ../tools/analytics.script
 	sbcl --script ../tools/splice-to-head.lisp ../tools/analytics.script \
 	  < ../doc/screamer.html > index.html
 
-../doc/screamer.html:
+../doc/screamer.html: ../doc/screamer.texinfo ../*.lisp
 	make -C ../doc
 
 clean:

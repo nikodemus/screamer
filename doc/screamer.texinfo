@@ -24,6 +24,14 @@
 
 @end titlepage
 
+@macro refmacro{name}
+@ref{Macro \name\, @code{\name\}}
+@end macro
+
+@macro reffun{name}
+@ref{Function \name\, @code{\name\}}
+@end macro
+
 Screamer provides a nondeterministic choice-point operator, a
 backtracking mechanism, and a forward propagation facility.
 
@@ -82,14 +90,15 @@ features of Screamer.
 
 @section Important Note on Packages
 
-Screamer shadows @code{defun}.
+Screamer shadows @code{defun}, and a couple of other symbols.
 
 Examples in this manual are expected to be entered in the package
 @code{SCREAMER-USER}, which has the correct @code{defun}.
 
 Packages using Screamer are best defined using
-@code{define-screamer-package}, which is like @code{defpackage} but
-does some additional shadowing imports.
+@refmacro{define-screamer-package}, which is like @code{defpackage}
+using @code{CL} and @code{SCREAMER} packages, but does the additional
+shadowing imports.
 
 This is however by no means necessary: you can also explicitly use
 @code{screamer::defun}.
@@ -97,13 +106,18 @@ This is however by no means necessary: you can also explicitly use
 @section Choice-Points, Failure, and Backtracking
 
 Screamer adds nondeterminism by providing the @emph{choice-point}
-operator @code{either} and the @emph{failure} operator @code{fail}.
+operator @refmacro{either} and the @emph{failure} operator
+@reffun{fail}.
 
 A choice-point is a point in program where more than one thing can
-happen. When a choice point is encountered, one of the possibilities
+happen. When a choice-point is encountered, one of the possibilities
 occurs, and execution continues. Should a failure subsequently occur,
 the system backtracks to the last choice-point where multiple
 possibilities were still present, and tries again.
+
+Backtracking is controlled by a form providing a nondeterministic
+context, eg. @refmacro{all-values}, @refmacro{one-value}, or
+@refmacro{for-effects}.
 
 @lisp
 (all-values
@@ -115,26 +129,24 @@ possibilities were still present, and tries again.
 
 At first @code{(either 1 2 3 4)} evaluates to 1, which is @code{oddp},
 so @code{all-values} receives it and sets about producing the next
-value.
-
-This time @code{either} returns 2, which isn't @code{oddp}. Hence
+value. Now @code{either} returns 2, which isn't @code{oddp}. Hence
 @code{fail} is called causing the system to backtrack.
 
 Starting again from the choice-point 3 is produced, which is
 @code{oddp}, and is received by @code{all-values}, which in turn
-requests the next value.
+requests the next value. Now @code{either} returns 4, which again
+causes @code{fail} to backtrack.
 
-Now @code{either} returns 4, which again causes @code{fail} to backtrack.
-
-Since the only choice-point available cannot produce any more alternatives,
-control passes back to @code{all-values} which returns the collected values.
+Since the only choice-point available cannot produce any more
+alternatives, control passes back to @code{all-values} which returns
+the collected values.
 
 Had we wanted only one answer instead of an enumeration of all
 possible answers we could have used @code{one-value} instead of
 @code{all-values}.
 
 If you're familiar with Prolog, @code{all-values} and @code{one-value}
-are analogous to Prolog's @code{bag-of} and @code{cut} primitives.
+are analogous to Prolog's @code{bagof} and @code{cut} primitives.
 
 @section Generators
 
@@ -158,7 +170,7 @@ Consider for example @code{an-integer-between}:
 
 Called with two integers, this function produces nondeterministic
 values in the given range -- finally backtracking to a previous
-choice-point when possibilities have already been exhausted.
+choice-point when all possibilities have been exhausted.
 
 Given @code{an-integer-between} and @code{fail} we can write eg. a
 generator for square numbers:
@@ -205,7 +217,7 @@ Screamer is able to undo effects of @code{setf} and @code{setq}
 calls to other functions with side-effects such as @code{set},
 @code{rplaca}, or @code{sort}.
 
-By default most side-effects are retained:
+By default all side-effects are retained:
 
 @lisp
 (let ((n 0))
@@ -216,8 +228,8 @@ By default most side-effects are retained:
         :n n)) ; => (:NUMBERS (0 1 2 3) :N 4)
 @end lisp
 
-Macros @code{local} and @code{global} can be used to turn undoing of
-side-effects on and off lexically.
+Macros @refmacro{local} and @refmacro{global} can be used to turn
+undoing of side-effects on and off lexically.
 
 @lisp
 (let ((m 0)
@@ -237,7 +249,7 @@ side-effects on and off lexically.
 
 In addition to nondeterminism via backtracking as discussed so far,
 Screamer also provides for forward constraint propagation via
-@emph{logic variables} constructed using @code{make-variable}.
+@emph{logic variables} constructed using @reffun{make-variable}.
 Screamer provides a variety of primitives for constraining variables.
 
 By convention suffix @code{v} is used to denote operators that accept
@@ -246,12 +258,15 @@ By convention suffix @code{v} is used to denote operators that accept
 can also be logic variables, and that it may assert facts about them
 and will possibly return another variable.
 
-The operator @code{assert!} is the primary tool about asserting facts
+The operator @refmacro{assert!} is the primary tool about asserting facts
 about variables.
 
 Expression such as @code{(foov myvar)} typically returns another
 variable depending on @code{myvar}, which can be constrained to be
 true using @code{assert!}.
+
+Operator @reffun{bound?} can be used to test if variable is bound to a
+specific value, and @reffun{value-of} can be used to obtain its value.
 
 @lisp
 ;;; Make a variable
@@ -270,6 +285,14 @@ true using @code{assert!}.
 
 ;;; And we have our answer.
 *v* ; => 42
+
+;;; However, there's a catch. Even though *v* printed as 42 above, *v* is
+;;; still a variable. This is convenience for working in the REPL: unbound
+;;; variables print using square brackets, bound print just their value.
+(type-of *v*) ; => SCREAMER::VARIABLE
+
+;;; To obtain its value:
+(value-of *v*) ; => 42
 @end lisp
 
 Assertions -- and constraint operators in general -- can cause failure
@@ -307,9 +330,10 @@ values, and force a solution:
             (static-ordering #'linear-force))) => ((-47 5) (-46 4) (-45 3) (-44 2))
 @end lisp
 
-In this case backtracking occurs only inside @code{solution}, when the
-system is trying to apply different solution to the given constraints,
-whereas in the first one we backtracked over the entire @code{let}.
+In this case backtracking occurs only inside @reffun{solution}, when
+the system is trying to apply different solution to the given
+constraints, whereas in the first one we backtracked over the entire
+@code{let}.
 
 @section Current Limitations
 

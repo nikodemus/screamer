@@ -2463,13 +2463,13 @@ equivalent to \(FAIL) and is thus deterministic. With one argument,
 only when EXPRESSION is deterministic. With two or more argument it is
 nondeterministic and can only appear in a nondeterministic context.
 
-It sets up a choice point and evaluates the first EXPRESSION returning its
-result. Whenever backtracking proceeds to this choice point, the next
+It sets up a choice-point and evaluates the first EXPRESSION returning its
+result. Whenever backtracking proceeds to this choice-point, the next
 EXPRESSION is evaluated and its result returned. When no more EXPRESSIONS
-remain, the current choice point is removed and backtracking continues to the
-next most recent choice point.
+remain, the current choice-point is removed and backtracking continues to the
+next most recent choice-point.
 
-As an optimization, the choice point created for this expression is removed
+As an optimization, the choice-point created for this expression is removed
 before the evaluation of the last EXPRESSION so that a failure during the
 evaluation of the last expression will backtrack directly to the parent choice
 point of the EITHER expression.
@@ -2491,25 +2491,25 @@ EITHER is a special form, not a function. It is an error for the expression
 SETF and SETQ expressions lexically nested in its body result in local
 side effects which are undone upon backtracking.
 
-This affects only side effects introduced explicitly via SETF and
-SETQ. Side effects introduced by either user defined functions or builtin
-Common Lisp functions such as RPLACA are always global.
+This affects only side effects introduced explicitly via SETF and SETQ. Side
+effects introduced by either user defined functions or builtin Common Lisp
+functions such as RPLACA are always global.
 
-Behaviour of side effects introduced by macro-expansions such as INCF
-depends on the exact macro-expansion. If (INCF (FOO)) expands using
-eg. SET-FOO, LOCAL is unable to undo the side-effect.
+Behaviour of side effects introduced by macro-expansions such as INCF depends
+on the exact macro-expansion. If (INCF (FOO)) expands using eg. SET-FOO, LOCAL
+is unable to undo the side-effect.
 
-LOCAL does not currently distinguish between initially uninitialized
-and intialized places, such as unbound variables or hash-table keys
-with no prior values. As a result, an attempt to assign an unbound
-variable inside LOCAL will signal an error due to the system's attempt
-to first read the variable. Similarly, undoing a (SETF GETHASH) when
-the key did not previously exist in the table will insert a NIL into
-the table instead of doing a REMHASH.
+LOCAL cannot distinguish between initially uninitialized and intialized
+places, such as unbound variables or hash-table keys with no prior values. As
+a result, an attempt to assign an unbound variable inside LOCAL will signal an
+error due to the system's attempt to first read the variable. Similarly,
+undoing a (SETF GETHASH) when the key did not previously exist in the table
+will insert a NIL into the table instead of doing a REMHASH. Easiest way
+to work around this is by using TRAIL.
 
-LOCAL and GLOBAL expressions may be nested inside one another. The
-nearest surrounding declaration determines whether or not a given SETF
-or SETQ results in a local or global side effect.
+LOCAL and GLOBAL expressions may be nested inside one another. The nearest
+surrounding declaration determines whether or not a given SETF or SETQ results
+in a local or global side effect.
 
 Side effects default to be global when there is no surrounding LOCAL or GLOBAL
 expression. Local side effects can appear both in deterministic as well as
@@ -2649,12 +2649,14 @@ Accordingly, local side effects performed by the body while producing each
 value are undone before attempting to produce subsequent values, and all local
 side effects performed by the body are undone upon exit from ALL-VALUES.
 
-Returns the list containing NIL if there are no EXPRESSIONS. An ALL-VALUES
-expression can appear in both deterministic and nondeterministic contexts.
-Irrespective of what context the ALL-VALUES expression appears in, the
-EXPRESSIONS are always in a nondeterministic context. An ALL-VALUES expression
-itself is always deterministic. ALL-VALUES is analogous to the bagof primitive
-in Prolog."
+Returns a list containing NIL if there are no EXPRESSIONS.
+
+An ALL-VALUES expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the ALL-VALUES expression appears in,
+the EXPRESSIONS are always in a nondeterministic context. An ALL-VALUES
+expression itself is always deterministic.
+
+ALL-VALUES is analogous to the `bagof' primitive in Prolog."
   (let ((values (gensym "VALUES"))
         (last-value-cons (gensym "LAST-VALUE-CONS")))
     `(let ((,values '())
@@ -2816,14 +2818,19 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
   (choice-point (funcall continuation t))
   (funcall continuation nil))
 
-(defvar *fail* (lambda () (throw '%fail nil)))
+(defvar *fail* (lambda ()
+                 (if *nondeterministic?*
+                     (throw '%fail nil)
+                     (error "Cannot FAIL: no choice-point to backtrack to."))))
 
 (defun fail ()
-  "Backtracks to the most recent choise point. Equivalent to
-\(EITHER). Note that FAIL is deterministic function and thus it is
-permissible to reference #'FAIL, and write \(FUNCALL #'FAIL) or
-\(APPLY #'FAIL). In nondeterministic contexts, the expression \(FAIL)
-is optimized to generate inline backtracking code."
+  "Backtracks to the most recent choice-point.
+
+FAIL is deterministic function and thus it is permissible to reference #'FAIL,
+and write \(FUNCALL #'FAIL) or \(APPLY #'FAIL). In nondeterministic contexts,
+the expression \(FAIL) is optimized to generate inline backtracking code.
+
+Calling FAIL when there is no choice-point to backtrack to signals an error."
   (funcall *fail*))
 
 (defmacro-compile-time when-failing ((&body failing-forms) &body body)
@@ -3103,7 +3110,7 @@ either a list or a vector."
   "Currently unsupported.
 
 When running under ILisp with iscream.el loaded, does non-determinism aware
-output to Emacs, which will be deleted when the current choise is unwound."
+output to Emacs, which will be deleted when the current choice is unwound."
   `(progn
      (unless *iscream?*
        (error "Cannot do LOCAL-OUTPUT unless Screamer is running under~%~
@@ -3176,6 +3183,14 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 
 #+screamer-clos
 (defun-compile-time variable? (thing) (typep thing 'variable))
+
+(defun integers-between (low high)
+  (cond ((and (typep low 'fixnum) (typep high 'fixnum))
+         (loop for i of-type fixnum from low upto high
+               collect i))
+        (t
+         (loop for i from low upto high
+               collect i))))
 
 (defun booleanp (x)
   "Returns true iff X is T or NIL."
@@ -3449,9 +3464,9 @@ Otherwise returns the value of X."
                                      (variable-lower-bound x))
                                   *maximum-discretization-range*)))
                      (set-enumerated-domain!
-                      x (all-values (an-integer-between
-                                     (variable-lower-bound x)
-                                     (variable-upper-bound x))))))
+                      x (integers-between
+                         (variable-lower-bound x)
+                         (variable-upper-bound x)))))
                 ((not (every #'integerp (variable-enumerated-domain x)))
                  ;; note: Could do less consing if had LOCAL DELETE-IF.
                  ;;       This would also allow checking list only once.
@@ -3661,8 +3676,8 @@ Otherwise returns the value of X."
                           (<= (- (variable-upper-bound x) lower-bound)
                               *maximum-discretization-range*)))
                  (set-enumerated-domain!
-                  x (all-values (an-integer-between lower-bound
-                                                    (variable-upper-bound x))))))
+                  x (integers-between lower-bound
+                                      (variable-upper-bound x)))))
             ((some #'(lambda (element) (< element lower-bound))
                    (variable-enumerated-domain x))
              ;; note: Could do less consing if had LOCAL DELETE-IF.
@@ -3696,8 +3711,8 @@ Otherwise returns the value of X."
                             (<= (- upper-bound (variable-lower-bound x))
                                 *maximum-discretization-range*)))
                (set-enumerated-domain!
-                x (all-values (an-integer-between (variable-lower-bound x)
-                                                  upper-bound)))))
+                x (integers-between (variable-lower-bound x)
+                                    upper-bound))))
             ((some #'(lambda (element) (> element upper-bound))
                    (variable-enumerated-domain x))
              ;; note: Could do less consing if had LOCAL DELETE-IF.
@@ -3751,9 +3766,9 @@ Otherwise returns the value of X."
                                      (variable-lower-bound x))
                                   *maximum-discretization-range*)))
                      (set-enumerated-domain!
-                      x (all-values (an-integer-between
-                                     (variable-lower-bound x)
-                                     (variable-upper-bound x))))))
+                      x (integers-between
+                         (variable-lower-bound x)
+                         (variable-upper-bound x)))))
                 ((or (and lower-bound
                           (some #'(lambda (element) (< element lower-bound))
                                 (variable-enumerated-domain x)))
@@ -3872,7 +3887,7 @@ Otherwise returns the value of X."
                          (<= (- upper-bound lower-bound)
                              *maximum-discretization-range*)))
                 (set-enumerated-domain!
-                 y (all-values (an-integer-between lower-bound upper-bound))))
+                 y (integers-between lower-bound upper-bound)))
             (set-enumerated-domain!
              y (prune-enumerated-domain y (variable-enumerated-domain y))))))
     (local (let* ((enumerated-domain
