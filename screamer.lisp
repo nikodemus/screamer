@@ -2649,12 +2649,14 @@ Accordingly, local side effects performed by the body while producing each
 value are undone before attempting to produce subsequent values, and all local
 side effects performed by the body are undone upon exit from ALL-VALUES.
 
-Returns the list containing NIL if there are no EXPRESSIONS. An ALL-VALUES
-expression can appear in both deterministic and nondeterministic contexts.
-Irrespective of what context the ALL-VALUES expression appears in, the
-EXPRESSIONS are always in a nondeterministic context. An ALL-VALUES expression
-itself is always deterministic. ALL-VALUES is analogous to the bagof primitive
-in Prolog."
+Returns a list containing NIL if there are no EXPRESSIONS.
+
+An ALL-VALUES expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the ALL-VALUES expression appears in,
+the EXPRESSIONS are always in a nondeterministic context. An ALL-VALUES
+expression itself is always deterministic.
+
+ALL-VALUES is analogous to the `bagof' primitive in Prolog."
   (let ((values (gensym "VALUES"))
         (last-value-cons (gensym "LAST-VALUE-CONS")))
     `(let ((,values '())

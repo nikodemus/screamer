@@ -146,7 +146,7 @@ possible answers we could have used @code{one-value} instead of
 @code{all-values}.
 
 If you're familiar with Prolog, @code{all-values} and @code{one-value}
-are analogous to Prolog's @code{bag-of} and @code{cut} primitives.
+are analogous to Prolog's @code{bagof} and @code{cut} primitives.
 
 @section Generators
 
