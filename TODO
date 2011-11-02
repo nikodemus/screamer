@@ -79,10 +79,6 @@
     - Implement SCREAMER:INCF, etc.
     - Wrap all non-SETF/SETQ forms in GLOBAL, so that those side-effects are never undone.
     - Leave it as-is.
-*** TODO No Previous value vs New Value distinction
-***** TODO (SETF (GETHASH ...) ...) does not REMHASH on unwind if there was not previous element
-***** TODO LOCAL (SETF/SETQ X e) will signal an error if X is unbound
-      because it needs to trail the previous value of X and it has none.
 * Old "Bugs to fix" list from screamer.lisp
   These haven't been verified or anything, just moved here.
 *** TODO Deterministic/nondeterministic LOCAL SETF/SETQ undone out of order.
