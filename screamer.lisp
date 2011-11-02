@@ -7134,48 +7134,45 @@ sufficient hooks for the user to define her own force functions.)"
         (reorder-internal
          variables cost-function terminate? order force-function))))
 
-;;; FIXME: This doesn't make any sense. See branch "maybe" for an alternative
-;;; expression. Also: why are we trying to increase the upper bound, and not
-;;; the lower bound? Should the API also not allow us to minimize a variable
-;;; towards either zero or negative infinity? --ns 2011-11-01
+;;; FIXME: What about optimizing towards negative infinity or zero? What
+;;; about restricting the low bound? What are the real applications for this?
+;;; What about evaluations that provide eg. a low bound higher than the
+;;; previous high bound, but no high bound?
 (defmacro-compile-time best-value
-    (form1 objective-form &optional (form2 nil form2?))
-  "First evaluates OBJECTIVE-FORM, which should evaluate to constraint variable V.
+    (form objective &optional (default '(fail)))
+  "Evaluates OBJECTIVE, which should evaluate to real-valued
+constraint variable V.
 
-Then repeatedly evaluates FORM1 in non-deterministic context till it fails. If
-previous round of evaluation produced an upper bound B for V, the during the
-next round any change to V must provide an upper bound higher than B, or that
-that change fails.
+Then repeatedly evaluates FORM in non-deterministic context till it
+fails. Once a successful evaluation has produced an upper bound for V,
+any subsequent evaluation of FORM that restricts the upper bound of V
+to less than or equal the previous upper bound fails.
 
-If the last successful evaluation of FORM produced an upper bound for V,
-returns a list of two elements: the the primary value of FORM1 from that
-round, and the upper bound of V.
+If any evaluation produced an upper bound for V, returns a list of two
+elements: the the primary value of FORM from the evaluation where
+upper bound of V reached its maximum, and that upper bound.
 
-Otherwise if FORM2 is provided, returns the result of evaluating it, or else
-calls fails.
-
-Note: this documentation string is entirely reverse-engineered. Lacking
-information on just how BEST-VALUE was intended to work, it is hard to tell
-what is a bug, an accident of implementation, and what is a feature. If you
-have any insight into BEST-VALUE, please send email to
-nikodemus@random-state.net."
-  (let ((bound (gensym "BOUND-"))
-        (best (gensym "BEST-"))
-        (objective (gensym "OBJECTIVE-")))
+Otherwise evaluates DEFAULT -- defaulting to FAIL."
+  (let ((bound (gensym "BOUND"))
+        (best (gensym "BEST"))
+        (objectivev (gensym "OBJECTIVE")))
     `(let ((,bound nil)
            (,best nil)
-           (,objective (variablize ,objective-form)))
+           (,objectivev (variablize ,objective)))
        (attach-noticer!
         #'(lambda ()
-            (let ((upper (variable-upper-bound ,objective)))
+            (let ((upper (variable-upper-bound ,objectivev)))
               (when (and ,bound upper (<= upper ,bound))
                 (fail))))
-        ,objective)
+        ,objectivev)
        (for-effects
-         (let ((value ,form1))
-           (global (setf ,bound (variable-upper-bound ,objective))
-                   (setf ,best value))))
-       (if ,bound (list ,best ,bound) ,(if form2? form2 '(fail))))))
+         (let ((value ,form)
+               (tmp (variable-upper-bound ,objectivev)))
+           (when tmp
+             (global
+               (setf ,bound tmp)
+               (setf ,best value)))))
+       (if ,bound (list ,best ,bound) ,default))))
 
 (defun template-internal (template variables)
   (cond
