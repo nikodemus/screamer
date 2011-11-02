@@ -88,8 +88,6 @@
 *** TODO Deterministic/nondeterministic LOCAL SETF/SETQ undone out of order.
 *** TODO Changing determinism status
     can cause code from a different file to be included causing wierd behavior.
-*** TODO Will signal an obscure error if FAIL is called in a deterministic
-    context which is not nested in a choice point.
 *** TODO May loop when expressions contain circular lists.
 *** TODO APPLY-NONDETERMINISTIC conses.
 * Old "TTMTTD" list from screamer.lisp

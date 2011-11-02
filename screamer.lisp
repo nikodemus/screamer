@@ -2836,14 +2836,19 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
   (choice-point (funcall continuation t))
   (funcall continuation nil))
 
-(defvar *fail* (lambda () (throw '%fail nil)))
+(defvar *fail* (lambda ()
+                 (if *nondeterministic?*
+                     (throw '%fail nil)
+                     (error "Cannot FAIL: no choice-point to backtrack to."))))
 
 (defun fail ()
-  "Backtracks to the most recent choise point. Equivalent to
-\(EITHER). Note that FAIL is deterministic function and thus it is
-permissible to reference #'FAIL, and write \(FUNCALL #'FAIL) or
-\(APPLY #'FAIL). In nondeterministic contexts, the expression \(FAIL)
-is optimized to generate inline backtracking code."
+  "Backtracks to the most recent choise point.
+
+FAIL is deterministic function and thus it is permissible to reference #'FAIL,
+and write \(FUNCALL #'FAIL) or \(APPLY #'FAIL). In nondeterministic contexts,
+the expression \(FAIL) is optimized to generate inline backtracking code.
+
+Calling FAIL when there is no choice point to backtrack to signals an error."
   (funcall *fail*))
 
 (defmacro-compile-time when-failing ((&body failing-forms) &body body)
