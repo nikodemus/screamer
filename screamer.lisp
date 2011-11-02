@@ -2555,13 +2555,12 @@ deterministic."
           (cps-convert-progn body '#'fail nil nil environment))))
 
 (defmacro-compile-time one-value (form &optional (default '(fail)))
-  "Returns the first value of a nondeterministic form. FORM is evaluated,
-deterministically returning only its first nondeterministic value, if any.
+  "Returns the first nondeterministic value yielded by FORM.
 
 No further execution of FORM is attempted after it successfully returns one
 value.
 
-If FORM does not return any nondeterministic values \(i.e. it fails) then
+If FORM does not yield any nondeterministic values \(i.e. it fails) then
 DEFAULT is evaluated and its value returned instead. DEFAULT defaults to
 \(FAIL) if not present.
 
@@ -2623,7 +2622,7 @@ expression is always deterministic."
 
 (defmacro-compile-time all-values (&body body)
   "Evaluates BODY as an implicit PROGN and returns a list of all of the
-nondeterministic primary values returned by the BODY.
+nondeterministic values yielded by the it.
 
 These values are produced by repeatedly evaluating the body and backtracking
 to produce the next value, until the body fails and yields no further values.
@@ -2654,17 +2653,17 @@ ALL-VALUES is analogous to the `bagof' primitive in Prolog."
        ,values)))
 
 (defmacro-compile-time ith-value (i form &optional (default '(fail)))
-  "Returns the Ith nondeterministic value of FORM.
+  "Returns the Ith nondeterministic value yielded by FORM.
 
-I must be an integer. The first nondeterministic value returned by FORM is
+I must be an integer. The first nondeterministic value yielded by FORM is
 numbered zero, the second one, etc. The Ith value is produced by repeatedly
 evaluating FORM, backtracking through and discarding the first I values and
 deterministically returning the next value produced.
 
-No further execution of FORM is attempted after it successfully returns the
+No further execution of FORM is attempted after it successfully yields the
 desired value.
 
-If FORM fails before returning both the I values to be discarded, as well as
+If FORM fails before yielding both the I values to be discarded, as well as
 the desired Ith value, then DEFAULT is evaluated and its value returned
 instead. DEFAULT defaults to \(FAIL) if not present.
 
@@ -2766,7 +2765,7 @@ Screamer."
 
 (defmacro-compile-time print-values (&body body)
   "Evaluates BODY as an implicit PROGN and prints each of the nondeterministic
-values returned by the BODY in succession using PRINT.
+values yielded by it using PRINT.
 
 After each value is printed, the user is queried as to whether or not further
 values are desired. These values are produced by repeatedly evaluating the

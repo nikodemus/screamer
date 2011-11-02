@@ -6,12 +6,12 @@
 ***** DONE All exported symbols documented.
 ***** WIP Cleanups
 ******* DONE Some docstrings talk of EXPRESSIONS, some of FORMS.
-******* TODO "Yields" vs "returns" a value.
+******* DONE "Yields" vs "returns" a value.
 ******* TODO Restricts vs constrains.
 ******* TODO Don't talk about noticers: they're an implementation detail.
+******* TODO Simplify the language in the constraint section.
 *** TODO Make iscream.el work under Slime.
-*** Obvious opportunistic bugfixes
-***** Minimal behavioural changes.
+*** Obvious opportunistic bugfixes (minimal behavioural changes)
 * Future Development
 *** Once 3.21 is out, move it onto "classic" branch, into deep maintenance mode.
 *** New stuff appears for now on "wip" branch, which is rebased constantly.
