@@ -2463,13 +2463,13 @@ equivalent to \(FAIL) and is thus deterministic. With one argument,
 only when EXPRESSION is deterministic. With two or more argument it is
 nondeterministic and can only appear in a nondeterministic context.
 
-It sets up a choice point and evaluates the first EXPRESSION returning its
-result. Whenever backtracking proceeds to this choice point, the next
+It sets up a choice-point and evaluates the first EXPRESSION returning its
+result. Whenever backtracking proceeds to this choice-point, the next
 EXPRESSION is evaluated and its result returned. When no more EXPRESSIONS
-remain, the current choice point is removed and backtracking continues to the
-next most recent choice point.
+remain, the current choice-point is removed and backtracking continues to the
+next most recent choice-point.
 
-As an optimization, the choice point created for this expression is removed
+As an optimization, the choice-point created for this expression is removed
 before the evaluation of the last EXPRESSION so that a failure during the
 evaluation of the last expression will backtrack directly to the parent choice
 point of the EITHER expression.
@@ -2842,13 +2842,13 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
                      (error "Cannot FAIL: no choice-point to backtrack to."))))
 
 (defun fail ()
-  "Backtracks to the most recent choise point.
+  "Backtracks to the most recent choice-point.
 
 FAIL is deterministic function and thus it is permissible to reference #'FAIL,
 and write \(FUNCALL #'FAIL) or \(APPLY #'FAIL). In nondeterministic contexts,
 the expression \(FAIL) is optimized to generate inline backtracking code.
 
-Calling FAIL when there is no choice point to backtrack to signals an error."
+Calling FAIL when there is no choice-point to backtrack to signals an error."
   (funcall *fail*))
 
 (defmacro-compile-time when-failing ((&body failing-forms) &body body)
@@ -3128,7 +3128,7 @@ either a list or a vector."
   "Currently unsupported.
 
 When running under ILisp with iscream.el loaded, does non-determinism aware
-output to Emacs, which will be deleted when the current choise is unwound."
+output to Emacs, which will be deleted when the current choice is unwound."
   `(progn
      (unless *iscream?*
        (error "Cannot do LOCAL-OUTPUT unless Screamer is running under~%~

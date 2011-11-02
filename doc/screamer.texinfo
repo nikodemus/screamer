@@ -110,7 +110,7 @@ operator @refmacro{either} and the @emph{failure} operator
 @reffun{fail}.
 
 A choice-point is a point in program where more than one thing can
-happen. When a choice point is encountered, one of the possibilities
+happen. When a choice-point is encountered, one of the possibilities
 occurs, and execution continues. Should a failure subsequently occur,
 the system backtracks to the last choice-point where multiple
 possibilities were still present, and tries again.
