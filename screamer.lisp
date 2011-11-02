@@ -3197,6 +3197,14 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 #+screamer-clos
 (defun-compile-time variable? (thing) (typep thing 'variable))
 
+(defun integers-between (low high)
+  (cond ((and (typep low 'fixnum) (typep high 'fixnum))
+         (loop for i of-type fixnum from low upto high
+               collect i))
+        (t
+         (loop for i from low upto high
+               collect i))))
+
 (defun booleanp (x)
   "Returns true iff X is T or NIL."
   (typep x 'boolean))
@@ -3467,9 +3475,9 @@ Otherwise returns the value of X."
                                      (variable-lower-bound x))
                                   *maximum-discretization-range*)))
                      (set-enumerated-domain!
-                      x (all-values (an-integer-between
-                                     (variable-lower-bound x)
-                                     (variable-upper-bound x))))))
+                      x (integers-between
+                         (variable-lower-bound x)
+                         (variable-upper-bound x)))))
                 ((not (every #'integerp (variable-enumerated-domain x)))
                  ;; note: Could do less consing if had LOCAL DELETE-IF.
                  ;;       This would also allow checking list only once.
@@ -3679,8 +3687,8 @@ Otherwise returns the value of X."
                           (<= (- (variable-upper-bound x) lower-bound)
                               *maximum-discretization-range*)))
                  (set-enumerated-domain!
-                  x (all-values (an-integer-between lower-bound
-                                                    (variable-upper-bound x))))))
+                  x (integers-between lower-bound
+                                      (variable-upper-bound x)))))
             ((some #'(lambda (element) (< element lower-bound))
                    (variable-enumerated-domain x))
              ;; note: Could do less consing if had LOCAL DELETE-IF.
@@ -3714,8 +3722,8 @@ Otherwise returns the value of X."
                             (<= (- upper-bound (variable-lower-bound x))
                                 *maximum-discretization-range*)))
                (set-enumerated-domain!
-                x (all-values (an-integer-between (variable-lower-bound x)
-                                                  upper-bound)))))
+                x (integers-between (variable-lower-bound x)
+                                    upper-bound))))
             ((some #'(lambda (element) (> element upper-bound))
                    (variable-enumerated-domain x))
              ;; note: Could do less consing if had LOCAL DELETE-IF.
@@ -3769,9 +3777,9 @@ Otherwise returns the value of X."
                                      (variable-lower-bound x))
                                   *maximum-discretization-range*)))
                      (set-enumerated-domain!
-                      x (all-values (an-integer-between
-                                     (variable-lower-bound x)
-                                     (variable-upper-bound x))))))
+                      x (integers-between
+                         (variable-lower-bound x)
+                         (variable-upper-bound x)))))
                 ((or (and lower-bound
                           (some #'(lambda (element) (< element lower-bound))
                                 (variable-enumerated-domain x)))
@@ -3890,7 +3898,7 @@ Otherwise returns the value of X."
                          (<= (- upper-bound lower-bound)
                              *maximum-discretization-range*)))
                 (set-enumerated-domain!
-                 y (all-values (an-integer-between lower-bound upper-bound))))
+                 y (integers-between lower-bound upper-bound)))
             (set-enumerated-domain!
              y (prune-enumerated-domain y (variable-enumerated-domain y))))))
     (local (let* ((enumerated-domain
