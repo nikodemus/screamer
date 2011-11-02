@@ -126,14 +126,15 @@ features of Screamer.
 
 <h3 class="section"><a name="TOC2"></a>2.1 Important Note on Packages</h3>
 
-<p>Screamer shadows <code>defun</code>.
+<p>Screamer shadows <code>defun</code>, and a couple of other symbols.
 
    <p>Examples in this manual are expected to be entered in the package
 <code>SCREAMER-USER</code>, which has the correct <code>defun</code>.
 
    <p>Packages using Screamer are best defined using
-<code>define-screamer-package</code>, which is like <code>defpackage</code> but
-does some additional shadowing imports.
+<a href="#Macro-define_002dscreamer_002dpackage"><code>define-screamer-package</code></a>, which is like <code>defpackage</code>
+using <code>CL</code> and <code>SCREAMER</code> packages, but does the additional
+shadowing imports.
 
    <p>This is however by no means necessary: you can also explicitly use
 <code>screamer::defun</code>.
@@ -141,13 +142,18 @@ does some additional shadowing imports.
 <h3 class="section"><a name="TOC3"></a>2.2 Choice-Points, Failure, and Backtracking</h3>
 
 <p>Screamer adds nondeterminism by providing the <em>choice-point</em>
-operator <code>either</code> and the <em>failure</em> operator <code>fail</code>.
+operator <a href="#Macro-either"><code>either</code></a> and the <em>failure</em> operator
+<a href="#Function-fail"><code>fail</code></a>.
 
    <p>A choice-point is a point in program where more than one thing can
-happen. When a choice point is encountered, one of the possibilities
+happen. When a choice-point is encountered, one of the possibilities
 occurs, and execution continues. Should a failure subsequently occur,
 the system backtracks to the last choice-point where multiple
 possibilities were still present, and tries again.
+
+   <p>Backtracking is controlled by a form providing a nondeterministic
+context, eg. <a href="#Macro-all_002dvalues"><code>all-values</code></a>, <a href="#Macro-one_002dvalue"><code>one-value</code></a>, or
+<a href="#Macro-for_002deffects"><code>for-effects</code></a>.
 
 <pre class="lisp">     (all-values
        (let ((x (either 1 2 3 4)))
@@ -157,26 +163,24 @@ possibilities were still present, and tries again.
 </pre>
    <p>At first <code>(either 1 2 3 4)</code> evaluates to 1, which is <code>oddp</code>,
 so <code>all-values</code> receives it and sets about producing the next
-value.
-
-   <p>This time <code>either</code> returns 2, which isn't <code>oddp</code>. Hence
+value. Now <code>either</code> returns 2, which isn't <code>oddp</code>. Hence
 <code>fail</code> is called causing the system to backtrack.
 
    <p>Starting again from the choice-point 3 is produced, which is
 <code>oddp</code>, and is received by <code>all-values</code>, which in turn
-requests the next value.
+requests the next value. Now <code>either</code> returns 4, which again
+causes <code>fail</code> to backtrack.
 
-   <p>Now <code>either</code> returns 4, which again causes <code>fail</code> to backtrack.
-
-   <p>Since the only choice-point available cannot produce any more alternatives,
-control passes back to <code>all-values</code> which returns the collected values.
+   <p>Since the only choice-point available cannot produce any more
+alternatives, control passes back to <code>all-values</code> which returns
+the collected values.
 
    <p>Had we wanted only one answer instead of an enumeration of all
 possible answers we could have used <code>one-value</code> instead of
 <code>all-values</code>.
 
    <p>If you're familiar with Prolog, <code>all-values</code> and <code>one-value</code>
-are analogous to Prolog's <code>bag-of</code> and <code>cut</code> primitives.
+are analogous to Prolog's <code>bagof</code> and <code>cut</code> primitives.
 
 <h3 class="section"><a name="TOC4"></a>2.3 Generators</h3>
 
@@ -198,7 +202,7 @@ called <em>generators</em>, and by convention have names starting with
 </pre>
    <p>Called with two integers, this function produces nondeterministic
 values in the given range &ndash; finally backtracking to a previous
-choice-point when possibilities have already been exhausted.
+choice-point when all possibilities have been exhausted.
 
    <p>Given <code>an-integer-between</code> and <code>fail</code> we can write eg. a
 generator for square numbers:
@@ -241,7 +245,7 @@ general what is the right choice in a given case.
 calls to other functions with side-effects such as <code>set</code>,
 <code>rplaca</code>, or <code>sort</code>.
 
-   <p>By default most side-effects are retained:
+   <p>By default all side-effects are retained:
 
 <pre class="lisp">     (let ((n 0))
        (list :numbers
@@ -250,8 +254,8 @@ calls to other functions with side-effects such as <code>set</code>,
                            x))
              :n n)) ; =&gt; (:NUMBERS (0 1 2 3) :N 4)
 </pre>
-   <p>Macros <code>local</code> and <code>global</code> can be used to turn undoing of
-side-effects on and off lexically.
+   <p>Macros <a href="#Macro-local"><code>local</code></a> and <a href="#Macro-global"><code>global</code></a> can be used to turn
+undoing of side-effects on and off lexically.
 
 <pre class="lisp">     (let ((m 0)
            (n 0))
@@ -269,7 +273,7 @@ side-effects on and off lexically.
 
 <p>In addition to nondeterminism via backtracking as discussed so far,
 Screamer also provides for forward constraint propagation via
-<em>logic variables</em> constructed using <code>make-variable</code>. 
+<em>logic variables</em> constructed using <a href="#Function-make_002dvariable"><code>make-variable</code></a>. 
 Screamer provides a variety of primitives for constraining variables.
 
    <p>By convention suffix <code>v</code> is used to denote operators that accept
@@ -278,12 +282,15 @@ Screamer provides a variety of primitives for constraining variables.
 can also be logic variables, and that it may assert facts about them
 and will possibly return another variable.
 
-   <p>The operator <code>assert!</code> is the primary tool about asserting facts
+   <p>The operator <a href="#Macro-assert_0021"><code>assert!</code></a> is the primary tool about asserting facts
 about variables.
 
    <p>Expression such as <code>(foov myvar)</code> typically returns another
 variable depending on <code>myvar</code>, which can be constrained to be
 true using <code>assert!</code>.
+
+   <p>Operator <a href="#Function-bound_003f"><code>bound?</code></a> can be used to test if variable is bound to a
+specific value, and <a href="#Function-value_002dof"><code>value-of</code></a> can be used to obtain its value.
 
 <pre class="lisp">     ;;; Make a variable
      (defparameter *v* (make-variable "The Answer"))
@@ -301,6 +308,14 @@ true using <code>assert!</code>.
      
      ;;; And we have our answer.
      *v* ; =&gt; 42
+     
+     ;;; However, there's a catch. Even though *v* printed as 42 above, *v* is
+     ;;; still a variable. This is convenience for working in the REPL: unbound
+     ;;; variables print using square brackets, bound print just their value.
+     (type-of *v*) ; =&gt; SCREAMER::VARIABLE
+     
+     ;;; To obtain its value:
+     (value-of *v*) ; =&gt; 42
 </pre>
    <p>Assertions &ndash; and constraint operators in general &ndash; can cause failure
 and backtracking, in which case constraints from the last attempt are
@@ -333,9 +348,10 @@ values, and force a solution:
        (solution (list *x* *y*)
                  (static-ordering #'linear-force))) =&gt; ((-47 5) (-46 4) (-45 3) (-44 2))
 </pre>
-   <p>In this case backtracking occurs only inside <code>solution</code>, when the
-system is trying to apply different solution to the given constraints,
-whereas in the first one we backtracked over the entire <code>let</code>.
+   <p>In this case backtracking occurs only inside <a href="#Function-solution"><code>solution</code></a>, when
+the system is trying to apply different solution to the given
+constraints, whereas in the first one we backtracked over the entire
+<code>let</code>.
 
 <h3 class="section"><a name="TOC7"></a>2.6 Current Limitations</h3>
 
@@ -436,40 +452,33 @@ of Screamer.
 <p><a name="Macro-either"></a>
 
 <div class="defun">
-&mdash; Macro: <b>either</b><var> &amp;body expressions<a name="index-either-1"></a></var><br>
+&mdash; Macro: <b>either</b><var> &amp;body alternatives<a name="index-either-1"></a></var><br>
 <blockquote><p><a name="index-either-2"></a>Nondeterministically evaluates and returns the value of one of its
-<code>expressions</code>.
+<code>alternatives</code>.
 
         <p><code>either</code> takes any number of arguments. With no arguments, <code>(either) </code>is
-equivalent to <code>(fail) </code>and is thus deterministic. With one argument,
-<code>(either expression) </code>is equivalent to expression itself and is thus deterministic
-only when <code>expression</code> is deterministic. With two or more argument it is
-nondeterministic and can only appear in a nondeterministic context.
+equivalent to <code>(fail) </code>and is thus deterministic. With one argument, (EITHER
+X) is equivalent to <code>x</code> itself and is thus deterministic only when <code>x</code> is
+deterministic. With two or more argument it is nondeterministic and can only
+appear in a nondeterministic context.
 
-        <p>It sets up a choice point and evaluates the first <code>expression</code> returning its
-result. Whenever backtracking proceeds to this choice point, the next
-<code>expression</code> is evaluated and its result returned. When no more <code>expressions</code>
-remain, the current choice point is removed and backtracking continues to the
-next most recent choice point.
-
-        <p>As an optimization, the choice point created for this expression is removed
-before the evaluation of the last <code>expression</code> so that a failure during the
-evaluation of the last expression will backtrack directly to the parent choice
-point of the <code>either</code> expression.
-
-        <p><code>either</code> is a special form, not a function. It is an error for the expression
-<code>#'either</code> to appear in a program. 
+        <p>It sets up a choice-point and evaluates the first <code>alternative</code> returning its
+values. When backtracking follows to this choice-point, the next <code>alternative</code>
+is evaluated and its values are returned. When no more <code>alternatives</code> remain,
+the current choice-point is removed and backtracking continues to the next
+most recent choice-point. 
 </p></blockquote></div>
 
    <p><a name="Function-fail"></a>
 
 <div class="defun">
 &mdash; Function: <b>fail</b><var><a name="index-fail-3"></a></var><br>
-<blockquote><p><a name="index-fail-4"></a>Backtracks to the most recent choise point. Equivalent to
-<code>(either)</code>. Note that <code>fail</code> is deterministic function and thus it is
-permissible to reference <code>#'fail</code>, and write <code>(funcall #'fail) </code>or
-<code>(apply #'fail)</code>. In nondeterministic contexts, the expression <code>(fail)</code>
-is optimized to generate inline backtracking code. 
+<blockquote><p><a name="index-fail-4"></a>Backtracks to the most recent choice-point.
+
+        <p><code>fail</code> is deterministic function and thus it is permissible to reference <code>#'fail</code>,
+and write <code>(funcall #'fail) </code>or <code>(apply #'fail)</code>.
+
+        <p>Calling <code>fail</code> when there is no choice-point to backtrack to signals an error. 
 </p></blockquote></div>
 
    <p><a name="Function-trail"></a>
@@ -486,9 +495,9 @@ selection (due to either a normal return, or calling <code>fail</code>.)
    <p><a name="Macro-all_002dvalues"></a>
 
 <div class="defun">
-&mdash; Macro: <b>all-values</b><var> &amp;body expressions<a name="index-all_002dvalues-7"></a></var><br>
-<blockquote><p><a name="index-all_002dvalues-8"></a>Evaluates <code>expressions</code> as an implicit <code>progn</code> and returns a list of all of the
-nondeterministic values returned by the last <code>expression</code>.
+&mdash; Macro: <b>all-values</b><var> &amp;body body<a name="index-all_002dvalues-7"></a></var><br>
+<blockquote><p><a name="index-all_002dvalues-8"></a>Evaluates <code>body</code> as an implicit <code>progn</code> and returns a list of all of the
+nondeterministic values yielded by the it.
 
         <p>These values are produced by repeatedly evaluating the body and backtracking
 to produce the next value, until the body fails and yields no further values.
@@ -497,120 +506,118 @@ to produce the next value, until the body fails and yields no further values.
 value are undone before attempting to produce subsequent values, and all local
 side effects performed by the body are undone upon exit from <code>all-values</code>.
 
-        <p>Returns the list containing <code>nil</code> if there are no <code>expressions</code>. An <code>all-values</code>
-expression can appear in both deterministic and nondeterministic contexts. 
-Irrespective of what context the <code>all-values</code> expression appears in, the
-<code>expressions</code> are always in a nondeterministic context. An <code>all-values</code> expression
-itself is always deterministic. <code>all-values</code> is analogous to the bagof primitive
-in Prolog. 
+        <p>Returns a list containing <code>nil</code> if <code>body</code> is empty.
+
+        <p>An <code>all-values</code> expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the <code>all-values</code> appears in, the <code>body</code> is
+always in a nondeterministic context. An <code>all-values</code> expression itself is
+always deterministic.
+
+        <p><code>all-values</code> is analogous to the `bagof' primitive in Prolog. 
 </p></blockquote></div>
 
    <p><a name="Macro-one_002dvalue"></a>
 
 <div class="defun">
-&mdash; Macro: <b>one-value</b><var> expression &amp;optional default-expression<a name="index-one_002dvalue-9"></a></var><br>
-<blockquote><p><a name="index-one_002dvalue-10"></a>Returns the first value of a nondeterministic expression. <code>expression</code> is
-evaluated, deterministically returning only its first nondeterministic value,
-if any.
+&mdash; Macro: <b>one-value</b><var> form &amp;optional default<a name="index-one_002dvalue-9"></a></var><br>
+<blockquote><p><a name="index-one_002dvalue-10"></a>Returns the first nondeterministic value yielded by <code>form</code>.
 
-        <p>No further execution of <code>expression</code> is attempted after it successfully returns
-one value.
+        <p>No further execution of <code>form</code> is attempted after it successfully returns one
+value.
 
-        <p>If <code>expression</code> does not return any nondeterministic values (i.e. it fails)
-then <code>default-expression</code> is evaluated and its value returned instead. 
-<code>default-expression</code> defaults to <code>(fail) </code>if not present.
+        <p>If <code>form</code> does not yield any nondeterministic values (i.e. it fails) then
+<code>default</code> is evaluated and its value returned instead. <code>default</code> defaults to
+<code>(fail) </code>if not present.
 
-        <p>Local side effects performed by <code>expression</code> are undone when <code>one-value</code> returns,
-but local side effects performed by <code>default-expression</code> are not undone when
-<code>one-value</code> returns.
+        <p>Local side effects performed by <code>form</code> are undone when <code>one-value</code> returns, but
+local side effects performed by <code>default</code> are not undone when <code>one-value</code> returns.
 
         <p>A <code>one-value</code> expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the <code>one-value</code> expression appears in,
-<code>expression</code> is always in a nondeterministic context, while <code>default-expression</code>
-is in whatever context the <code>one-value</code> expression appears.
+contexts. Irrespective of what context the <code>one-value</code> appears in, <code>form</code> is
+always in a nondeterministic context, while <code>default</code> is in whatever context the
+<code>one-value</code> form appears.
 
-        <p>A <code>one-value</code> expression is nondeterministic if <code>default-expression</code> is present
-and is nondeterministic, otherwise it is deterministic.
+        <p>A <code>one-value</code> expression is nondeterministic if <code>default</code> is present and is
+nondeterministic, otherwise it is deterministic.
 
-        <p>If <code>default-expression</code> is present and nondeterministic, and if <code>expression</code>
-fails, then it is possible to backtrack into the <code>default-expression</code> and for
-the <code>one-value</code> expression to nondeterministically return multiple times. 
-<code>one-value</code> is analogous to the cut primitive <code>(!) </code>in Prolog. 
+        <p>If <code>default</code> is present and nondeterministic, and if <code>form</code> fails, then it is
+possible to backtrack into the <code>default</code> and for the <code>one-value</code> form to
+nondeterministically return multiple times. <code>one-value</code> is analogous to the cut
+primitive (`!') in Prolog. 
 </p></blockquote></div>
 
    <p><a name="Macro-for_002deffects"></a>
 
 <div class="defun">
-&mdash; Macro: <b>for-effects</b><var> &amp;body forms<a name="index-for_002deffects-11"></a></var><br>
-<blockquote><p><a name="index-for_002deffects-12"></a>Evaluates <code>forms</code> as an implicit <code>progn</code> in a nondeterministic context and
+&mdash; Macro: <b>for-effects</b><var> &amp;body body<a name="index-for_002deffects-11"></a></var><br>
+<blockquote><p><a name="index-for_002deffects-12"></a>Evaluates <code>body</code> as an implicit <code>progn</code> in a nondeterministic context and
 returns <code>nil</code>.
 
         <p>The body is repeatedly backtracked to its first choice-point until the body
 fails.
 
-        <p>Local side effects performed by <code>forms</code> are undone when <code>for-effects</code> returns.
+        <p>Local side effects performed by <code>body</code> are undone when <code>for-effects</code> returns.
 
         <p>A <code>for-effects</code> expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the <code>for-effects</code> expression appears in,
-<code>forms</code> are always in a nondeterministic context.
-
-        <p>A <code>for-effects</code> expression is is always deterministic. 
+contexts. Irrespective of what context the <code>for-effects</code> appears in, <code>body</code> are
+always in a nondeterministic context. A <code>for-effects</code> expression is is always
+deterministic. 
 </p></blockquote></div>
 
    <p><a name="Macro-ith_002dvalue"></a>
 
 <div class="defun">
-&mdash; Macro: <b>ith-value</b><var> i expression &amp;optional default-expression<a name="index-ith_002dvalue-13"></a></var><br>
-<blockquote><p><a name="index-ith_002dvalue-14"></a>Returns the Ith value of a nondeterministic expression. <code>expression</code> is
-evaluated, deterministically returning only its Ith nondeterministic value, if
-any. I must be an integer. The first nondeterministic value returned by
-<code>expression</code> is numbered zero, the second one, etc. The Ith value is produced by
-repeatedly evaluating <code>expression</code>, backtracking through and discarding the
-first I values and deterministically returning the next value produced.
+&mdash; Macro: <b>ith-value</b><var> i form &amp;optional default<a name="index-ith_002dvalue-13"></a></var><br>
+<blockquote><p><a name="index-ith_002dvalue-14"></a>Returns the Ith nondeterministic value yielded by <code>form</code>.
 
-        <p>No further execution of <code>expression</code> is attempted after it successfully returns
-the desired value.
+        <p>I must be an integer. The first nondeterministic value yielded by <code>form</code> is
+numbered zero, the second one, etc. The Ith value is produced by repeatedly
+evaluating <code>form</code>, backtracking through and discarding the first I values and
+deterministically returning the next value produced.
 
-        <p>If <code>expression</code> fails before returning both the I values to be discarded, as
-well as the desired Ith value, then <code>default-expression</code> is evaluated and its
-value returned instead. <code>default-expression</code> defaults to <code>(fail) </code>if not present.
+        <p>No further execution of <code>form</code> is attempted after it successfully yields the
+desired value.
 
-        <p>Local side effects performed by <code>expression</code> are undone when <code>ith-value</code> returns,
-but local side effects performed by <code>default-expression</code> and by I are not undone
-when <code>ith-value</code> returns.
+        <p>If <code>form</code> fails before yielding both the I values to be discarded, as well as
+the desired Ith value, then <code>default</code> is evaluated and its value returned
+instead. <code>default</code> defaults to <code>(fail) </code>if not present.
+
+        <p>Local side effects performed by <code>form</code> are undone when <code>ith-value</code> returns, but
+local side effects performed by <code>default</code> and by I are not undone when <code>ith-value</code>
+returns.
 
         <p>An <code>ith-value</code> expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the <code>ith-value</code> expression appears in,
-<code>expression</code> is always in a nondeterministic context, while <code>default-expression</code>
-and I are in whatever context the <code>ith-value</code> expression appears.
+contexts. Irrespective of what context the <code>ith-value</code> appears in, <code>form</code> is
+always in a nondeterministic context, while <code>default</code> and I are in whatever
+context the <code>ith-value</code> appears in.
 
-        <p>An <code>ith-value</code> expression is nondeterministic if <code>default-expression</code> is present
-and is nondeterministic, or if I is nondeterministic. Otherwise it is
-deterministic.
+        <p>An <code>ith-value</code> expression is nondeterministic if <code>default</code> is present and is
+nondeterministic, or if I is nondeterministic. Otherwise it is deterministic.
 
-        <p>If <code>default-expression</code> is present and nondeterministic, and if <code>expression</code>
-fails, then it is possible to backtrack into the <code>default-expression</code> and for
-the <code>ith-value</code> expression to nondeterministically return multiple times.
+        <p>If <code>default</code> is present and nondeterministic, and if <code>form</code> fails, then it is
+possible to backtrack into the <code>default</code> and for the <code>ith-value</code> expression to
+nondeterministically return multiple times.
 
         <p>If I is nondeterministic then the <code>ith-value</code> expression operates
 nondeterministically on each value of I. In this case, backtracking for each
-value of <code>expression</code> and <code>default-expression</code> is nested in, and restarted for,
-each backtrack of I. 
+value of <code>form</code> and <code>default</code> is nested in, and restarted for, each backtrack of
+I. 
 </p></blockquote></div>
 
    <p><a name="Macro-print_002dvalues"></a>
 
 <div class="defun">
-&mdash; Macro: <b>print-values</b><var> &amp;body expressions<a name="index-print_002dvalues-15"></a></var><br>
-<blockquote><p><a name="index-print_002dvalues-16"></a>Evaluates <code>expressions</code> as an implicit <code>progn</code> and prints
-each of the nondeterministic values returned by the last <code>expression</code> in
-succession using <code>print</code>.
+&mdash; Macro: <b>print-values</b><var> &amp;body body<a name="index-print_002dvalues-15"></a></var><br>
+<blockquote><p><a name="index-print_002dvalues-16"></a>Evaluates <code>body</code> as an implicit <code>progn</code> and prints each of the nondeterministic
+values yielded by it using <code>print</code>.
 
         <p>After each value is printed, the user is queried as to whether or not further
 values are desired. These values are produced by repeatedly evaluating the
 body and backtracking to produce the next value, until either the user
 indicates that no further values are desired or until the body fails and
 yields no further values.
+
+        <p>Returns the last value printed.
 
         <p>Accordingly, local side effects performed by the body while producing each
 value are undone after printing each value, before attempting to produce
@@ -620,9 +627,8 @@ because the user declines to produce further values.
 
         <p>A <code>print-values</code> expression can appear in both deterministic and
 nondeterministic contexts. Irrespective of what context the <code>print-values</code>
-expression appears in, the <code>expressions</code> are always in a nondeterministic
-context. A <code>print-values</code> expression itself is always deterministic and always
-returns <code>nil</code>.
+appears in, the <code>body</code> are always in a nondeterministic context. A
+<code>print-values</code> expression itself is always deterministic.
 
         <p><code>print-values</code> is analogous to the standard top-level user interface in Prolog. 
 </p></blockquote></div>
@@ -630,8 +636,8 @@ returns <code>nil</code>.
    <p><a name="Macro-possibly_003f"></a>
 
 <div class="defun">
-&mdash; Macro: <b>possibly?</b><var> &amp;body forms<a name="index-possibly_003f-17"></a></var><br>
-<blockquote><p><a name="index-possibly_003f-18"></a>Evaluates <code>forms</code> as an implicit <code>progn</code> in nondeterministic context,
+&mdash; Macro: <b>possibly?</b><var> &amp;body body<a name="index-possibly_003f-17"></a></var><br>
+<blockquote><p><a name="index-possibly_003f-18"></a>Evaluates <code>body</code> as an implicit <code>progn</code> in nondeterministic context,
 returning true if the body ever yields true.
 
         <p>The body is repeatedly backtracked as long as it yields <code>nil</code>. Returns
@@ -641,17 +647,16 @@ yielding true.
         <p>Local side effects performed by the body are undone when <code>possibly</code>? returns.
 
         <p>A <code>possibly</code>? expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the <code>possibly</code>? expression appears in,
-its body is always in a nondeterministic context.
-
-        <p>A <code>possibly</code>? expression is always deterministic. 
+contexts. Irrespective of what context the <code>possibly</code>? appears in, its body is
+always in a nondeterministic context. A <code>possibly</code>? expression is always
+deterministic. 
 </p></blockquote></div>
 
    <p><a name="Macro-necessarily_003f"></a>
 
 <div class="defun">
-&mdash; Macro: <b>necessarily?</b><var> &amp;body forms<a name="index-necessarily_003f-19"></a></var><br>
-<blockquote><p><a name="index-necessarily_003f-20"></a>Evaluates <code>forms</code> as an implicit <code>progn</code> in nondeterministic context,
+&mdash; Macro: <b>necessarily?</b><var> &amp;body body<a name="index-necessarily_003f-19"></a></var><br>
+<blockquote><p><a name="index-necessarily_003f-20"></a>Evaluates <code>body</code> as an implicit <code>progn</code> in nondeterministic context,
 returning true if the body never yields false.
 
         <p>The body is repeatedly backtracked as long as it yields true. Returns the last
@@ -662,30 +667,25 @@ returns <code>nil</code>.
 
         <p>A <code>necessarily</code>? expression can appear in both deterministic and
 nondeterministic contexts. Irrespective of what context the <code>necessarily</code>? 
-expression appears in, its body is always in a nondeterministic context.
-
-        <p>A <code>necessarily</code>? expression is always deterministic. 
+appears in, its body is always in a nondeterministic context. A <code>necessarily</code>? 
+expression is always deterministic. 
 </p></blockquote></div>
 
    <p><a name="Macro-global"></a>
 
 <div class="defun">
-&mdash; Macro: <b>global</b><var> &amp;body expressions<a name="index-global-21"></a></var><br>
-<blockquote><p><a name="index-global-22"></a>Evaluates <code>expressions</code> in the same fashion as <code>progn</code> except that all <code>setf</code> and
-<code>setq</code> expressions lexically nested in its body result in global side effects
-which are not undone upon backtracking.
+&mdash; Macro: <b>global</b><var> &amp;body body<a name="index-global-21"></a></var><br>
+<blockquote><p><a name="index-global-22"></a>Evaluates <code>body</code> in the same fashion as <code>progn</code> except that all <code>setf</code> and <code>setq</code>
+forms lexically nested in its body result in global side effects which are not
+undone upon backtracking.
 
         <p>Note that this affects only side effects introduced explicitly via <code>setf</code> and
 <code>setq</code>. Side effects introduced by Common Lisp builtin functions such as <code>rplaca</code>
 are always global anyway.
 
-        <p>Furthermore, it affects only occurrences of <code>setf</code> and <code>setq</code> which appear
-textually nested in the body of the <code>global</code> expression <code>--</code> not those appearing
-in functions called from the body.
-
-        <p><code>local</code> and <code>global</code> expressions may be nested inside one another. The nearest
-surrounding declaration determines whether or not a given <code>setf</code> or <code>setq</code> results
-in a local or global side effect.
+        <p><code>local</code> and <code>global</code> may be nested inside one another. The nearest lexically
+surrounding one determines whether or not a given <code>setf</code> or <code>setq</code> results in a
+local or global side effect.
 
         <p>Side effects default to be global when there is no surrounding <code>local</code> or <code>global</code>
 expression. Global side effects can appear both in deterministic as well as
@@ -697,30 +697,30 @@ completely transparent to the user.
    <p><a name="Macro-local"></a>
 
 <div class="defun">
-&mdash; Macro: <b>local</b><var> &amp;body expressions<a name="index-local-23"></a></var><br>
-<blockquote><p><a name="index-local-24"></a>Evaluates <code>expressions</code> in the same fashion as <code>progn</code> except that all
-<code>setf</code> and <code>setq</code> expressions lexically nested in its body result in local
-side effects which are undone upon backtracking.
+&mdash; Macro: <b>local</b><var> &amp;body body<a name="index-local-23"></a></var><br>
+<blockquote><p><a name="index-local-24"></a>Evaluates <code>body</code> in the same fashion as <code>progn</code> except that all <code>setf</code> and <code>setq</code>
+forms lexically nested in its body result in local side effects which are
+undone upon backtracking.
 
-        <p>This affects only side effects introduced explicitly via <code>setf</code> and
-<code>setq</code>. Side effects introduced by either user defined functions or builtin
-Common Lisp functions such as <code>rplaca</code> are always global.
+        <p>This affects only side effects introduced explicitly via <code>setf</code> and <code>setq</code>. Side
+effects introduced by either user defined functions or builtin Common Lisp
+functions such as <code>rplaca</code> are always global.
 
-        <p>Behaviour of side effects introduced by macro-expansions such as <code>incf</code>
-depends on the exact macro-expansion. If <code>(incf (foo)) </code>expands using
-eg. <code>set-foo</code>, <code>local</code> is unable to undo the side-effect.
+        <p>Behaviour of side effects introduced by macro-expansions such as <code>incf</code> depends
+on the exact macro-expansion. If <code>(incf (foo)) </code>expands using eg. <code>set-foo</code>, <code>local</code>
+is unable to undo the side-effect.
 
-        <p><code>local</code> does not currently distinguish between initially uninitialized
-and intialized places, such as unbound variables or hash-table keys
-with no prior values. As a result, an attempt to assign an unbound
-variable inside <code>local</code> will signal an error due to the system's attempt
-to first read the variable. Similarly, undoing a <code>(setf gethash) </code>when
-the key did not previously exist in the table will insert a <code>nil</code> into
-the table instead of doing a <code>remhash</code>.
+        <p><code>local</code> cannot distinguish between initially uninitialized and intialized
+places, such as unbound variables or hash-table keys with no prior values. As
+a result, an attempt to assign an unbound variable inside <code>local</code> will signal an
+error due to the system's attempt to first read the variable. Similarly,
+undoing a <code>(setf gethash) </code>when the key did not previously exist in the table
+will insert a <code>nil</code> into the table instead of doing a <code>remhash</code>. Easiest way
+to work around this is by using <code>trail</code>.
 
-        <p><code>local</code> and <code>global</code> expressions may be nested inside one another. The
-nearest surrounding declaration determines whether or not a given <code>setf</code>
-or <code>setq</code> results in a local or global side effect.
+        <p><code>local</code> and <code>global</code> may be nested inside one another. The nearest lexically
+surrounding one determines whether or not a given <code>setf</code> or <code>setq</code> results in a
+local or global side effect.
 
         <p>Side effects default to be global when there is no surrounding <code>local</code> or <code>global</code>
 expression. Local side effects can appear both in deterministic as well as
@@ -941,10 +941,9 @@ Otherwise returns the value of <code>x</code>.
 
 <div class="defun">
 &mdash; Function: <b>bound?</b><var> x<a name="index-bound_003f-57"></a></var><br>
-<blockquote><p><a name="index-bound_003f-58"></a>Returns <code>t</code> if <code>x</code> is not a variable or if <code>x</code> is a bound
-variable. Otherwise returns <code>nil</code>. <code>bound</code>? is analogous to the
-extra-logical predicates <code>var</code> and <code>nonvar</code> typically available in
-Prolog. 
+<blockquote><p><a name="index-bound_003f-58"></a>Returns <code>t</code> if <code>x</code> is not a variable or if <code>x</code> is a bound variable. Otherwise
+returns <code>nil</code>. <code>bound</code>? is analogous to the extra-logical predicates `var' and
+`nonvar' typically available in Prolog. 
 </p></blockquote></div>
 
    <p><a name="Function-ground_003f"></a>
@@ -1014,10 +1013,10 @@ not be equal. This is accomplished by attaching noticers to the variables
 nested in <code>x</code> and <code>y</code> which detect when <code>x</code> becomes equal to <code>y</code> and fail.
 
         <p>The expression <code>(known? (equalv x y)) </code>is analogous to the extra-logical predicate
-<code>==</code> typically available in Prolog.
+`==' typically available in Prolog.
 
         <p>The expression <code>(known? (notv (equalv x y))) </code>is analogous to the extra-logical
-predicate \= typically available in Prolog.
+predicate `\=' typically available in Prolog.
 
         <p>The expression <code>(assert! (equalv x y)) </code>is analogous to Prolog unification.
 
