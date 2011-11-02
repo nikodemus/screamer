@@ -2453,43 +2453,35 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
            ,@modified-function-definitions
            ',function-name)))))
 
-(defmacro-compile-time either (&body expressions)
+(defmacro-compile-time either (&body alternatives)
   "Nondeterministically evaluates and returns the value of one of its
-EXPRESSIONS.
+ALTERNATIVES.
 
 EITHER takes any number of arguments. With no arguments, \(EITHER) is
-equivalent to \(FAIL) and is thus deterministic. With one argument,
-\(EITHER EXPRESSION) is equivalent to expression itself and is thus deterministic
-only when EXPRESSION is deterministic. With two or more argument it is
-nondeterministic and can only appear in a nondeterministic context.
+equivalent to \(FAIL) and is thus deterministic. With one argument, \(EITHER
+X) is equivalent to X itself and is thus deterministic only when X is
+deterministic. With two or more argument it is nondeterministic and can only
+appear in a nondeterministic context.
 
-It sets up a choice-point and evaluates the first EXPRESSION returning its
-result. Whenever backtracking proceeds to this choice-point, the next
-EXPRESSION is evaluated and its result returned. When no more EXPRESSIONS
-remain, the current choice-point is removed and backtracking continues to the
-next most recent choice-point.
-
-As an optimization, the choice-point created for this expression is removed
-before the evaluation of the last EXPRESSION so that a failure during the
-evaluation of the last expression will backtrack directly to the parent choice
-point of the EITHER expression.
-
-EITHER is a special form, not a function. It is an error for the expression
-#'EITHER to appear in a program."
+It sets up a choice-point and evaluates the first ALTERNATIVE returning its
+values. When backtracking follows to this choice-point, the next ALTERNATIVE
+is evaluated and its values are returned. When no more ALTERNATIVES remain,
+the current choice-point is removed and backtracking continues to the next
+most recent choice-point."
   ;; FIXME: ref to operators providing nondeterministic contexts
-  (cond ((not expressions)
+  (cond ((not alternatives)
          '(fail))
-        ((not (rest expressions))
-         (first expressions))
+        ((not (rest alternatives))
+         (first alternatives))
         (t
          `(if (a-boolean)
-              ,(first expressions)
-              (either ,@(rest expressions))))))
+              ,(first alternatives)
+              (either ,@(rest alternatives))))))
 
-(defmacro-compile-time local (&body expressions &environment environment)
-  "Evaluates EXPRESSIONS in the same fashion as PROGN except that all
-SETF and SETQ expressions lexically nested in its body result in local
-side effects which are undone upon backtracking.
+(defmacro-compile-time local (&body body &environment environment)
+  "Evaluates BODY in the same fashion as PROGN except that all SETF and SETQ
+forms lexically nested in its body result in local side effects which are
+undone upon backtracking.
 
 This affects only side effects introduced explicitly via SETF and SETQ. Side
 effects introduced by either user defined functions or builtin Common Lisp
@@ -2507,9 +2499,9 @@ undoing a (SETF GETHASH) when the key did not previously exist in the table
 will insert a NIL into the table instead of doing a REMHASH. Easiest way
 to work around this is by using TRAIL.
 
-LOCAL and GLOBAL expressions may be nested inside one another. The nearest
-surrounding declaration determines whether or not a given SETF or SETQ results
-in a local or global side effect.
+LOCAL and GLOBAL may be nested inside one another. The nearest lexically
+surrounding one determines whether or not a given SETF or SETQ results in a
+local or global side effect.
 
 Side effects default to be global when there is no surrounding LOCAL or GLOBAL
 expression. Local side effects can appear both in deterministic as well as
@@ -2520,24 +2512,20 @@ rather than macros. This should be completely transparent to the user."
   (let ((*local?* t))
     `(progn ,@(mapcar
                #'(lambda (form) (perform-substitutions form environment))
-               expressions))))
+               body))))
 
-(defmacro-compile-time global (&body expressions &environment environment)
-  "Evaluates EXPRESSIONS in the same fashion as PROGN except that all SETF and
-SETQ expressions lexically nested in its body result in global side effects
-which are not undone upon backtracking.
+(defmacro-compile-time global (&body body &environment environment)
+  "Evaluates BODY in the same fashion as PROGN except that all SETF and SETQ
+forms lexically nested in its body result in global side effects which are not
+undone upon backtracking.
 
 Note that this affects only side effects introduced explicitly via SETF and
 SETQ. Side effects introduced by Common Lisp builtin functions such as RPLACA
 are always global anyway.
 
-Furthermore, it affects only occurrences of SETF and SETQ which appear
-textually nested in the body of the GLOBAL expression -- not those appearing
-in functions called from the body.
-
-LOCAL and GLOBAL expressions may be nested inside one another. The nearest
-surrounding declaration determines whether or not a given SETF or SETQ results
-in a local or global side effect.
+LOCAL and GLOBAL may be nested inside one another. The nearest lexically
+surrounding one determines whether or not a given SETF or SETQ results in a
+local or global side effect.
 
 Side effects default to be global when there is no surrounding LOCAL or GLOBAL
 expression. Global side effects can appear both in deterministic as well as
@@ -2547,60 +2535,57 @@ completely transparent to the user."
   (let ((*local?* nil))
     `(progn ,@(mapcar
                #'(lambda (form) (perform-substitutions form environment))
-               expressions))))
+               body))))
 
-(defmacro-compile-time for-effects (&body forms &environment environment)
-  "Evaluates FORMS as an implicit PROGN in a nondeterministic context and
+(defmacro-compile-time for-effects (&body body &environment environment)
+  "Evaluates BODY as an implicit PROGN in a nondeterministic context and
 returns NIL.
 
 The body is repeatedly backtracked to its first choice-point until the body
 fails.
 
-Local side effects performed by FORMS are undone when FOR-EFFECTS returns.
+Local side effects performed by BODY are undone when FOR-EFFECTS returns.
 
 A FOR-EFFECTS expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the FOR-EFFECTS expression appears in,
-FORMS are always in a nondeterministic context.
-
-A FOR-EFFECTS expression is is always deterministic."
+contexts. Irrespective of what context the FOR-EFFECTS appears in, BODY are
+always in a nondeterministic context. A FOR-EFFECTS expression is is always
+deterministic."
   `(choice-point
     ,(let ((*nondeterministic-context?* t))
-          (cps-convert-progn forms '#'fail nil nil environment))))
+          (cps-convert-progn body '#'fail nil nil environment))))
 
-(defmacro-compile-time one-value (expression &optional (default-expression '(fail)))
-  "Returns the first value of a nondeterministic expression. EXPRESSION is
-evaluated, deterministically returning only its first nondeterministic value,
-if any.
+(defmacro-compile-time one-value (form &optional (default '(fail)))
+  "Returns the first value of a nondeterministic form. FORM is evaluated,
+deterministically returning only its first nondeterministic value, if any.
 
-No further execution of EXPRESSION is attempted after it successfully returns
-one value.
+No further execution of FORM is attempted after it successfully returns one
+value.
 
-If EXPRESSION does not return any nondeterministic values \(i.e. it fails)
-then DEFAULT-EXPRESSION is evaluated and its value returned instead.
-DEFAULT-EXPRESSION defaults to \(FAIL) if not present.
+If FORM does not return any nondeterministic values \(i.e. it fails) then
+DEFAULT is evaluated and its value returned instead. DEFAULT defaults to
+\(FAIL) if not present.
 
-Local side effects performed by EXPRESSION are undone when ONE-VALUE returns,
-but local side effects performed by DEFAULT-EXPRESSION are not undone when
-ONE-VALUE returns.
+Local side effects performed by FORM are undone when ONE-VALUE returns, but
+local side effects performed by DEFAULT are not undone when ONE-VALUE returns.
 
 A ONE-VALUE expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the ONE-VALUE expression appears in,
-EXPRESSION is always in a nondeterministic context, while DEFAULT-EXPRESSION
-is in whatever context the ONE-VALUE expression appears.
+contexts. Irrespective of what context the ONE-VALUE appears in, FORM is
+always in a nondeterministic context, while DEFAULT is in whatever context the
+ONE-VALUE form appears.
 
-A ONE-VALUE expression is nondeterministic if DEFAULT-EXPRESSION is present
-and is nondeterministic, otherwise it is deterministic.
+A ONE-VALUE expression is nondeterministic if DEFAULT is present and is
+nondeterministic, otherwise it is deterministic.
 
-If DEFAULT-EXPRESSION is present and nondeterministic, and if EXPRESSION
-fails, then it is possible to backtrack into the DEFAULT-EXPRESSION and for
-the ONE-VALUE expression to nondeterministically return multiple times.
-ONE-VALUE is analogous to the cut primitive \(!) in Prolog."
+If DEFAULT is present and nondeterministic, and if FORM fails, then it is
+possible to backtrack into the DEFAULT and for the ONE-VALUE form to
+nondeterministically return multiple times. ONE-VALUE is analogous to the cut
+primitive \(`!') in Prolog."
   `(block one-value
-     (for-effects (return-from one-value ,expression))
-     ,default-expression))
+     (for-effects (return-from one-value ,form))
+     ,default))
 
-(defmacro-compile-time possibly? (&body forms)
-  "Evaluates FORMS as an implicit PROGN in nondeterministic context,
+(defmacro-compile-time possibly? (&body body)
+  "Evaluates BODY as an implicit PROGN in nondeterministic context,
 returning true if the body ever yields true.
 
 The body is repeatedly backtracked as long as it yields NIL. Returns
@@ -2610,14 +2595,13 @@ yielding true.
 Local side effects performed by the body are undone when POSSIBLY? returns.
 
 A POSSIBLY? expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the POSSIBLY? expression appears in,
-its body is always in a nondeterministic context.
+contexts. Irrespective of what context the POSSIBLY? appears in, its body is
+always in a nondeterministic context. A POSSIBLY? expression is always
+deterministic."
+  `(one-value (let ((value (progn ,@body))) (unless value (fail)) value) nil))
 
-A POSSIBLY? expression is always deterministic."
-  `(one-value (let ((value (progn ,@forms))) (unless value (fail)) value) nil))
-
-(defmacro-compile-time necessarily? (&body forms)
-  "Evaluates FORMS as an implicit PROGN in nondeterministic context,
+(defmacro-compile-time necessarily? (&body body)
+  "Evaluates BODY as an implicit PROGN in nondeterministic context,
 returning true if the body never yields false.
 
 The body is repeatedly backtracked as long as it yields true. Returns the last
@@ -2628,19 +2612,18 @@ Local side effects performed by the body are undone when NECESSARILY? returns.
 
 A NECESSARILY? expression can appear in both deterministic and
 nondeterministic contexts. Irrespective of what context the NECESSARILY?
-expression appears in, its body is always in a nondeterministic context.
-
-A NECESSARILY? expression is always deterministic."
+appears in, its body is always in a nondeterministic context. A NECESSARILY?
+expression is always deterministic."
   `(let ((result t))
      (one-value
-      (let ((value (progn ,@forms)))
+      (let ((value (progn ,@body)))
         (when value (setf result value) (fail))
         value)
       result)))
 
-(defmacro-compile-time all-values (&body expressions)
-  "Evaluates EXPRESSIONS as an implicit PROGN and returns a list of all of the
-nondeterministic values returned by the last EXPRESSION.
+(defmacro-compile-time all-values (&body body)
+  "Evaluates BODY as an implicit PROGN and returns a list of all of the
+nondeterministic primary values returned by the BODY.
 
 These values are produced by repeatedly evaluating the body and backtracking
 to produce the next value, until the body fails and yields no further values.
@@ -2649,12 +2632,12 @@ Accordingly, local side effects performed by the body while producing each
 value are undone before attempting to produce subsequent values, and all local
 side effects performed by the body are undone upon exit from ALL-VALUES.
 
-Returns a list containing NIL if there are no EXPRESSIONS.
+Returns a list containing NIL if BODY is empty.
 
 An ALL-VALUES expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the ALL-VALUES expression appears in,
-the EXPRESSIONS are always in a nondeterministic context. An ALL-VALUES
-expression itself is always deterministic.
+contexts. Irrespective of what context the ALL-VALUES appears in, the BODY is
+always in a nondeterministic context. An ALL-VALUES expression itself is
+always deterministic.
 
 ALL-VALUES is analogous to the `bagof' primitive in Prolog."
   (let ((values (gensym "VALUES"))
@@ -2662,7 +2645,7 @@ ALL-VALUES is analogous to the `bagof' primitive in Prolog."
     `(let ((,values '())
            (,last-value-cons nil))
        (for-effects
-         (let ((value (progn ,@expressions)))
+         (let ((value (progn ,@body)))
            (global (if (null ,values)
                        (setf ,last-value-cons (list value)
                              ,values ,last-value-cons)
@@ -2670,50 +2653,49 @@ ALL-VALUES is analogous to the `bagof' primitive in Prolog."
                              ,last-value-cons (rest ,last-value-cons))))))
        ,values)))
 
-(defmacro-compile-time ith-value (i expression &optional (default-expression '(fail)))
-  "Returns the Ith value of a nondeterministic expression. EXPRESSION is
-evaluated, deterministically returning only its Ith nondeterministic value, if
-any. I must be an integer. The first nondeterministic value returned by
-EXPRESSION is numbered zero, the second one, etc. The Ith value is produced by
-repeatedly evaluating EXPRESSION, backtracking through and discarding the
-first I values and deterministically returning the next value produced.
+(defmacro-compile-time ith-value (i form &optional (default '(fail)))
+  "Returns the Ith nondeterministic value of FORM.
 
-No further execution of EXPRESSION is attempted after it successfully returns
-the desired value.
+I must be an integer. The first nondeterministic value returned by FORM is
+numbered zero, the second one, etc. The Ith value is produced by repeatedly
+evaluating FORM, backtracking through and discarding the first I values and
+deterministically returning the next value produced.
 
-If EXPRESSION fails before returning both the I values to be discarded, as
-well as the desired Ith value, then DEFAULT-EXPRESSION is evaluated and its
-value returned instead. DEFAULT-EXPRESSION defaults to \(FAIL) if not present.
+No further execution of FORM is attempted after it successfully returns the
+desired value.
 
-Local side effects performed by EXPRESSION are undone when ITH-VALUE returns,
-but local side effects performed by DEFAULT-EXPRESSION and by I are not undone
-when ITH-VALUE returns.
+If FORM fails before returning both the I values to be discarded, as well as
+the desired Ith value, then DEFAULT is evaluated and its value returned
+instead. DEFAULT defaults to \(FAIL) if not present.
+
+Local side effects performed by FORM are undone when ITH-VALUE returns, but
+local side effects performed by DEFAULT and by I are not undone when ITH-VALUE
+returns.
 
 An ITH-VALUE expression can appear in both deterministic and nondeterministic
-contexts. Irrespective of what context the ITH-VALUE expression appears in,
-EXPRESSION is always in a nondeterministic context, while DEFAULT-EXPRESSION
-and I are in whatever context the ITH-VALUE expression appears.
+contexts. Irrespective of what context the ITH-VALUE appears in, FORM is
+always in a nondeterministic context, while DEFAULT and I are in whatever
+context the ITH-VALUE appears in.
 
-An ITH-VALUE expression is nondeterministic if DEFAULT-EXPRESSION is present
-and is nondeterministic, or if I is nondeterministic. Otherwise it is
-deterministic.
+An ITH-VALUE expression is nondeterministic if DEFAULT is present and is
+nondeterministic, or if I is nondeterministic. Otherwise it is deterministic.
 
-If DEFAULT-EXPRESSION is present and nondeterministic, and if EXPRESSION
-fails, then it is possible to backtrack into the DEFAULT-EXPRESSION and for
-the ITH-VALUE expression to nondeterministically return multiple times.
+If DEFAULT is present and nondeterministic, and if FORM fails, then it is
+possible to backtrack into the DEFAULT and for the ITH-VALUE expression to
+nondeterministically return multiple times.
 
 If I is nondeterministic then the ITH-VALUE expression operates
 nondeterministically on each value of I. In this case, backtracking for each
-value of EXPRESSION and DEFAULT-EXPRESSION is nested in, and restarted for,
-each backtrack of I."
+value of FORM and DEFAULT is nested in, and restarted for, each backtrack of
+I."
   (let ((counter (gensym "I")))
     `(block ith-value
        (let ((,counter (value-of ,i)))
-         (for-effects (let ((value ,expression))
+         (for-effects (let ((value ,form))
                         (if (zerop ,counter)
                             (return-from ith-value value)
                             (decf ,counter))))
-         ,default-expression))))
+         ,default))))
 
 ;;; In classic Screamer TRAIL is unexported and UNWIND-TRAIL is exported. This
 ;;; doesn't seem very safe or sane: while users could conceivably want to use
@@ -2782,16 +2764,17 @@ Screamer."
     (format-string? (apply #'cl:y-or-n-p format-string format-args))
     (t (cl:y-or-n-p))))
 
-(defmacro-compile-time print-values (&body expressions)
-  "Evaluates EXPRESSIONS as an implicit PROGN and prints
-each of the nondeterministic values returned by the last EXPRESSION in
-succession using PRINT.
+(defmacro-compile-time print-values (&body body)
+  "Evaluates BODY as an implicit PROGN and prints each of the nondeterministic
+values returned by the BODY in succession using PRINT.
 
 After each value is printed, the user is queried as to whether or not further
 values are desired. These values are produced by repeatedly evaluating the
 body and backtracking to produce the next value, until either the user
 indicates that no further values are desired or until the body fails and
 yields no further values.
+
+Returns the last value printed.
 
 Accordingly, local side effects performed by the body while producing each
 value are undone after printing each value, before attempting to produce
@@ -2801,15 +2784,13 @@ because the user declines to produce further values.
 
 A PRINT-VALUES expression can appear in both deterministic and
 nondeterministic contexts. Irrespective of what context the PRINT-VALUES
-expression appears in, the EXPRESSIONS are always in a nondeterministic
-context. A PRINT-VALUES expression itself is always deterministic and always
-returns NIL.
+appears in, the BODY are always in a nondeterministic context. A
+PRINT-VALUES expression itself is always deterministic.
 
 PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
-  ;; FIXME: Documentation lies: does not always return NIL.
   `(catch 'succeed
      (for-effects
-       (let ((value (progn ,@expressions)))
+       (let ((value (progn ,@body)))
          (print value)
          (unless (y-or-n-p "Do you want another solution?")
            (throw 'succeed value))))))
@@ -2847,8 +2828,7 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
   "Backtracks to the most recent choice-point.
 
 FAIL is deterministic function and thus it is permissible to reference #'FAIL,
-and write \(FUNCALL #'FAIL) or \(APPLY #'FAIL). In nondeterministic contexts,
-the expression \(FAIL) is optimized to generate inline backtracking code.
+and write \(FUNCALL #'FAIL) or \(APPLY #'FAIL).
 
 Calling FAIL when there is no choice-point to backtrack to signals an error."
   (funcall *fail*))
@@ -3380,10 +3360,9 @@ variable which is shared with X."
       (let ((y (make-variable))) (restrict-value! y x) y)))
 
 (defun bound? (x)
-  "Returns T if X is not a variable or if X is a bound
-variable. Otherwise returns NIL. BOUND? is analogous to the
-extra-logical predicates VAR and NONVAR typically available in
-Prolog."
+  "Returns T if X is not a variable or if X is a bound variable. Otherwise
+returns NIL. BOUND? is analogous to the extra-logical predicates `var' and
+`nonvar' typically available in Prolog."
   (not (variable? (value-of x))))
 
 (defun ground? (x)
@@ -5946,10 +5925,10 @@ not be equal. This is accomplished by attaching noticers to the variables
 nested in X and Y which detect when X becomes equal to Y and fail.
 
 The expression \(KNOWN? (EQUALV X Y)) is analogous to the extra-logical predicate
-== typically available in Prolog.
+`==' typically available in Prolog.
 
 The expression \(KNOWN? (NOTV (EQUALV X Y))) is analogous to the extra-logical
-predicate \\= typically available in Prolog.
+predicate `\\=' typically available in Prolog.
 
 The expression \(ASSERT! (EQUALV X Y)) is analogous to Prolog unification.
 
