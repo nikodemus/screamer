@@ -1,38 +1,34 @@
 -*- mode: org -*-
-* Battle Plan
-*** Release 3.21: unofficial maintenance release of 3.20.
-***** This is currently happening on "master".
-***** WIP Complete manual
-      All exported symbols documented, not everything needs to be
-      super-polished, but the information should be there.
-***** DONE ANSI cleanups
-***** Obvious bugfixes, like 19c3bfaadbbf01401db14589c70b2b102297aef0
-*** New development
-***** Once 3.21 is out, move it onto "classic" branch, into deep maintenance mode.
-***** New stuff appears for now on "future" branch, which is rebased constantly.
-      It is master + new code on top.
-      Once 3.21 is out, future becomes the new master.
-***** New stuff is also on "dev" branch, which is not rebased -- for convenience.
-      It gets master and future merged into it. Or possibly master as
-      merges and future as cherries. In either case, it will be thrown
-      out once 3.21 is out.
-***** Release 4.0
-******* DONE /=V allowing integer bounds to be constrained.
-******* Support at least some of the currently missing special forms
-******* Add DEFINE-SCREAMER-FUNCTION or similar as an alias to SCREAMER::DEFUN.
-******* Identify some performance issues and see if anything can be done.
-******* Try to improve debuggability of Screamer generated code.
-******* Make iscream.el work under Slime.
-******* Change COUNT-FAILURES to make the number easier to access.
-******* Consider adding a separate type for gaussian integers.
-******* Make BEST-VALUE make sense.
-* Documentation
-*** WIP A web-friendly manual
-***** Cleanups
-******* Some docstrings talk of EXPRESSIONS, some of FORMS.
-******* "Yields" vs "returns" a value.
-******* Restricts vs constrains.
-******* Don't talk about noticers: they're an implementation detail.
+* WIP Release 3.21: unofficial maintenance release of 3.20.
+*** Branch "master"
+*** DONE ANSI cleanups
+*** WIP Complete manual
+***** DONE All exported symbols documented.
+***** WIP Cleanups
+******* TODO Some docstrings talk of EXPRESSIONS, some of FORMS.
+******* TODO "Yields" vs "returns" a value.
+******* TODO Restricts vs constrains.
+******* TODO Don't talk about noticers: they're an implementation detail.
+*** TODO Make iscream.el work under Slime.
+*** Obvious opportunistic bugfixes
+***** Minimal behavioural changes.
+* Future Development
+*** Once 3.21 is out, move it onto "classic" branch, into deep maintenance mode.
+*** New stuff appears for now on "wip" branch, which is rebased constantly.
+    It is master + new code on top.
+    Once 3.21 is out, wip becomes the new master.
+*** New stuff is also on "dev" branch, which is not rebased -- for convenience.
+    It gets master merged it and wip as cherries.
+    Will be thrown away once 3.21 is out.
+*** Release 4.0
+***** DONE /=V allowing integer bounds to be constrained.
+***** DONE Make BEST-VALUE make some sense.
+***** Support at least some of the currently missing special forms
+***** Add DEFINE-SCREAMER-FUNCTION or similar as an alias to SCREAMER::DEFUN.
+***** Identify some performance issues and see if anything can be done.
+***** Try to improve debuggability of Screamer generated code.
+***** Change COUNT-FAILURES to make the number easier to access.
+***** Consider adding a separate type for gaussian integers.
 * Performance
 *** TODO Rewrite dynamic-extent continuations using FLET
     At least SBCL cannot currently stack-allocate a let-bound lambda,
@@ -88,7 +84,6 @@
 *** TODO APPLY-NONDETERMINISTIC conses.
 * Old "TTMTTD" list from screamer.lisp
   Things to Maybe Think Then Do? *shrug*
-*** WIP Manual.
 *** TODO Should have way of having a stream of values.
 *** TODO Kashket's constraint additions Fall90-158.
 *** TODO Compress trail after repeated LOCAL SETF/SETQ to same variable
