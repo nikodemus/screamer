@@ -4,13 +4,38 @@
 @settitle Screamer
 @c %**end of header
 
-@settitle Screamer
-
 @c for install-info
 @dircategory Software development
 @direntry
 * Screamer:           Nondeterministic Extension to Common Lisp
 @end direntry
+
+@setcontentsaftertitlepage
+
+@copying
+Copyright 2011 Nikodemus Siivola <nikodemus@@random-state.net>
+
+This manual is distributed under the same terms as Screamer:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright and authorship notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Happy Constraining!
+@end copying
 
 @titlepage
 
@@ -24,13 +49,8 @@
 
 @end titlepage
 
-@macro refmacro{name}
-@ref{Macro \name\, @code{\name\}}
-@end macro
-
-@macro reffun{name}
-@ref{Function \name\, @code{\name\}}
-@end macro
+@node Top
+@top Introduction
 
 Screamer provides a nondeterministic choice-point operator, a
 backtracking mechanism, and a forward propagation facility.
@@ -60,12 +80,19 @@ is the GitHub project page.
 
 @contents
 
-@ifnottex
+@menu
+* Original Publications::       
+* Overview::                    
+* Examples::                    
+* Dictionary::                  
+* Function Index::              
+* Variable Index::              
+@end menu
 
-@include include/ifnottex.texinfo
+@include include/sb-texinfo.texinfo
 
-@end ifnottex
-
+@node Original Publications
+@comment  node-name,  next,  previous,  up
 @chapter Original Publications
 
 Following original publications by Siskind and McAllester form the
@@ -75,7 +102,7 @@ basis of this manual:
 Screaming Yellow Zonkers}, 1991. Old Screamer manual, doesn't always
 hold true for Screamer 3.20 on which this ``modern'' Screamer is
 based, but still probably the most complete discussion of various
-operators.
+operators and the overall design of Screamer outside of this manual.
 
 @url{http://nikodemus.github.com/screamer/screamer-paper.pdf,
 Screamer: A Portable Efficient Implementation of Nondeterministic
@@ -86,6 +113,8 @@ Nondeterministic Lisp as a Substrate for Constraint Logic
 Programming}, 1993. A paper describing the constaints propagation
 features of Screamer.
 
+@node Overview
+@comment  node-name,  next,  previous,  up
 @chapter Overview
 
 @section Important Note on Packages
@@ -176,7 +205,7 @@ Given @code{an-integer-between} and @code{fail} we can write eg. a
 generator for square numbers:
 
 @lisp
-;;; Square numbers are numbers produced by multiplying an integer with itself.
+;;; Square numbers are numbers produced by squaring an integer.
 (defun a-square-number (min max)
   (let* ((x (an-integer-between 0 max))
          (square (* x x)))
@@ -245,7 +274,7 @@ undoing of side-effects on and off lexically.
         :n n)) ; => (:NUMBERS (0 1 2 3) :M 4 :N 0)
 @end lisp
 
-@section Constraints
+@section Constraint Propagation
 
 In addition to nondeterminism via backtracking as discussed so far,
 Screamer also provides for forward constraint propagation via
@@ -286,9 +315,10 @@ specific value, and @reffun{value-of} can be used to obtain its value.
 ;;; And we have our answer.
 *v* ; => 42
 
-;;; However, there's a catch. Even though *v* printed as 42 above, *v* is
-;;; still a variable. This is convenience for working in the REPL: unbound
-;;; variables print using square brackets, bound print just their value.
+;;; However, there's a catch. Even though *v* printed as 42 above, *v*
+;;; is still a variable. This is convenience for working in the REPL:
+;;; unbound variables print using square brackets, bound ones print
+;;; as their value.
 (type-of *v*) ; => SCREAMER::VARIABLE
 
 ;;; To obtain its value:
@@ -327,7 +357,8 @@ values, and force a solution:
 
 (all-values
   (solution (list *x* *y*)
-            (static-ordering #'linear-force))) => ((-47 5) (-46 4) (-45 3) (-44 2))
+            (static-ordering #'linear-force)))
+; => ((-47 5) (-46 4) (-45 3) (-44 2))
 @end lisp
 
 In this case backtracking occurs only inside @reffun{solution}, when
@@ -407,6 +438,8 @@ the new key and its value entirely via @code{remhash}.
 
 @end itemize
 
+@node Examples
+@comment  node-name,  next,  previous,  up
 @chapter Examples
 
 @section Einstein's Riddle
@@ -414,8 +447,8 @@ the new key and its value entirely via @code{remhash}.
 Solving the ``Einstein's Riddle'' using nondeterministic features of
 Screamer, ie. backtracking search.
 
-[ @url{einstein.lisp.html, HTML} ]
-[ @url{einstein.lisp, Source} ]
+[ @url{http://nikodemus.github.com/screamer/einstein.lisp.html, HTML} ]
+[ @url{http://nikodemus.github.com/screamer/einstein.lisp, Source} ]
 
 @section The Zebra Puzzle
 
@@ -425,18 +458,22 @@ features of Screamer.
 (This puzzle is virtually identical to ``Einstein's Riddle'', but the
 solution is very different.)
 
-[ @url{zebra.lisp.html, HTML} ]
-[ @url{zebra.lisp, Source} ]
+[ @url{http://nikodemus.github.com/screamer/zebra.lisp.html, HTML} ]
+[ @url{http://nikodemus.github.com/screamer/zebra.lisp, Source} ]
 
 @section The Sudoku Puzzle
 
 Solving a sudoku puzzle using forward constraint propagation features
 of Screamer.
 
-[ @url{sudoku.lisp.html, HTML} ]
-[ @url{sudoku.lisp, Source} ]
+[ @url{http://nikodemus.github.com/screamer/sudoku.lisp.html, HTML} ]
+[ @url{http://nikodemus.github.com/screamer/sudoku.lisp, Source} ]
 
-@chapter Nondetermism
+@node Dictionary
+@comment  node-name,  next,  previous,  up
+@chapter Dictionary
+
+@section Nondetermism
 
 @include include/macro-screamer-either.texinfo
 @include include/fun-screamer-fail.texinfo
@@ -463,9 +500,9 @@ of Screamer.
 @include include/macro-screamer-when-failing.texinfo
 @include include/macro-screamer-count-failures.texinfo
 
-@chapter Constraints
+@section Constraints
 
-@section Basics
+@subsection Basics
 
 @include include/fun-screamer-make-variable.texinfo
 @include include/macro-screamer-assert!.texinfo
@@ -478,7 +515,7 @@ of Screamer.
 @include include/fun-screamer-equalv.texinfo
 @include include/fun-screamer-template.texinfo
 
-@section Booleans
+@subsection Booleans
 
 @include include/fun-screamer-a-booleanv.texinfo
 @include include/fun-screamer-booleanpv.texinfo
@@ -489,12 +526,12 @@ of Screamer.
 @include include/fun-screamer-orv.texinfo
 @include include/fun-screamer-count-truesv.texinfo
 
-@section Sequences
+@subsection Sequences
 
 @include include/fun-screamer-a-member-ofv.texinfo
 @include include/fun-screamer-memberv.texinfo
 
-@section Numbers
+@subsection Numbers
 
 @include include/fun-screamer-a-numberv.texinfo
 @include include/fun-screamer-a-realv.texinfo
@@ -511,7 +548,7 @@ of Screamer.
 @include include/fun-screamer-minv.texinfo
 @include include/fun-screamer-maxv.texinfo
 @include include/fun-screamer-plus-v.texinfo
-@include include/fun-screamer---v.texinfo
+@include include/fun-screamer--v.texinfo
 @include include/fun-screamer-star-v.texinfo
 @include include/fun-screamer-slash-v.texinfo
 @include include/fun-screamer-lt-v.texinfo
@@ -521,7 +558,7 @@ of Screamer.
 @include include/fun-screamer-gt-v.texinfo
 @include include/fun-screamer-slash-equals-v.texinfo
 
-@section Forcing Solutions
+@subsection Forcing Solutions
 
 @include include/fun-screamer-solution.texinfo
 @include include/fun-screamer-static-ordering.texinfo
@@ -531,7 +568,7 @@ of Screamer.
 @include include/fun-screamer-domain-size.texinfo
 @include include/fun-screamer-range-size.texinfo
 
-@chapter Miscellany
+@section Miscellany
 
 @include include/macro-screamer-define-screamer-package.texinfo
 @include include/macro-screamer-best-value.texinfo
@@ -547,5 +584,6 @@ of Screamer.
 @include include/var-screamer-star-minimum-shrink-ratio-star.texinfo
 @include include/var-screamer-star-strategy-star.texinfo
 
+@include include/short-backmatter.texinfo
 
 @bye
