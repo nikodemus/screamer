@@ -11,7 +11,7 @@ cat > $2 <<EOF
 <html>
   <head>
     <title>$3</title>
-    <link rel="stylesheet" href="style.css" type="text/css">
+    <link rel="stylesheet" href="htmlize-style.css" type="text/css">
 EOF
 
 cat $BASE/analytics.script >> $2
