@@ -15,7 +15,7 @@ test: clean
 	sbcl --eval '(let ((asdf:*central-registry* (cons #p"./" asdf:*central-registry*))) (asdf:test-system :screamer) (quit))'
 
 doc:
-	make -C doc
+	make -C html pdf
 
 web:
 	make -C web
