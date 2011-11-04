@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+  <head>
+    <title>Screamer Example: sudoku.lisp</title>
+    <link rel="stylesheet" href="style.css" type="text/css">
+  <script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3652989-3']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+  </script>
+  <script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3652989-3']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+  </script>
+  </head>
+  <body>
+    <pre>
+<span class="comment-delimiter">;;;; </span><span class="comment">Example "Sudoku"
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">Using Screamer to solve a sudoku puzzle.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_eval_w.htm">eval-when</a></span> (<span class="builtin">:compile-toplevel</span> <span class="builtin">:load-toplevel</span>)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_provid.htm">require</a></span> <span class="constant">:screamer</span>))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_in_pkg.htm">in-package</a></span> <span class="builtin">:screamer-user</span>)
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Utility definitions
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">VAR-INTEGER-LIST returns a list of COUNT variables constrained to be
+</span><span class="comment-delimiter">;;;; </span><span class="comment">between MIN and MAX.
+</span><span class="comment-delimiter">;;;;</span><span class="comment">
+</span><span class="comment-delimiter">;;;; </span><span class="comment">ALL-DIFFERENTV returns a variable constrained to be true if variables in
+</span><span class="comment-delimiter">;;;; </span><span class="comment">the list received all have different values.
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">var-integer-list</span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_countc.htm">count</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_max_m.htm">min</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_max_m.htm">max</a></span>)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_loop.htm">loop</a></span> for i below <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_countc.htm">count</a></span>
+        collect (an-integer-betweenv <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_max_m.htm">min</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_max_m.htm">max</a></span>)))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">all-differentv</span> (x <span class="type"><a href="http://www.lispworks.com/reference/HyperSpec/Body/03_da.htm">&amp;rest</a></span> xs)
+  <span class="comment-delimiter">;; </span><span class="comment">Functionally the same as (apply #'/=v list), but faster.
+</span>  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_flet_.htm">labels</a></span> ((all-different (x xs)
+             (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_if.htm">if</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_null.htm">null</a></span> xs)
+                 <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_t.htm">t</a></span>
+                 (andv (notv (=v x (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">car</a></span> xs)))
+                       (all-different x (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">cdr</a></span> xs))
+                       (all-different (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">car</a></span> xs) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_car_c.htm">cdr</a></span> xs))))))
+    (all-different x xs)))
+
+<span class="comment-delimiter">;;;; </span><span class="comment">Utility functions for Sudoku CSP modelling
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">chunk</span> (size <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_declar.htm">declare</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_type.htm">type</a></span> (<span class="type"><a href="http://www.lispworks.com/reference/HyperSpec/Body/t_intege.htm">integer</a></span> 0 <span class="variable-name"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_st.htm">*</a></span>) size))
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> (chunks)
+    (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_loop.htm">loop</a></span> for l <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_eq_sle.htm">=</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> then (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_subseq.htm">subseq</a></span> l size)
+          while l <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_do_do.htm">do</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_push.htm">push</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_subseq.htm">subseq</a></span> l 0 size) chunks)
+          finally (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_return.htm">return</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_revers.htm">nreverse</a></span> chunks)))))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">matrix-transpose</span> (matrix)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_when_.htm">when</a></span> matrix
+    (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_apply.htm">apply</a></span> #'<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_mapc_.htm">mapcar</a></span> #'<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> matrix)))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">rows</span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> <span class="type"><a href="http://www.lispworks.com/reference/HyperSpec/Body/03_da.htm">&amp;optional</a></span> (size 9))
+  (chunk size <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">columns</span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> <span class="type"><a href="http://www.lispworks.com/reference/HyperSpec/Body/03_da.htm">&amp;optional</a></span> (size 9))
+  (matrix-transpose (chunk size <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>)))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">boxes</span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> <span class="type"><a href="http://www.lispworks.com/reference/HyperSpec/Body/03_da.htm">&amp;optional</a></span> (size 3))
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_flet_.htm">flet</a></span> ((flatten (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>)
+           (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_apply.htm">apply</a></span> #'<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_append.htm">append</a></span> <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>)))
+    (flatten (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_mapc_.htm">mapcar</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_lambda.htm">lambda</a></span> (x)
+                       (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_mapc_.htm">mapcar</a></span> #'flatten
+                               (matrix-transpose x)))
+                     (chunk size
+                            (chunk size
+                                   (chunk size
+                                          <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>)))))))
+
+<span class="comment-delimiter">;;;; </span><span class="comment">the CSPs
+</span>
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defpar.htm">defparameter</a></span> <span class="variable-name">*sudoku-problem-1*</span>
+  '(_ _ 8   _ _ _   6 _ _
+    _ 4 _   9 _ 2   _ 5 _
+    _ _ _   6 4 8   _ _ _
+
+    _ 3 9   _ 2 _   1 7 _
+    _ 1 _   _ _ _   _ 3 _
+    _ 8 5   _ 1 _   2 6 _
+
+    _ _ _   2 8 7   _ _ _
+    _ 6 _   1 _ 4   _ 8 _
+    _ _ 2   _ _ _   5 _ _))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defpar.htm">defparameter</a></span> <span class="variable-name">*sudoku-problem-2*</span>
+  '(_ 2 6   _ _ _   8 1 _
+    3 _ _   7 _ 8   _ _ 6
+    4 _ _   _ 5 _   _ _ 7
+
+    _ 5 _   1 _ 7   _ 9 _
+    _ _ 3   9 _ 5   1 _ _
+    _ 4 _   3 _ 2   _ 5 _
+
+    1 _ _   _ 3 _   _ _ 2
+    5 _ _   2 _ 4   _ _ 9
+    _ 3 8   _ _ _   4 6 _))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defpar.htm">defparameter</a></span> <span class="variable-name">*sudoku-problem-3*</span>
+  '(_ _ 2   3 _ _   7 _ _
+    _ _ 4   _ _ 9   _ _ _
+    6 _ _   _ _ _   _ 5 _
+
+    _ 7 _   _ _ 2   _ 6 _
+    _ _ 3   7 _ _   4 _ _
+    _ 1 _   _ _ _   _ 2 _
+
+    _ 3 _   _ _ _   _ _ 9
+    _ _ _   4 _ _   6 _ _
+    _ _ 5   _ _ 8   2 _ _))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">sudoku</span> (grid)
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_let_l.htm">let</a></span> ((vars (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_mapc_.htm">mapcar</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_lambda.htm">lambda</a></span> (x)
+                        (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_if.htm">if</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_nump.htm">numberp</a></span> x)
+                            x
+                            (an-integer-betweenv 1 9)))
+                      grid)))
+    (one-value
+     (solution
+      (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_dolist.htm">dolist</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span> (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_append.htm">append</a></span> (rows vars)
+                            (columns vars)
+                            (boxes vars))
+               vars)
+        (assert! (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/f_apply.htm">apply</a></span> 'all-differentv <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_list.htm">list</a></span>)))
+      (reorder #'domain-size
+               #'(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_lambda.htm">lambda</a></span> (x) (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/s_declar.htm">declare</a></span> (<span class="preprocessor"><a href="http://www.lispworks.com/reference/HyperSpec/Body/d_ignore.htm">ignore</a></span> x)) <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/a_nil.htm">nil</a></span>)
+               #'<span class="builtin">&lt;</span>
+               #'linear-force)))))
+
+(<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_defun.htm">defun</a></span> <span class="function-name">run</span> ()
+  (<span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_loop.htm">loop</a></span> repeat 1
+        <span class="builtin"><a href="http://www.lispworks.com/reference/HyperSpec/Body/m_do_do.htm">do</a></span> (sudoku *sudoku-problem-1*)
+           (sudoku *sudoku-problem-2*)
+           (sudoku *sudoku-problem-3*)))
+
+
+
+    </pre>
+  </body>
+</html>
