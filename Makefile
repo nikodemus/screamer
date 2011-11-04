@@ -21,11 +21,12 @@ pages:
 	mkdir web-tmp
 
 	make -C doc html pdf
-	cp doc/*.pdf doc/examples/*.lisp web-tmp/
-	sh -c 'for f in doc/*.html doc/examples/*.html; \
+	cp doc/*.pdf doc/examples/*.lisp doc/examples/*.html web-tmp/
+	sh -c 'for f in doc/*.html; \
           do sbcl --script tools/splice-to-head.lisp tools/analytics.script \
                < $$f > web-tmp/`basename $$f`; done'
 	cp web-tmp/screamer.html web-tmp/index.html
+	cp tools/htmlize-style.css web-tmp/
 
 	git checkout gh-pages
 	mv web-tmp/* .
