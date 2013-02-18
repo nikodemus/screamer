@@ -2715,6 +2715,7 @@ selection (due to either a normal return, or calling FAIL.)"
     (vector-push-extend function *trail* 1024))
   function)
 
+#-lispworks
 (defun unwind-trail-to (trail-pointer)
   (declare (fixnum trail-pointer))
   (loop with trail = *trail*
@@ -2723,6 +2724,19 @@ selection (due to either a normal return, or calling FAIL.)"
            (funcall (vector-pop trail))
            ;; note: This is to allow the trail closures to be garbage collected.
            (setf (aref trail (fill-pointer trail)) nil)))
+
+#+lispworks
+(defun unwind-trail-to (trail-pointer)
+  (declare (fixnum trail-pointer))
+  (let ((trail *trail*))
+    (tagbody
+  loop-start
+     (when (<= (fill-pointer trail) trail-pointer)
+       (return-from unwind-trail-to))
+     (funcall (vector-pop trail))
+     ;; note: This is to allow the trail closures to be garbage collected.
+     (setf (aref trail (fill-pointer trail)) nil)
+     (go loop-start))))
 
 ;;; FIXME: Since Screamer doesn't use UNWIND-TRAIL even internally, it should
 ;;; probably be deleted when Screamer 4.0 is in the works.
@@ -3183,6 +3197,7 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 #+screamer-clos
 (defun-compile-time variable? (thing) (typep thing 'variable))
 
+#-lispworks
 (defun integers-between (low high)
   (cond ((and (typep low 'fixnum) (typep high 'fixnum))
          (loop for i of-type fixnum from low upto high
@@ -3190,6 +3205,25 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
         (t
          (loop for i from low upto high
                collect i))))
+
+#+lispworks
+(defun fixnum-range (low high)
+  (do* ((num (1- low) (1+ num))
+        (result (list) (push num result)))
+       ((>= num high) (reverse result))
+    (declare (fixnum num))))
+        
+#+lispworks
+(defun range (low high)
+  (do* ((num (1- low) (1+ num))
+        (result (list) (push num result)))
+       ((>= num high) (reverse result))))
+
+#+lispworks
+(defun integers-between (low high)
+  (cond ((and (typep low 'fixnum) (typep high 'fixnum))
+         (fixnum-range low high))
+        (t (range low high))))
 
 (defun booleanp (x)
   "Returns true iff X is T or NIL."
