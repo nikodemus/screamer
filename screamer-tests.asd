@@ -27,10 +27,12 @@
 ;;;; IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ;;;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(defsystem :screamer
+(defsystem :screamer-tests
   :serial t
-  :licence "MIT"
-  :description "Nondeterministic programming and constraint propagation."
-  :components
-  ((:file "package")
-   (:file "screamer")))
+  :depends-on (:screamer :iterate :hu.dwim.stefil)
+  :components ((:file "primordial")
+               (:file "tests")))
+
+(defmethod perform ((o test-op) (c (eql (find-system :screamer))))
+  (load-system :screamer-tests)
+  (funcall (intern (string '#:test-screamer) :screamer-tests)))
