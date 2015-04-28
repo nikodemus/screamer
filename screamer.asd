@@ -14,8 +14,8 @@
 
 (defsystem screamer
     :name "Screamer - an extension of Common Lisp that adds support for nondeterministic programming"
-    :author "Jeffrey Mark Siskind"
-    :maintainer "Chun Tian (binghe)"
+    :author "Jeffrey Mark Siskind & David Allen McAllester"
+    :maintainer "Nikodemus Siivola"
     :version "3.24"
     :depends-on (cl-plus)
     :components
