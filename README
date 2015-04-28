@@ -1,51 +1,29 @@
--*- mode: text; mode: auto-fill; fill-column: 78 -*-
+This is Screamer - an extension of Common Lisp that adds support for
+nondeterministic programming.
 
-Screamer is an extension of Common Lisp that adds support for nondeterministic
-programming. Screamer consists of two levels. The basic nondeterministic level
-adds support for backtracking and undoable side effects. On top of this
-nondeterministic substrate, Screamer provides a comprehensive constraint
-programming language in which one can formulate and solve mixed systems of
-numeric and symbolic constraints. Together, these two levels augment Common
-Lisp with practically all of the functionality of both Prolog and constraint
-logic programming languages such as CHiP and CLP(R). Furthermore, Screamer is
-fully integrated with Common Lisp. Screamer programs can coexist and
-interoperate with other extensions to as CLIM and Iterate.
+This code is base on the version 3.24 from Jeffrey Mark Siskind.
+This code should run on any ANSI Common Lisp.
 
-In several ways Screamer is more efficient than other implementations of
-backtracking languages. First, Screamer code is transformed into Common Lisp
-which can be compiled by the underlying Common Lisp system. Many competing
-implementations of nondeterministic Lisp are interpreters and thus are far
-less efficient than Screamer. Second, the backtracking primitives require
-fairly low overhead in Screamer. Finally, this overhead to support
-backtracking is only paid for by those portions of the program which use the
-backtracking primitives. Deterministic portions of user programs pass through
-the Screamer-to-Common-Lisp transformation unchanged. Since in practise, only
-small portions of typical programs utilize the backtracking primitives,
-Screamer can produce more efficient code than compilers for languages in which
-backtracking is more pervasive.
+This software is Copyright (C) by Jeffrey Mark Siskind.
+It is hereby released undef the GNU Lesser General Public License.
+See also <http://opensource.franz.com/preamble.html>.
 
-Screamer was written by Jeffrey Mark Siskind and David Allen McAllester, see
-file LICENSE for licensing information.
+Note that it may take a long time to compile Screamer (i.e. 1.5 hours
+using the Lucid production compiler on a Sun SPARCstation 2).
 
-This version of Screamer is based on released version 3.20, and is
-being dragged kicking -- and screaming -- into the 21st century:
+This directory contains the following files:
 
-* Support for Symbolics, AKCL, etc. has been stripped.
+screamer.lisp - The source code for Screamer.
 
-* It has been modified to run in ANSI Common Lisp, as opposed to CLtL1/CLtL2.
+iterate.lisp - The source code for Jonathan Amsterdam's Iterate macro. This
+has been modified slightly. This file is not need to run Screamer but is
+needed to run the examples in primordial.lisp, screams.lisp, and
+equations.lisp.
 
-* Ongoing maintenance work: original screamer.lisp has been split into
-  package.lisp and screamer.lisp, ChangeLog.old, and some information
-  has been moved over to TODO.
-
-* Ongoing development and documentation work: a new manual is in the making,
-  and add support for missing Common Lisp special forms in nondeterministic
-  context is planned.
-
-See TODO for the current task list.
-
-Source files part of the distribution not currently referenced in the
-screamer.asd:
+primordial.lisp - A sort of torture test to determine whether Screamer is
+working. To run, first compile and load Screamer and Iterate, compile and load
+this file, type (IN-PACKAGE :PRIMORDIAL), and then type (PRIME-ORDEAL). If no
+errors result then Screamer is probably working correctly.
 
 screams.lisp - A file containing all of the examples from the Screamer manual
 and the two papers ircs-93-03 and aaai93. To use, first compile and load
@@ -62,15 +40,13 @@ set the variable SCREAMER:*ISCREAM?* to T. This will enable the Screamer
 macro LOCAL-OUTPUT and improve the behavior of Y-OR-N-P and PRINT-VALUES
 under ILisp.
 
-Subdirectory papers/ contains the original Screamer manual and papers:
-
-screamer.dvi
-screamer.ps - DVI and Postscript versions of an outdated manual for Screamer.
+doc/screamer.dvi
+doc/screamer.ps - DVI and Postscript versions of an outdated manual for Screamer.
 The code in this manual has some bugs but corrected versions are included in
 screams.lisp.
 
-ircs-93-03.dvi
-ircs-93-03.ps - DVI and Postscript versions of a paper describing the
+doc/ircs-93-03.dvi
+doc/ircs-93-03.ps - DVI and Postscript versions of a paper describing the
 fundamentals of nondeterministic CommonLisp. This paper is available at
 Technical Report 93-03 of the University of Pennsylvania Institute for
 Research in Cognitive Science. The appropriate BibTeX entry is:
@@ -87,8 +63,8 @@ Research in Cognitive Science. The appropriate BibTeX entry is:
         number = {IRCS--93--03}}
 The code in this paper is included in screams.lisp.
 
-aaai93.dvi
-aaai93.ps - DVI and Postscript versions of a paper describing the constraint
+doc/aaai93.dvi
+doc/aaai93.ps - DVI and Postscript versions of a paper describing the constraint
 package included with Screamer. This paper will appear in the Proceedings of
 AAAI-93. The appropriate BibTeX entry is:
 The code in this paper is also included in screams.lisp.
@@ -103,8 +79,7 @@ The code in this paper is also included in screams.lisp.
 	year = 1993,
 	month = jul}
 
-Following are old notes regarding incompatibilities between Screamer 3.20 and
-Screamer 2.4 (as eg. described in papers/screamer.ps):
+Incompatibilities between Screamer 3.20 and Screamer 2.4:
 
 Screamer 3.20 contains numerous bug fixes, performance enhancements and novel
 features over Screamer 2.4, the prior widely released version. I do not have
@@ -216,3 +191,6 @@ package by using the following preamble to your file:
  <optional defpackage arguments>)
 (IN-PACKAGE :MY-PACKAGE)
 
+Note that DEFINE-SCREAMER-PACKAGE doesn't work under AKCL or Poplog so on
+these systems you must either use the SCREAMER-USER package or figure out on
+your own how to appropriately define a Screamer package.
