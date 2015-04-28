@@ -24,9 +24,6 @@
 ;;;;
 ;;;; Question: Who owns the fish?
 
-(eval-when (:compile-toplevel :load-toplevel)
-  (require :screamer))
-
 (in-package :screamer-user)
 
 ;;;; Asserting things, failing when they don't hold.

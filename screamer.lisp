@@ -565,6 +565,8 @@
  (defpackage :screamer
   (:shadow :defun :multiple-value-bind :y-or-n-p :variable)
   (:use :cl #+lucid :lcl)
+  #+:harlequin-common-lisp
+  (:shadowing-import-from :ansi-loop :loop :loop-finish)
   (:export :either
 	   :fail
 	   :local
@@ -791,7 +793,8 @@
  ;;       Lucid.
  `(eval-when (:compile-toplevel :load-toplevel :execute)
    (defpackage ,defined-package-name ,@options
-    (:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p)
+    (:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p
+     #+:harlequin-common-lisp :loop #+:harlequin-common-lisp :loop-finish)
     (:use :cl #+lucid :lcl :screamer))))
 
 #-(or poplog akcl)
