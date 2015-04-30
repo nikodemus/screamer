@@ -17,7 +17,6 @@
     :author "Jeffrey Mark Siskind & David Allen McAllester"
     :maintainer "Nikodemus Siivola, Chun Tian (binghe)"
     :version "3.24"
-    :depends-on (cl-plus)
     :components
     (#+harlequin-common-lisp
      (:file "loop")

@@ -121,9 +121,8 @@
 #||#(in-package :cl-user)
 
 #-(or poplog akcl)
-(defpackage :iterate
- (:nicknames :iter)
- (:use :cl)
+(defpackage screamer.iterate
+ (:use :common-lisp)
  (:export :iterate :iter :display-iterate-clauses :declare-variables
           :defmacro-clause :defclause-sequence :dsetq :initially
           :after-each :finally :if-first-time :finally-protected
@@ -136,10 +135,10 @@
           :reducing :accumulate :accumulating))
 
 #-(or poplog akcl)
-(in-package :iterate)
+(in-package :screamer.iterate)
 
 #+(or poplog akcl)
-(in-package :iterate :nicknames '(:iter))
+(in-package :screamer.iterate)
 
 #+(or poplog akcl)
 (export '(iterate iter display-iterate-clauses declare-variables
@@ -158,14 +157,21 @@
 
 #+(or lucid poplog akcl) (proclaim '(declaration declare-variables))
 
+(defmacro defconst (name initial-value &optional doc)
+  "Only evaluates INITIAL-VALUE when NAME is unbound to a value."
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+    (if (boundp ',name)
+	',name
+	(defconstant ,name ,initial-value ,@(when doc (list doc))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Constants and global variables.
 
-(cl+:defconst version "1.2" "Current version of Iterate")
+(defconst version "1.2" "Current version of Iterate")
 
 
 
-(cl+:defconst standard-type-symbols
+(defconst standard-type-symbols
   '(array atom bignum bit bit-vector character common compiled-function
     complex cons double-float fixnum float function hash-table integer
     keyword list long-float nil null number package pathname random-state
@@ -177,7 +183,7 @@
 
 ;;; These next two can be used for maximizing and minimizing.
 
-(cl+:defconst smallest-number-alist
+(defconst smallest-number-alist
   `((fixnum . ,most-negative-fixnum)
     (float . ,most-negative-long-float)
     (long-float . ,most-negative-long-float)
@@ -185,7 +191,7 @@
     (double-float . ,most-negative-double-float)
     (single-float . ,most-negative-single-float)))
 
-(cl+:defconst largest-number-alist
+(defconst largest-number-alist
   `((fixnum . ,most-positive-fixnum)
     (float . ,most-positive-long-float)
     (long-float . ,most-positive-long-float)
@@ -1309,7 +1315,7 @@ an ambiguity with clause ~a"
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-(cl+:defconst sequence-keyword-list
+(defconst sequence-keyword-list
   '(:from from :upfrom upfrom :downfrom downfrom :to to :downto downto
     :above above :below below :by (by 1) :with-index with-index))
 

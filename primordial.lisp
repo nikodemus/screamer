@@ -9,12 +9,12 @@
 #-(or poplog akcl cmu sbcl clisp gcl) (in-package :screamer-user)
 
 #-(or poplog akcl cmu sbcl clisp gcl)
-(screamer:define-screamer-package :primordial (:use :iterate))
+(screamer:define-screamer-package :primordial (:use :screamer.iterate))
 
 #+(or cmu sbcl clisp gcl)
 (defpackage :primordial
  (:shadowing-import-from :screamer :defun :multiple-value-bind :y-or-n-p)
- (:use :cl :screamer :iterate))
+ (:use :cl :screamer :screamer.iterate))
 
 (in-package :primordial)
 
@@ -22,7 +22,7 @@
 (shadowing-import
  '(screamer::defun screamer::multiple-value-bind screamer::y-or-n-p))
 
-#+(or poplog akcl) (use-package '(:cl :screamer :iterate))
+#+(or poplog akcl) (use-package '(:cl :screamer :screamer.iterate))
 
 (defun equal-set? (x y)
  (and (subsetp x y :test #'equal) (subsetp y x :test #'equal)))

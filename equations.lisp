@@ -5,13 +5,13 @@
 (in-package :screamer-user)
 
 #-(or poplog akcl)
-(screamer:define-screamer-package :screams (:use :iterate))
+(screamer:define-screamer-package :screams (:use :screamer.iterate))
 
 #-(or poplog akcl)
 (in-package :screams)
 
 #+(or poplog akcl)
-(use-package :iterate)
+(use-package :screamer.iterate)
 
 (defvar *infinity* 1e38)
 
