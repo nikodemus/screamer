@@ -1,35 +1,26 @@
-.PHONY: doc webdocs wc clean all test examples
+## makefile for screamer
+# $Id: Makefile 7061 2003-09-07 06:34:45Z kevin $
+# $Source: /opt/cvsroot/debian/src/screamer/Makefile,v $
 
-all:
-	echo "Targets: clean, wc, doc, test, pages"
+TOP := $(shell cd ../..; pwd)
+LISPEXT := lisp
+SOURCES := equations iterate primordial screamer screams
+SYSTEM := screamer
+include $(TOP)/clocc.mk
 
-clean:
-	rm -f *.fasl *~ \#*
-	make -C doc clean
+screamer.$(FASLEXT): screamer.$(LISPEXT)
 
-wc:
-	wc -l *.lisp
+iterate.$(FASLEXT): iterate.$(LISPEXT)
 
-test: clean
-	sbcl --eval '(let ((asdf:*central-registry* (cons #p"./" asdf:*central-registry*))) (asdf:test-system :screamer) (quit))'
+primordial.$(FASLEXT): primordial.$(LISPEXT) \
+	iterate.$(FASLEXT) screamer.$(FASLEXT)
 
-doc:
-	make -C doc all
+screams.$(FASLEXT): screams.$(LISPEXT)  \
+	iterate.$(FASLEXT) screamer.$(FASLEXT)
 
-pages:
-	rm -rf web-tmp
-	mkdir web-tmp
+equations.$(FASLEXT): equations.$(LISPEXT) \
+	iterate.$(FASLEXT) screamer.$(FASLEXT)
 
-	make -C doc html pdf
-	cp doc/*.pdf doc/examples/*.lisp doc/examples/*.html web-tmp/
-	sh -c 'for f in doc/*.html; \
-          do sbcl --script tools/splice-to-head.lisp tools/analytics.script \
-               < $$f > web-tmp/`basename $$f`; done'
-	cp web-tmp/screamer.html web-tmp/index.html
-	cp tools/htmlize-style.css web-tmp/
-
-	git checkout gh-pages
-	mv web-tmp/* .
-	rm -rf web-tmp
-	git commit -a -c master
-	git checkout -f master
+check: screamer.$(FASLEXT) iterate.$(FASLEXT) primordial.$(FASLEXT)
+	$(TOP)/bin/run-lisp $(patsubst %,-i %,$^) \
+		-x '(print (funcall (intern "PRIME-ORDEAL" "PRIMORDIAL")))'

@@ -28,9 +28,6 @@
 ;;;;
 ;;;; Question: Who owns a Zebra, and who drinks water?
 
-(eval-when (:compile-toplevel :load-toplevel)
-  (require :screamer))
-
 (in-package :screamer-user)
 
 ;;;; Utility definitions

@@ -4,16 +4,18 @@
 
 (in-package :screamer-user)
 
-(eval-when (:compile-toplevel :load-toplevel)
-  (require :iterate))
+#-(or poplog akcl)
+(screamer:define-screamer-package :screams (:use :screamer.iterate))
 
-(screamer:define-screamer-package :screams (:use :iterate))
-
+#-(or poplog akcl)
 (in-package :screams)
 
-(defvar *infinity* 1d38)
+#+(or poplog akcl)
+(use-package :screamer.iterate)
 
-(defvar *fuzz* 1d-6)
+(defvar *infinity* 1e38)
+
+(defvar *fuzz* 1e-6)
 
 (defun make-interval (low high) (cons low high))
 
@@ -80,50 +82,42 @@
 		(make-environment (rest variables) interval)))))
 
 (defun a-half-interval (interval)
-  (let ((midpoint (/ (+ (low interval) (high interval)) 2)))
-    (if (and (> midpoint (low interval))
-             (< midpoint (high interval)))
-        (either (make-interval (low interval) midpoint)
-                (make-interval midpoint (high interval)))
-        ;; Due to floating-point inaccuracy, we can have a big interval
-        ;; without any midpoints in it that can be represented.
-        (fail))))
+ (let ((midpoint (/ (+ (low interval) (high interval)) 2)))
+  (either (make-interval (low interval) midpoint)
+	  (make-interval midpoint (high interval)))))
 
 (defun copy-all (tree)
  (if (atom tree) tree (cons (copy-all (car tree)) (copy-all (cdr tree)))))
 
 (defun biggest-cell (environment)
-  (if (null (rest environment))
-      (first environment)
-      (let ((big-cell (biggest-cell (rest environment))))
-        (let ((interval1 (cdr (first environment)))
-              (interval2 (cdr big-cell)))
-          (if (> (size interval1) (size interval2))
-              (first environment)
-              big-cell)))))
+ (if (null (rest environment))
+     (first environment)
+     (let ((big-cell (biggest-cell (rest environment))))
+      (let ((interval1 (cdr (first environment)))
+	    (interval2 (cdr big-cell)))
+       (if (> (size interval1) (size interval2))
+	   (first environment)
+	   big-cell)))))
 
 (defun refine-environment (environment equations)
-  (let ((cell (biggest-cell environment)))
-    (cond ((small? (cdr cell))
-           (copy-all environment))
-          (t
-           (local (setf (cdr cell) (a-half-interval (cdr cell))))
-           (if (some #'(lambda (equation) (impossible? equation environment))
-                     equations)
-               (fail)
-               (refine-environment environment equations))))))
+ (let ((cell (biggest-cell environment)))
+  (cond ((small? (cdr cell)) (copy-all environment))
+	(t (local (setf (cdr cell) (a-half-interval (cdr cell))))
+	   (if (some #'(lambda (equation) (impossible? equation environment))
+		     equations)
+	       (fail))
+	   (refine-environment environment equations)))))
 
 (defun solve (equations)
-  (refine-environment
-   (make-environment (variables-of equations)
-                     (make-interval (- *infinity*) *infinity*))
-   equations))
+ (refine-environment
+  (make-environment (variables-of equations)
+		    (make-interval (- *infinity*) *infinity*))
+  equations))
 
 (defun dam-test ()
-  (for-effects
-    (print (solve '((= (+ (* x x) (* y y)) (* z z))
-                    (= x (+ 5 y))
-                    (= z (+ x y 3)))))))
+ (for-effects (print (solve '((= (+ (* x x) (* y y)) (* z z))
+			      (= x (+ 5 y))
+			      (= z (+ x y 3)))))))
 
 (defun dam-testa ()
  (for-effects
@@ -194,8 +188,6 @@
 	     #'>
 	     #'divide-and-conquer-force)))))
 
-;;; FIXME: This blows stack on SBCL.
-#+nil
 (defun equation1a ()
  ;; note: This uses ratnums which eventually get turned into flonums.
  (for-effects
@@ -265,9 +257,6 @@
 	     #'>
 	     #'divide-and-conquer-force)))))
 
-;;; FIXME: This doesn't actually get (1 5), but ends up with
-;;; variables very close to them -- even though the comment
-;;; leads me to think it's supposed to get (1 5).
 (defun equation3a ()
  ;; note: This uses ratnums which eventually get turned into flonums.
  (for-effects
@@ -359,7 +348,6 @@
 	     #'>
 	     #'divide-and-conquer-force)))))
 
-;;; This doesn't appear to terminate very quickly, if at all...
 (defun nonlinear1 ()
  (for-effects
   (print
@@ -377,8 +365,6 @@
 	     #'>
 	     #'divide-and-conquer-force)))))
 
-;;; FIXME: blows stack on SBCL.
-#+nil
 (defun nonlinear2 ()
  (for-effects
   (print

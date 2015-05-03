@@ -2,9 +2,6 @@
 ;;;;
 ;;;; Using Screamer to solve a sudoku puzzle.
 
-(eval-when (:compile-toplevel :load-toplevel)
-  (require :screamer))
-
 (in-package :screamer-user)
 
 ;;;; Utility definitions
