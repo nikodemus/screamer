@@ -2717,15 +2717,9 @@ selection (due to either a normal return, or calling FAIL.)"
 
 (defun unwind-trail-to (trail-pointer)
   (declare (fixnum trail-pointer))
-  #-lispworks
-  (loop with trail = *trail*
-        do (when (<= (fill-pointer trail) trail-pointer)
-             (return-from unwind-trail-to))
-           (funcall (vector-pop trail))
-           ;; note: This is to allow the trail closures to be garbage collected.
-           (setf (aref trail (fill-pointer trail)) nil))
-  ;; LW's non-trivial LOOP generates MACROLETs that can't be supported by WALK.
-  #+lispworks
+  ;; KLUDGE: This loops needs to be kept simple, since in some implementations
+  ;; (eg. Lispworks) non-trivial LOOP generates MACROLETs that can't be
+  ;; supported by WALK.
   (let ((trail *trail*))
     (loop (when (<= (fill-pointer trail) trail-pointer)
             (return-from unwind-trail-to))
@@ -3194,26 +3188,20 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 
 (defun integers-between (low high)
   (cond ((and (typep low 'fixnum) (typep high 'fixnum))
-         #-lispworks
-         (loop for i of-type fixnum from low upto high
-               collect i)
-         ;; LW's non-trivial LOOP generates MACROLETs that can't be supported by WALK.
-         #+lispworks
-         (let ((result nil))
-           (do ((i low (1+ i)))
-               ((> i high) (nreverse result))
-             (declare (type fixnum i))
-             (push i result))))
+         ;; KLUDGE: Don't change this to a LOOP, since in some implementations
+         ;; (eg. Lispworks) non-trivial LOOP generates MACROLETs that can't be
+         ;; supported by WALK.
+         (do ((result nil)
+              (i low (1+ i)))
+             ((> i high) (nreverse result))
+           (declare (type fixnum i))
+           (push i result)))
         (t
-         #-lispworks
-         (loop for i from low upto high
-               collect i)
-         ;; LW's non-trivial LOOP generates MACROLETs that can't be supported by WALK.
-         #+lispworks
-         (let ((result nil))
-           (do ((i low (1+ i)))
-               ((> i high) (nreverse result))
-             (push i result))))))
+         ;; KLUDGE: As above.
+         (do ((result nil)
+              (i low (1+ i)))
+             ((> i high) (nreverse result))
+           (push i result)))))
 
 (defun booleanp (x)
   "Returns true iff X is T or NIL."
