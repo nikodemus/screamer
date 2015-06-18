@@ -40,7 +40,8 @@ being dragged kicking -- and screaming -- into the 21st century:
 
 * Ongoing development and documentation work: a new manual is in the making,
   and add support for missing Common Lisp special forms in nondeterministic
-  context is planned.
+  context is planned. ...the progress is rather glacial, however. Don't hold
+  your breath.
 
 See TODO for the current task list.
 
@@ -64,13 +65,15 @@ under ILisp.
 
 Subdirectory papers/ contains the original Screamer manual and papers:
 
+screamer.pdf
 screamer.dvi
-screamer.ps - DVI and Postscript versions of an outdated manual for Screamer.
-The code in this manual has some bugs but corrected versions are included in
-screams.lisp.
+screamer.ps - PDF, DVI, and Postscript versions of an outdated manual for
+Screamer. The code in this manual has some bugs but corrected versions are
+included in screams.lisp.
 
+ircs-93-03.pdf
 ircs-93-03.dvi
-ircs-93-03.ps - DVI and Postscript versions of a paper describing the
+ircs-93-03.ps - PDF, DVI, and Postscript versions of a paper describing the
 fundamentals of nondeterministic CommonLisp. This paper is available at
 Technical Report 93-03 of the University of Pennsylvania Institute for
 Research in Cognitive Science. The appropriate BibTeX entry is:
@@ -87,10 +90,11 @@ Research in Cognitive Science. The appropriate BibTeX entry is:
         number = {IRCS--93--03}}
 The code in this paper is included in screams.lisp.
 
+aaai93.pdf
 aaai93.dvi
-aaai93.ps - DVI and Postscript versions of a paper describing the constraint
-package included with Screamer. This paper will appear in the Proceedings of
-AAAI-93. The appropriate BibTeX entry is:
+aaai93.ps - PDF, DVI, and Postscript versions of a paper describing the
+constraint package included with Screamer. This paper will appear in the
+Proceedings of AAAI-93. The appropriate BibTeX entry is:
 The code in this paper is also included in screams.lisp.
 \newcommand{\Lisp}{{\mbox{\sc Lisp}}}
 @string{AAAI93 = {Proceedings of the Eleventh National Conference on
