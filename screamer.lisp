@@ -4,9 +4,7 @@
 
 ;;; Screamer
 ;;; A portable efficient implementation of nondeterministic Common Lisp
-;;; Version 3.20
-;;;
-;;; Written by:
+;;; Based on original version 3.20 by:
 ;;;
 ;;;   Jeffrey Mark Siskind (Department of Computer Science, University of Toronto)
 ;;;   David Allen McAllester (MIT Artificial Intelligence Laboratory)
@@ -74,10 +72,8 @@ to DEFPACKAGE, and automatically injects two additional options:
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (defmacro ,function-name ,lambda-list ,@body)))
 
-(defparameter *screamer-version* "3.20"
-  "The version of Screamer which is loaded. This is currently still 3.20,
-while we're considering how to express versions for this copy of Screamer in
-the future.")
+(defparameter *screamer-version* (asdf:component-version (asdf:find-system :screamer))
+  "The version of Screamer which is loaded.")
 
 (defvar-compile-time *dynamic-extent?*
     ;; SBCL cannot stack-allocate LET-bound lambdas that screamer

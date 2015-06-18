@@ -1,6 +1,4 @@
 -*- mode: org -*-
-* WIP Release 4.0.0
-*** There are too many confusing 3.2x versions around. Make a clean break now.
 * WIP Complete manual
 ***** DONE All exported symbols documented.
 ***** WIP Cleanups
