@@ -1,49 +1,28 @@
 -*- mode: org -*-
-* WIP Release 3.21: unofficial maintenance release of 3.20.
-*** Branch "master"
-*** DONE ANSI cleanups
-*** WIP Complete manual
+* WIP Release 4.0.0
+*** There are too many confusing 3.2x versions around. Make a clean break now.
+* WIP Complete manual
 ***** DONE All exported symbols documented.
 ***** WIP Cleanups
 ******* DONE Some docstrings talk of EXPRESSIONS, some of FORMS.
 ******* DONE "Yields" vs "returns" a value.
 ******* TODO Restricts vs constrains.
 ******* TODO Don't talk about noticers: they're an implementation detail.
-******* TODO Simplify the language in the constraint section.
-*** TODO Make iscream.el work under Slime.
-*** Obvious opportunistic bugfixes (minimal behavioural changes)
-* Future Development
-*** Once 3.21 is out, move it onto "classic" branch, into deep maintenance mode.
-*** New stuff appears for now on "wip" branch, which is rebased constantly.
-    It is master + new code on top.
-    Once 3.21 is out, wip becomes the new master.
-*** New stuff is also on "dev" branch, which is not rebased -- for convenience.
-    It gets master merged it and wip as cherries.
-    Will be thrown away once 3.21 is out.
-*** Release 4.0
-***** DONE /=V allowing integer bounds to be constrained.
-***** DONE Make BEST-VALUE make some sense.
-***** Support at least some of the currently missing special forms
-***** Add DEFINE-SCREAMER-FUNCTION or similar as an alias to SCREAMER::DEFUN.
-***** Identify some performance issues and see if anything can be done.
-***** Try to improve debuggability of Screamer generated code.
-***** Change COUNT-FAILURES to make the number easier to access.
-***** Consider adding a separate type for gaussian integers.
-* Performance
-*** TODO Rewrite dynamic-extent continuations using FLET
+***** TODO Simplify the language in the constraint section.
+* TODO Make iscream.el work under Slime.
+* TODO Rewrite dynamic-extent continuations using FLET
     At least SBCL cannot currently stack-allocate a let-bound lambda,
     but manages FLET and LABELS just fine.
-*** TODO Dynamic-extent in CPS-CONVERT-TAGBODY.
-* Maintenance
-*** WIP Split the system into logical pieces.
+* TODO Dynamic-extent in CPS-CONVERT-TAGBODY.
+* WIP Split the system into logical pieces.
     Most of the DEFUN-COMPILE-TIME functions should probably go
     to a file of their own, loaded before the main screamer code
     is compiled.
-*** TODO Cleanups
-***** TODO #:DUMMY-N gensyms used all over the place
-      This makes macro-expansions harder to read than they need to be.
-      Use differently named gensyms for different things.
-***** TODO DEFMACRO-COMPILE-TIME
+* TODO Cleanups
+*** TODO #:DUMMY-N gensyms used all over the place
+    This makes macro-expansions harder to read than they need to be.
+    Use differently named gensyms for different things.
+*** TODO DEFMACRO-COMPILE-TIME
       Check if Allegro still needs this.
 *** TODO primordial.lisp has some commented-out tests using LOOP
     Apparently LOCAL and LOOP interactions depend on the specific
