@@ -61,7 +61,9 @@
 
 (defun test5-internal (list)
  (local (let (collection)
-	 (dolist (e list) (push (either 0 1) collection))
+	 (dolist (e list)
+           (declare (ignore e))
+           (push (either 0 1) collection))
 	 collection)))
 
 (defun test5 ()
@@ -69,7 +71,9 @@
 
 (defun test6-internal (list)
  (local (let (collection)
-	 (dolist (e list) (push (a-bit) collection))
+	 (dolist (e list)
+           (declare (ignore e))
+           (push (a-bit) collection))
 	 collection)))
 
 (defun test6 ()
