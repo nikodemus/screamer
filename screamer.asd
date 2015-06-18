@@ -31,12 +31,18 @@
   :serial t
   :licence "MIT"
   :description "Nondeterministic programming and constraint propagation."
+  :author "Jeffrey Mark Siskind & David Allen McAllester"
+  :maintainer "Nikodemus Siivola <nikodemus@random-state.net>"
   :components
   ((:file "package")
    (:file "screamer")))
 
 (defsystem :screamer-tests
   :serial t
+  :licence "MIT"
+  :description "Tests for Screamer"
+  :author "Jeffrey Mark Siskind & David Allen McAllester"
+  :maintainer "Nikodemus Siivola <nikodemus@random-state.net>"
   :depends-on (:screamer :iterate :hu.dwim.stefil)
   :components ((:file "primordial")
                (:file "tests")))
