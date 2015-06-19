@@ -20,14 +20,23 @@
 (in-package :screamer-user)
 
 (define-screamer-package :screamer-tests
-  (:use :cl :hu.dwim.stefil))
+  (:use :cl :hu.dwim.stefil)
+  (:export #:test-screamer #:screamer-tests))
 
 (in-package :screamer-tests)
 
-(defsuite (test-screamer :in root-suite) ()
+(defun test-screamer (&optional no-debug)
+  (flet ((test ()
+           (eql 0 (getf (extract-test-run-statistics (screamer-tests))
+                        :number-of-failures))))
+    (if no-debug
+        (without-debugging (test))
+        (test))))
+
+(defsuite (screamer-tests :in root-suite) ()
   (run-child-tests))
 
-(in-suite test-screamer)
+(in-suite screamer-tests)
 
 (defun eval-when/ct ()
   (let ((x (either :a :b)))

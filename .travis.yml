@@ -1,0 +1,21 @@
+language: lisp
+sudo: required
+
+env:
+  matrix:
+    - LISP=sbcl
+    - LISP=ccl
+    - LISP=clisp
+
+install:
+  - curl -L https://github.com/luismbo/cl-travis/raw/master/install.sh | sh
+
+script:
+  - cl -e '(ql:quickload :screamer-tests)
+           (unless (screamer-tests:test-screamer t)
+             (uiop:quit 1))'
+
+notifications:
+  email:
+    recipients:
+      - nikodemus@random-state.net
