@@ -2446,14 +2446,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
               function-record-screamer?)
         `(eval-when (:compile-toplevel :load-toplevel :execute)
            (cache-definition ',function-name ',lambda-list ',body ',callees)
-           ;; CLHS 3.2.2.3 says that the consequences are unspecified
-           ;; if functions are redefined multiple times in the same
-           ;; file, if they have not been declared notinline.  When
-           ;; declared notinline, SBCL still signals a warning, so
-           ;; muffle it.
-           (declaim (notinline ,function-name))
-           (handler-bind (#+sbcl (sb-int:duplicate-definition #'muffle-warning))
-             ,@modified-function-definitions)
+           ,@modified-function-definitions
            ',function-name)))))
 
 (defmacro-compile-time either (&body alternatives)
