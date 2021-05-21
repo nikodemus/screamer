@@ -98,17 +98,17 @@ is the GitHub project page.
 Following original publications by Siskind and McAllester form the
 basis of this manual:
 
-@url{http://nikodemus.github.com/screamer/screaming-yellow-zonkers.pdf,
+@url{http://nikodemus.github.io/screamer/screaming-yellow-zonkers.pdf,
 Screaming Yellow Zonkers}, 1991. Old Screamer manual, doesn't always
 hold true for Screamer 3.20 on which this ``modern'' Screamer is
 based, but still probably the most complete discussion of various
 operators and the overall design of Screamer outside of this manual.
 
-@url{http://nikodemus.github.com/screamer/screamer-paper.pdf,
+@url{http://nikodemus.github.io/screamer/screamer-paper.pdf,
 Screamer: A Portable Efficient Implementation of Nondeterministic
 Common Lisp}, 1993. A paper describing the fundamentals of Screamer.
 
-@url{http://nikodemus.github.com/screamer/nondeterministic-lisp.pdf,
+@url{http://nikodemus.github.io/screamer/nondeterministic-lisp.pdf,
 Nondeterministic Lisp as a Substrate for Constraint Logic
 Programming}, 1993. A paper describing the constaints propagation
 features of Screamer.
@@ -447,8 +447,8 @@ the new key and its value entirely via @code{remhash}.
 Solving the ``Einstein's Riddle'' using nondeterministic features of
 Screamer, ie. backtracking search.
 
-[ @url{http://nikodemus.github.com/screamer/einstein.lisp.html, HTML} ]
-[ @url{http://nikodemus.github.com/screamer/einstein.lisp, Source} ]
+[ @url{http://nikodemus.github.io/screamer/einstein.lisp.html, HTML} ]
+[ @url{http://nikodemus.github.io/screamer/einstein.lisp, Source} ]
 
 @section The Zebra Puzzle
 
@@ -458,16 +458,16 @@ features of Screamer.
 (This puzzle is virtually identical to ``Einstein's Riddle'', but the
 solution is very different.)
 
-[ @url{http://nikodemus.github.com/screamer/zebra.lisp.html, HTML} ]
-[ @url{http://nikodemus.github.com/screamer/zebra.lisp, Source} ]
+[ @url{http://nikodemus.github.io/screamer/zebra.lisp.html, HTML} ]
+[ @url{http://nikodemus.github.io/screamer/zebra.lisp, Source} ]
 
 @section The Sudoku Puzzle
 
 Solving a sudoku puzzle using forward constraint propagation features
 of Screamer.
 
-[ @url{http://nikodemus.github.com/screamer/sudoku.lisp.html, HTML} ]
-[ @url{http://nikodemus.github.com/screamer/sudoku.lisp, Source} ]
+[ @url{http://nikodemus.github.io/screamer/sudoku.lisp.html, HTML} ]
+[ @url{http://nikodemus.github.io/screamer/sudoku.lisp, Source} ]
 
 @node Dictionary
 @comment  node-name,  next,  previous,  up
