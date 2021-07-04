@@ -5070,12 +5070,12 @@ vector."
                         ((known?-notv-memberv x sequence) (restrict-false! z))))
               x)
              (if (vectorp sequence)
-                 (dolist (element sequence)
-                   (attach-noticer!
-                    #'(lambda ()
-                        (cond ((known?-memberv x sequence) (restrict-true! z))
-                              ((known?-notv-memberv x sequence) (restrict-false! z))))
-                    element))
+                 (map nil (lambda (element)
+                            (attach-noticer!
+                             #'(lambda ()
+                                 (cond ((known?-memberv x sequence) (restrict-true! z))
+                                       ((known?-notv-memberv x sequence) (restrict-false! z))))
+                             element)) sequence)
                  (attach-noticer!
                   #'(lambda ()
                       (cond ((known?-memberv x sequence) (restrict-true! z))
