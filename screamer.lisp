@@ -4213,13 +4213,17 @@ Otherwise returns the value of X."
         (fail))))
 
 (defun +-rule-down (z x y)
+  ;; ORIGINAL COMMENT
   ;; note: We can't assert that X and Y are integers when Z is an integer since
   ;;       Z may be an integer when X and Y are Gaussian integers. But we can
   ;;       make such an assertion if either X or Y is real. If the Screamer
   ;;       type system could distinguish Gaussian integers from other complex
   ;;       numbers we could make such an assertion whenever either X or Y was
   ;;       not a Gaussian integer.
-  (if (and (variable-integer? z) (or (variable-real? x) (variable-real? y)))
+  ;; FIX: 2013/02/25 The argument above must surely be incorrect. If Z is an integer, and Y is a real say 2.5
+  ;; then X will surely not be an integer. The argument *does* work if either X or Y
+  ;; is an integer
+  (if (and (variable-integer? z) (or (variable-integer? x) (variable-integer? y))) ; Original: (or (variable-real? x) (variable-real? y)))
       (restrict-integer! x))
   ;; note: Ditto.
   (if (and (variable-real? z) (or (variable-real? x) (variable-real? y)))
