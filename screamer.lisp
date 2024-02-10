@@ -4296,11 +4296,11 @@ Otherwise returns the value of X."
 (defun +-rule-down (z x y)
   ;; note: We can't assert that X and Y are integers when Z is an integer since
   ;;       Z may be an integer when X and Y are Gaussian integers. But we can
-  ;;       make such an assertion if either X or Y is real. If the Screamer
+  ;;       make such an assertion if either X or Y is an integer. If the Screamer
   ;;       type system could distinguish Gaussian integers from other complex
   ;;       numbers we could make such an assertion whenever either X or Y was
   ;;       not a Gaussian integer.
-  (if (and (variable-integer? z) (or (variable-real? x) (variable-real? y)))
+  (if (and (variable-integer? z) (or (variable-integer? x) (variable-integer? y)))
       (restrict-integer! x))
   ;; note: Ditto.
   (if (and (variable-real? z) (or (variable-real? x) (variable-real? y)))
@@ -4427,11 +4427,11 @@ Otherwise returns the value of X."
 (defun *-rule-down (z x y)
   ;; note: We can't assert that X and Y are integers when Z is an integer since
   ;;       Z may be an integer when X and Y are Gaussian integers. But we can
-  ;;       make such an assertion if either X or Y is real. If the Screamer
+  ;;       make such an assertion if either X or Y is an integer. If the Screamer
   ;;       type system could distinguish Gaussian integers from other complex
   ;;       numbers we could make such an assertion whenever either X or Y was
   ;;       not a Gaussian integer.
-  (if (and (variable-integer? z) (or (variable-real? x) (variable-real? y)))
+  (if (and (variable-integer? z) (or (variable-integer? x) (variable-integer? y)))
       (restrict-integer! x))
   ;; note: Ditto.
   (if (and (variable-real? z) (or (variable-real? x) (variable-real? y)))
