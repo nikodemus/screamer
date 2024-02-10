@@ -109,7 +109,7 @@ Use this to deal with floating-point errors, if necessary.")
 (defun roughly-= (a b)
   "Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'"
   (declare (number a b))
-  (<= (print (abs (- a b))) *numeric-bounds-collapse-threshold*))
+  (<= (abs (- a b)) *numeric-bounds-collapse-threshold*))
 
 (defvar-compile-time *function-record-table* (make-hash-table :test #'equal)
   "The function record table.")
