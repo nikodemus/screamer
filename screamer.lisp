@@ -6714,10 +6714,12 @@ X2."
   (if (null (cdr li))
       t
       (let ((l nil))
-        (loop for i in li
-              when (member i l :test test)
-                return t
-              do (push i l)))))
+        (not
+         ;; Return t if there *is* a duplicate
+         (loop for i in li
+               when (member i l :test test)
+                 return t
+               do (push i l))))))
 
 (defun all-differentv (inp)
   "Functionally the same as (apply #'/=v inp), but faster.
