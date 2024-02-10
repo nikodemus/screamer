@@ -103,6 +103,14 @@ disable it. Default is platform dependent.")
 
 (defvar *trail* (make-array 4096 :adjustable t :fill-pointer 0) "The trail.")
 
+(defvar *numeric-bounds-collapse-threshold* 0.0000000000001
+  "The threshold of closeness to consider 2 numbers equivalent.
+Use this to deal with floating-point errors, if necessary.")
+(defun roughly-= (a b)
+  "Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'"
+  (declare (number a b))
+  (<= (print (abs (- a b))) *numeric-bounds-collapse-threshold*))
+
 (defvar-compile-time *function-record-table* (make-hash-table :test #'equal)
   "The function record table.")
 
@@ -3757,7 +3765,7 @@ Otherwise returns the value of X."
                            (variable-enumerated-domain x)))))
       (when (and (variable-lower-bound x)
                  (variable-upper-bound x)
-                 (= (variable-lower-bound x) (variable-upper-bound x)))
+                 (roughly-= (variable-upper-bound x) (variable-lower-bound x)))
         (setf (variable-value x) (variable-lower-bound x)))
       (run-noticers x))))
 
@@ -3796,7 +3804,7 @@ Otherwise returns the value of X."
                            (variable-enumerated-domain x)))))
       (when (and (variable-lower-bound x)
                  (variable-upper-bound x)
-                 (= (variable-lower-bound x) (variable-upper-bound x)))
+                 (roughly-= (variable-lower-bound x) (variable-upper-bound x)))
         (setf (variable-value x) (variable-lower-bound x)))
       (run-noticers x))))
 
@@ -3866,7 +3874,7 @@ Otherwise returns the value of X."
                 (enumerated (variable-enumerated-domain x))
                 (lower (variable-lower-bound x)))
             (when (or (and (numberp domain) (= domain 1))
-                      (and (numberp range) (= range 0)))
+                      (and (numberp range) (roughly-= range 0)))
               (setf (variable-value x)
                     (cond ((listp enumerated) (first enumerated))
                           (lower lower)
