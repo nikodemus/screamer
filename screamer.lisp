@@ -4457,7 +4457,27 @@ Otherwise returns the value of X."
     ((and (variable-real? x) (variable-real? y))
      (restrict-bounds! x (variable-lower-bound y) (variable-upper-bound y))
      (restrict-bounds! y (variable-lower-bound x) (variable-upper-bound x)))
-    ((and (not (variable? x)) (not (variable? y)) (/= x y)) (fail))))
+    ((and (not (variable? x)) (not (variable? y)) (/= x y)) (fail)))
+  (when (or (variable? x) (variable? y))
+    (let ((xdom (cond
+                  ((and (variable? x)
+                        (subtypep (type-of (variable-enumerated-domain x)) 'list))
+                   (variable-enumerated-domain x))
+                  ((bound? x) (list (value-of x)))
+                  (t nil)))
+          (ydom (cond
+                  ((and (variable? y)
+                        (subtypep (type-of (variable-enumerated-domain y)) 'list))
+                   (variable-enumerated-domain y))
+                  ((bound? y) (list (value-of y)))
+                  (t nil))))
+      (when (and xdom ydom)
+        (let ((joined (intersection xdom ydom)))
+          (mapc
+           (lambda (v)
+             (when (variable? v)
+               (restrict-enumerated-domain! v joined)))
+           (list x y)))))))
 
 (defun <=-rule (x y)
   (if (variable-lower-bound x)
@@ -4480,9 +4500,21 @@ Otherwise returns the value of X."
 
 (defun /=-rule (x y)
   ;; note: Got rid of the nondeterministic version of /=-RULE.
-  (let ((x (value-of x))
-        (y (value-of y)))
-    (if (and (not (variable? x)) (not (variable? y)) (= x y)) (fail))))
+  (let ((xv (value-of x))
+        (yv (value-of y)))
+    (cond ((and (not (variable? xv)) (not (variable? yv)) (= xv yv)) (fail))
+          ((and (bound? xv)
+                (variable? y))
+           (if (listp (variable-enumerated-domain y))
+               (when (member (value-of xv) (variable-enumerated-domain y))
+                 (restrict-enumerated-domain! y (remove (value-of xv) (variable-enumerated-domain y))))
+               (restrict-enumerated-antidomain! y (cons (value-of xv) (variable-enumerated-antidomain y)))))
+          ((and (bound? yv)
+                (variable? x))
+           (if (listp (variable-enumerated-domain x))
+               (when (member (value-of yv) (variable-enumerated-domain x))
+                 (restrict-enumerated-domain! x (remove (value-of yv) (variable-enumerated-domain x))))
+               (restrict-enumerated-antidomain! x (cons (value-of yv) (variable-enumerated-antidomain x))))))))
 
 ;;; Lifted Arithmetic Functions (Two argument optimized)
 
