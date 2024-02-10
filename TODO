@@ -1,4 +1,73 @@
 -*- mode: org -*-
+* Bugs
+** TODO =v and ==v don't always propagate correctly
+Sometimes variables linked to solution variables by these operators don't have an effect unless they're included in the output of the relevant ~solution~ form. For instance, in the following code:
+#+begin_src lisp
+(let ((*maximum-discretization-range* 20))
+     (with-trail nil
+       (time
+        (identity
+         (let ((a (an-integer-betweenv 1 4))
+               (b (an-integer-betweenv 1 4))
+               (c (an-integer-betweenv 1 4)))
+           (identity
+            (let* ((l1 (list a b c))
+                   (ans (an-integer-betweenv 0 7)))
+              ; (assert! (all-differentv l1))
+              (assert! (/=v a b))
+              (assert! (/=v b c))
+              (assert! (/=v a c))
+              ; (assert! (<v a b c))
+              (assert! (=v ans (+v a b c)))
+              (print ans)
+              (print (list a b c))
+              (all-values
+                (solution (list ans a) (reorder #'domain-size #l((declare (ignore %)) nil) #'< #'linear-force))))))))))
+#+end_src
+We get the output ~((6 1) (7 1) (6 2) (7 2) (6 3) (7 4))~
+
+But in the following code:
+#+begin_src lisp
+(let ((*maximum-discretization-range* 20))
+     (with-trail nil
+       (time
+        (identity
+         (let ((a (an-integer-betweenv 1 4))
+               (b (an-integer-betweenv 1 4))
+               (c (an-integer-betweenv 1 4)))
+           (identity
+            (let* ((l1 (list a b c))
+                   (ans (an-integer-betweenv 0 7)))
+              ; (assert! (all-differentv l1))
+              (assert! (/=v a b))
+              (assert! (/=v b c))
+              (assert! (/=v a c))
+              ; (assert! (<v a b c))
+              (assert! (=v ans (+v a b c)))
+              (print ans)
+              (print (list a b c))
+              (all-values
+                (solution (list ans) (reorder #'domain-size #l((declare (ignore %)) nil) #'< #'linear-force))))))))))
+#+end_src
+We instead get the output ~((4) (5) (6) (7))~, which ignores the difference constraints on the elements of the list.
+** TODO LOCAL only reliable with explicit SETF/SETQ:
+    If (INCF (FOO)) expands into a form that does SET-FOO instead of
+    (SETF (FOO) ...) form, the code walker will not know about the
+    side-effect.
+
+    Options:
+    - Implement SCREAMER:INCF, etc.
+      - This seems a good approach; there is a well-defined set of functions we could reimplement to get complete coverage.
+    - Add advice on some relevant generic function to get notified when these kinds of replacements are made, and store the new function as an equivalent of ~incf~ / ~setf~ / etc.?
+    - Wrap all non-SETF/SETQ forms in GLOBAL, so that those side-effects are never undone?
+    - Leave it as-is?
+      - This feels like a bad option; it leads users who care more about runtime performance (and are thus more likely to be power users who also need greater reliability) to lose program correctness.
+* Old "Bugs to fix" list from screamer.lisp
+  These haven't been verified or anything, just moved here.
+*** TODO Deterministic/nondeterministic LOCAL SETF/SETQ undone out of order.
+*** TODO Changing determinism status can cause code from a different file to be included causing weird behavior.
+*** TODO May loop when expressions contain circular lists.
+*** DONE APPLY-NONDETERMINISTIC conses.
 * WIP Complete manual
 ***** DONE All exported symbols documented.
 ***** WIP Cleanups
@@ -8,11 +77,9 @@
 ******* TODO Don't talk about noticers: they're an implementation detail.
 ***** TODO Simplify the language in the constraint section.
 * TODO Make iscream.el work under Slime.
-* TODO Rewrite dynamic-extent continuations using FLET
-    At least SBCL cannot currently stack-allocate a let-bound lambda,
-    but manages FLET and LABELS just fine.
-* TODO Dynamic-extent in CPS-CONVERT-TAGBODY.
-* WIP Split the system into logical pieces.
+* [-] Dynamic-extent in CPS-CONVERT-TAGBODY?
+We have a straightforward approach (around line 1983), need to check if it works.
+* [-] Split the system into logical pieces.
     Most of the DEFUN-COMPILE-TIME functions should probably go
     to a file of their own, loaded before the main screamer code
     is compiled.
@@ -42,23 +109,6 @@
 	function as a nondeterministic one. A wizard might want to do this to
 	take advantage of the fact that a LOCAL SETF/SETQ in a nondeterministic
 	function does not cons up closures.
-* Bugs
-*** TODO LOCAL only reliable with explicit SETF/SETQ:
-    If (INCF (FOO)) expands into a form that does SET-FOO instead of
-    (SETF (FOO) ...) form, the code walker will not know about the
-    side-effect.
-
-    Options:
-    - Implement SCREAMER:INCF, etc.
-    - Wrap all non-SETF/SETQ forms in GLOBAL, so that those side-effects are never undone.
-    - Leave it as-is.
-* Old "Bugs to fix" list from screamer.lisp
-  These haven't been verified or anything, just moved here.
-*** TODO Deterministic/nondeterministic LOCAL SETF/SETQ undone out of order.
-*** TODO Changing determinism status
-    can cause code from a different file to be included causing wierd behavior.
-*** TODO May loop when expressions contain circular lists.
-*** TODO APPLY-NONDETERMINISTIC conses.
 * Old "TTMTTD" list from screamer.lisp
   Things to Maybe Think Then Do? *shrug*
 *** TODO Should have way of having a stream of values.
@@ -78,13 +128,14 @@
 *** TODO FUNCALLV and APPLYV need to assert the domains of the variable that they return.
 *** TODO Check that +V, -V, *V, /V, MINV and MAXV work and do the right thing with type propagation.
 *** TODO Check that PROPAGATE does the right thing with bounds of integers.
-*** TODO MEMBERV and derivatives should support vectors.
-*** TODO Backtracking out of INTEGER-BETWEENV and the like will yield an
-    unconstrained variable since the constraints are asserted locally.
+*** TODO Backtracking out of INTEGER-BETWEENV and the like will yield an unconstrained variable since the constraints are asserted locally.
+*** DONE MEMBERV and derivatives should support vectors.
+This seems to be resolved by a prior commit
 * Refactoring
 *** Depend on Alexandria
 ***** peal-off-documentation-string-and-declarations -> alexandria:parse-body
 *** SETF and SETQ walking is suspiciously different
 * Future Work
 *** TODO See if it would make sense to make nondeterministic functions funcallable instances.
-*** TODO Lock package on SBCL.
+*** [?] Lock package on SBCL?
+Why was this a todo?

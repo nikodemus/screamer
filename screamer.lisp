@@ -75,15 +75,6 @@ to DEFPACKAGE, and automatically injects two additional options:
 (defparameter *screamer-version* (asdf:component-version (asdf:find-system :screamer))
   "The version of Screamer which is loaded.")
 
-(defvar-compile-time *dynamic-extent?*
-  ;; SBCL cannot stack-allocate LET-bound lambdas that screamer
-  ;; currently uses, so setting dynamic-extent to T will only
-  ;; generate compiler notes about it inability to do so.
-  #-sbcl t
-  #+sbcl nil
-  "Set to T to enable the dynamic extent optimization, NIL to
-disable it. Default is platform dependent.")
-
 (defvar *iscream?* nil
   "T if Screamer is running under ILisp/GNUEmacs with iscream.el loaded.")
 
@@ -1637,10 +1628,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                     (symbol-package (magic-continuation-argument continuation)))
                 (if (null types)
                     `(let ((,(magic-continuation-argument continuation) ,form))
-                       ,@(if (and *dynamic-extent?* (is-magic-continuation? form))
-                             `((declare
-                                (dynamic-extent
-                                 ,(magic-continuation-argument continuation)))))
+                       (declare
+                        (dynamic-extent
+                         ,(magic-continuation-argument continuation)))
                        ;; Peal off LAMBDA, arguments, and DECLARE.
                        ,@(rest (rest (rest (second continuation)))))
                     `(let ((,(magic-continuation-argument continuation)
@@ -6738,7 +6728,12 @@ X2."
 (defun all-differentv (inp)
   "Functionally the same as (apply #'/=v inp), but faster.
 Works on nested sequences which potentially contain variables, e.g. (all-differentv '((1 2) (2 3))."
-  (let* ((val-diff-func (if (every #'known?-numberpv inp) #'/==v #'/==v))
+  (let* ((val-diff-func (cond
+                          ((every #'known?-numberpv inp)
+                           #'/=v)
+                          ((some #'s:sequencep inp)
+                           (lambda (a b) (notv (equalv a b))))
+                          (t #'/==v)))
          (seq-diff-func (lambda (a b) (notv (equalv a b))))
          (diff-func (lambda (a b)
                       (funcall (if (or (subtypep (type-of a) 'sequence)
@@ -6751,8 +6746,7 @@ Works on nested sequences which potentially contain variables, e.g. (all-differe
             (lambda (xs)
               (when (cdr xs)
                 (mapcar
-                 (alexandria:curry diff-func
-                                   (car xs))
+                 (curry diff-func (car xs))
                  (cdr xs))))
             (coerce inp 'list))))
   ;; (apply #'andv
