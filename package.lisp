@@ -48,10 +48,7 @@
            #:unwedge-screamer
            #:local-output
            #:a-boolean
-           #:an-integer
-           #:an-integer-above
-           #:an-integer-below
-           #:an-integer-between
+           #:an-integer #:an-integer-above #:an-integer-below #:an-integer-between
            #:a-member-of
            #:when-failing
            #:count-failures
@@ -66,34 +63,17 @@
            #:assert!
            #:known?
            #:decide
-           #:=v
-           #:<v
-           #:<=v
-           #:>v
-           #:>=v
-           #:/=v
+           #:=v #:<v #:<=v #:>v #:>=v #:/=v
            #:a-booleanv
-           #:an-integerv
-           #:an-integer-abovev
-           #:an-integer-belowv
-           #:an-integer-betweenv
-           #:a-realv
-           #:a-real-abovev
-           #:a-real-belowv
-           #:a-real-betweenv
+           #:an-integerv #:an-integer-abovev #:an-integer-belowv #:an-integer-betweenv
+           #:a-realv #:a-real-abovev #:a-real-belowv #:a-real-betweenv
            #:a-numberv
            #:a-member-ofv
-           #:notv
-           #:andv
-           #:orv
-           #:count-trues
-           #:count-truesv
-           #:+v
-           #:-v
-           #:*v
-           #:/v
-           #:minv
-           #:maxv
+           #:notv #:andv #:orv
+           #:count-trues #:count-truesv
+           #:+v #:-v #:*v #:/v
+           #:minv #:maxv
+           #:==v #:/==v
            #:funcallv
            #:applyv
            #:equalv

@@ -6463,8 +6463,186 @@ restrictions and fail when any assertion causes X1 to be known to be equal to
 X2."
   (/=v-internal x xs))
 
-;;; == for simple equality-checking using `equal'
+;;; == for simple equality-checking of atoms using `equal'
+(defun known?-==v2-variable (x y)
+  (or (and (variable-real? x)
+           (variable-real? y)
+           (known?-<=v2-variable x y)
+           (known?-<=v2-variable y x))
+      (and (not (equal x (variable-value x)))
+           (not (equal y (variable-value y)))
+           (equal (variable-value x) (variable-value y)))))
 
+(defun known?-/==v2-variable (x y)
+  (or (and (variable-real? x)
+           (variable-real? y)
+           (or (known?-<v2-variable x y) (known?-<v2-variable y x)))
+      (and (not (equal x (variable-value x)))
+           (not (equal y (variable-value y)))
+           (not (equal (variable-value x) (variable-value y))))))
+
+(defun known?-==v2-internal (x y)
+  (known?-==v2-variable (variablize x) (variablize y)))
+
+(defun known?-/==v2-internal (x y)
+  (known?-/==v2-variable (variablize x) (variablize y)))
+
+(defun known?-==v2 (x y)
+  (known?-==v2-internal x y))
+
+(defun known?-/==v2 (x y)
+  (known?-/==v2-internal x y))
+
+(defun known?-==v-internal (x xs)
+  (if (null xs)
+      t
+      (and (known?-==v2 x (first xs))
+           (known?-==v-internal (first xs) (rest xs)))))
+
+(defun known?-==v (x &rest xs) (known?-==v-internal x xs))
+
+(defun known?-/==v-internal (x xs)
+  (if (null xs)
+      t
+      (and (known?-/==v2 x (first xs))
+           (known?-/==v-internal x (rest xs))
+           (known?-/==v-internal (first xs) (rest xs)))))
+
+(defun known?-/==v (x &rest xs) (known?-/==v-internal x xs))
+
+(defun ==-rule (x y)
+  (cond
+    ;; note: I forget why +-RULE *-RULE MIN-RULE and MAX-RULE must perform the
+    ;;       check in the second COND clause irrespective of whether the first
+    ;;       clause is executed.
+    ((and (variable-real? x) (variable-real? y))
+     (restrict-bounds! x (variable-lower-bound y) (variable-upper-bound y))
+     (restrict-bounds! y (variable-lower-bound x) (variable-upper-bound x)))
+    ((and (not (variable? x)) (not (variable? y)) (not (equal x y))) (fail))
+    ((known?-/==v2 x y) (fail)))
+  (when (or (variable? x) (variable? y))
+    (let ((xdom (cond
+                  ((and (variable? x)
+                        (subtypep (type-of (variable-enumerated-domain x)) 'list))
+                   (variable-enumerated-domain x))
+                  ((bound? x) (list (value-of x)))
+                  (t nil)))
+          (ydom (cond
+                  ((and (variable? y)
+                        (subtypep (type-of (variable-enumerated-domain y)) 'list))
+                   (variable-enumerated-domain y))
+                  ((bound? y) (list (value-of y)))
+                  (t nil))))
+      (cond ((and (bound? y) (not xdom))
+             (set-enumerated-domain! x ydom))
+            ((and (bound? x) (not ydom))
+             (set-enumerated-domain! y xdom))
+            (t
+             (when (and xdom ydom
+                        (or (variable? x) (variable? y)))
+               (let ((joined (intersection xdom ydom :test #'equal)))
+                 (mapc
+                  (lambda (v)
+                    (when (variable? v)
+                      (restrict-enumerated-domain! v joined)))
+                  (list x y)))))))))
+
+(defun /==-rule (x y)
+  (let ((xv (value-of x))
+        (yv (value-of y)))
+    (when (known?-==v2 x y) (fail))
+    (cond ((and (not (variable? xv)) (not (variable? yv)) (equal xv yv)) (fail))
+          ((and (bound? xv)
+                (variable? y))
+           (if (subtypep (type-of (variable-enumerated-domain y)) 'list)
+               (when (member (value-of xv) (variable-enumerated-domain y))
+                 (restrict-enumerated-domain! y (remove (value-of xv) (variable-enumerated-domain y))))
+               (restrict-enumerated-antidomain! y (cons (value-of xv) (variable-enumerated-antidomain y)))))
+          ((and (bound? yv)
+                (variable? x))
+           (if (subtypep (type-of (variable-enumerated-domain x)) 'list)
+               (when (member (value-of yv) (variable-enumerated-domain x))
+                 (restrict-enumerated-domain! x (remove (value-of yv) (variable-enumerated-domain x))))
+               (restrict-enumerated-antidomain! x (cons (value-of yv) (variable-enumerated-antidomain x))))))))
+
+(defun assert!-==v2 (x y)
+  (let ((x (variablize x))
+        (y (variablize y)))
+    (attach-noticer! #'(lambda () (==-rule x y)) x)
+    (attach-noticer! #'(lambda () (==-rule x y)) y)))
+
+(defun assert!-/==v2 (x y)
+  (let ((x (variablize x))
+        (y (variablize y)))
+    (attach-noticer! #'(lambda () (/==-rule x y)) x)
+    (attach-noticer! #'(lambda () (/==-rule x y)) y)))
+
+(defun ==v2 (x y)
+  (cond ((known?-==v2-internal x y) t)
+        ((known?-/==v2-internal x y) nil)
+        (t (let ((x (variablize x))
+                 (y (variablize y))
+                 (z (a-booleanv)))
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-==v2-variable x y) (restrict-true! z))
+                        ((known?-/==v2-variable x y) (restrict-false! z))))
+              x)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-==v2-variable x y) (restrict-true! z))
+                        ((known?-/==v2-variable x y) (restrict-false! z))))
+              y)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((variable-true? z) (assert!-==v2 x y))
+                        ((variable-false? z) (assert!-/==v2 x y))))
+              z)
+             z))))
+
+(defun /==v2 (x y)
+  (cond ((known?-/==v2-internal x y) t)
+        ((known?-==v2-internal x y) nil)
+        (t (let ((x (variablize x))
+                 (y (variablize y))
+                 (z (a-booleanv)))
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-/==v2-variable x y) (restrict-true! z))
+                        ((known?-==v2-variable x y) (restrict-false! z))))
+              x)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-/==v2-variable x y) (restrict-true! z))
+                        ((known?-==v2-variable x y) (restrict-false! z))))
+              y)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((variable-true? z) (assert!-/==v2 x y))
+                        ((variable-false? z) (assert!-==v2 x y))))
+              z)
+             z))))
+
+(defun ==v-internal (x xs)
+  (if (null xs)
+      t
+      (andv (==v2 x (first xs))
+            (==v-internal (first xs) (rest xs)))))
+
+(defun ==v (x &rest xs)
+  "An extension of `=v' to work on most atoms by using `equal' to check equality."
+  (==v-internal x xs))
+
+(defun /==v-internal (x xs)
+  (if (null xs)
+      t
+      (andv (/==v2 x (first xs))
+            (/==v-internal x (rest xs))
+            (/==v-internal (first xs) (rest xs)))))
+
+(defun /==v (x &rest xs)
+  "The inverse of `==v'"
+  (/==v-internal x xs))
 
 ;;; Lifted EQUALV
 
