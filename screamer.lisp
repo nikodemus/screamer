@@ -6498,6 +6498,8 @@ X2."
           ((and (consp x) (consp y))
            (assert!-equalv (car x) (car y))
            (assert!-equalv (cdr x) (cdr y)))
+          ((and (vectorp x) (vectorp y) (= (length x) (length y)))
+           (cl:map nil #'assert!-equalv x y))
           (t (fail)))))
 
 (defun known?-notv-equalv (x y) (one-value (progn (assert!-equalv x y) nil) t))
