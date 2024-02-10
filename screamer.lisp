@@ -2648,6 +2648,54 @@ ALL-VALUES is analogous to the `bagof' primitive in Prolog."
                              ,last-value-cons (rest ,last-value-cons))))))
        ,values)))
 
+(defmacro-compile-time n-values (n form &optional (default-on-failure nil) (default nil))
+  "Returns the first N nondeterministic values yielded by FORM.
+
+N must be an integer denoting the number of values to return, or a form producing such an integer.
+
+No further execution of FORM is attempted after it successfully yields the
+desired value.
+
+If FORM fails before yielding the N values to be returned, then DEFAULT is evaluated and its value returned
+instead. DEFAULT defaults to NIL if not present.
+
+Local side effects performed by FORM are undone when N-VALUES returns, but
+local side effects performed by DEFAULT and by N are not undone when N-VALUES
+returns.
+
+An N-VALUES expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the N-VALUES appears in, FORM is
+always in a nondeterministic context, while DEFAULT and N are in whatever
+context the N-VALUES appears in.
+
+An N-VALUES expression is nondeterministic if DEFAULT is present and is
+nondeterministic, or if N is nondeterministic. Otherwise it is deterministic.
+
+If DEFAULT is present and nondeterministic, and if FORM fails, then it is
+possible to backtrack into the DEFAULT and for the N-VALUES expression to
+nondeterministically return multiple times.
+
+If N is nondeterministic then the N-VALUES expression operates
+nondeterministically on each value of N. In this case, backtracking for each
+value of FORM and DEFAULT is nested in, and restarted for, each backtrack of
+N."
+  (when (numberp n) (assert (and (integerp n) (>= n 0))))
+  (let ((counter (gensym "I"))
+        (value (gensym "value"))
+        (value-list (gensym "value-list")))
+    `(block n-values
+       (let (;; (screamer::*trail* (make-array 4096 :adjustable t :fill-pointer 0))
+             (,counter (value-of ,n))
+             (,value-list nil))
+         (declare (integer ,counter) ((or cons null) ,value-list))
+         (for-effects (unless (zerop ,counter)
+                        (let ((,value ,form))
+                          (decf ,counter)
+                          (push ,value ,value-list)
+                          (when (zerop ,counter)
+                            (return-from n-values ,value-list)))))
+         ,(if default-on-failure default value-list)))))
+
 (defmacro-compile-time ith-value (i form &optional (default '(fail)))
   "Returns the Ith nondeterministic value yielded by FORM.
 
@@ -2735,6 +2783,17 @@ eg. undo effects of local assignments -- hence users should never call it. It
 is provided at the moment only for backwards compatibility with classic
 Screamer."
   (unwind-trail-to 0))
+
+(defmacro-compile-time with-trail (size-form &rest body)
+  "Evaluates the BODY forms with *trail* set to a new array of the specified size. (*trail* is part of Screamer's backtracking mechanism.)
+SIZE-FORM is a positive integer or a form which evaluates to a positive integer, used as the size of the *trail* array."
+  (when (numberp size-form) (assert (and (integerp size-form) (>= size-form 0))))
+  (let ((s (gensym "size")))
+    `(let ((screamer::*trail* (make-array
+                               (let ((,s ,size-form)) (if ,s ,s 2048))
+                               :adjustable t
+                               :fill-pointer 0)))
+       ,@body)))
 
 (defun y-or-n-p
     (&optional (format-string nil format-string?) &rest format-args)
@@ -3059,6 +3118,13 @@ integers. Fails if the interval does not contain any integers."
        (do ((i low (1+ i))) ((= i high))
          (choice-point-internal (funcall continuation i))))
       (funcall continuation high))))
+
+(defmacro let-integers-betweenv (((min max) var-list) &rest body)
+  "Defines multiple logic variables with numerical values between min and max (in the same manner as with an-integer-betweenv).
+Duplicate variable names will be ignored."
+  `(let ,(loop for i in (remove-duplicates var-list)
+               collect (list i `(an-integer-betweenv ,min ,max)))
+     ,@body))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'a-member-of))
@@ -6643,6 +6709,40 @@ X2."
 (defun /==v (x &rest xs)
   "The inverse of `==v'"
   (/==v-internal x xs))
+
+(defun all-different (li &key (test #'equal))
+  (if (null (cdr li))
+      t
+      (let ((l nil))
+        (loop for i in li
+              when (member i l :test test)
+                return t
+              do (push i l)))))
+
+(defun all-differentv (inp)
+  "Functionally the same as (apply #'/=v inp), but faster.
+Works on nested sequences which potentially contain variables, e.g. (all-differentv '((1 2) (2 3))."
+  (let* ((val-diff-func (if (every #'known?-numberpv inp) #'/==v #'/==v))
+         (seq-diff-func (lambda (a b) (notv (equalv a b))))
+         (diff-func (lambda (a b)
+                      (funcall (if (or (subtypep (type-of a) 'sequence)
+                                       (subtypep (type-of b) 'sequence))
+                                   seq-diff-func
+                                   val-diff-func)
+                               a b))))
+    (apply #'andv
+           (mapcon
+            (lambda (xs)
+              (when (cdr xs)
+                (mapcar
+                 (alexandria:curry diff-func
+                                   (car xs))
+                 (cdr xs))))
+            (coerce inp 'list))))
+  ;; (apply #'andv
+  ;;        (mapcar (alexandria:curry #'apply #'andv)
+  ;;                (maplist (lambda (xs) (when (cdr xs) (mapcar (alexandria:curry #'/=v (car xs)) (cdr xs)))) inp)))
+  )
 
 ;;; Lifted EQUALV
 

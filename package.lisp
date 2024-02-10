@@ -33,16 +33,15 @@
            #:global
            #:for-effects
            #:multiple-value-call-nondeterministic
-           #:one-value
            #:possibly?
            #:necessarily?
-           #:all-values
-           #:ith-value
+           #:one-value #:all-values #:n-values #:ith-value
            #:print-values
            #:nondeterministic-function?
            #:funcall-nondeterministic
            #:apply-nondeterministic
            #:unwind-trail
+           #:with-trail
            #:trail
            #:purge
            #:unwedge-screamer
@@ -66,6 +65,7 @@
            #:=v #:<v #:<=v #:>v #:>=v #:/=v
            #:a-booleanv
            #:an-integerv #:an-integer-abovev #:an-integer-belowv #:an-integer-betweenv
+           #:let-integers-betweenv
            #:a-realv #:a-real-abovev #:a-real-belowv #:a-real-betweenv
            #:a-numberv
            #:a-member-ofv
@@ -73,7 +73,7 @@
            #:count-trues #:count-truesv
            #:+v #:-v #:*v #:/v
            #:minv #:maxv
-           #:==v #:/==v
+           #:==v #:/==v #:all-different #:all-differentv
            #:funcallv
            #:applyv
            #:equalv
