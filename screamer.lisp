@@ -3755,6 +3755,10 @@ Otherwise returns the value of X."
              (set-enumerated-domain!
               x (remove-if #'(lambda (element) (< element lower-bound))
                            (variable-enumerated-domain x)))))
+      (when (and (variable-lower-bound x)
+                 (variable-upper-bound x)
+                 (= (variable-lower-bound x) (variable-upper-bound x)))
+        (setf (variable-value x) (variable-lower-bound x)))
       (run-noticers x))))
 
 (defun restrict-upper-bound! (x upper-bound)
@@ -3790,6 +3794,10 @@ Otherwise returns the value of X."
              (set-enumerated-domain!
               x (remove-if #'(lambda (element) (> element upper-bound))
                            (variable-enumerated-domain x)))))
+      (when (and (variable-lower-bound x)
+                 (variable-upper-bound x)
+                 (= (variable-lower-bound x) (variable-upper-bound x)))
+        (setf (variable-value x) (variable-lower-bound x)))
       (run-noticers x))))
 
 (defun restrict-bounds! (x lower-bound upper-bound)
@@ -3857,8 +3865,8 @@ Otherwise returns the value of X."
                 (range (range-size x))
                 (enumerated (variable-enumerated-domain x))
                 (lower (variable-lower-bound x)))
-            (when (or (eql domain 1)
-                      (eql range 0))
+            (when (or (and (numberp domain) (= domain 1))
+                      (and (numberp range) (= range 0)))
               (setf (variable-value x)
                     (cond ((listp enumerated) (first enumerated))
                           (lower lower)
