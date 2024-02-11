@@ -49,14 +49,14 @@ But in the following code:
               (all-values
                 (solution (list ans) (reorder #'domain-size #l((declare (ignore %)) nil) #'< #'linear-force))))))))))
 #+end_src
-We instead get the output ~((4) (5) (6) (7))~, which ignores the difference constraints on the elements of the list.
+We instead get the output ~((4) (5) (6) (7))~, which incorporates the bounds of the ~+v~ form but ignores the effect of the difference constraints on the elements of the list.
 ** TODO LOCAL only reliable with explicit SETF/SETQ:
     If (INCF (FOO)) expands into a form that does SET-FOO instead of
     (SETF (FOO) ...) form, the code walker will not know about the
     side-effect.
 
     Options:
-    - Implement SCREAMER:INCF, etc.
+    - Implement SCREAMER:INCF, etc?
       - This seems a good approach; there is a well-defined set of functions we could reimplement to get complete coverage.
     - Add advice on some relevant generic function to get notified when these kinds of replacements are made, and store the new function as an equivalent of ~incf~ / ~setf~ / etc.?
     - Wrap all non-SETF/SETQ forms in GLOBAL, so that those side-effects are never undone?
@@ -77,7 +77,7 @@ We instead get the output ~((4) (5) (6) (7))~, which ignores the difference cons
 ******* TODO Don't talk about noticers: they're an implementation detail.
 ***** TODO Simplify the language in the constraint section.
 * TODO Make iscream.el work under Slime.
-* [-] Dynamic-extent in CPS-CONVERT-TAGBODY?
+* [-] Dynamic-extent in CPS-CONVERT-TAGBODY.
 We have a straightforward approach (around line 1983), need to check if it works.
 * [-] Split the system into logical pieces.
     Most of the DEFUN-COMPILE-TIME functions should probably go
@@ -132,8 +132,10 @@ We have a straightforward approach (around line 1983), need to check if it works
 *** DONE MEMBERV and derivatives should support vectors.
 This seems to be resolved by a prior commit
 * Refactoring
-*** Depend on Alexandria
-***** peal-off-documentation-string-and-declarations -> alexandria:parse-body
+*** [-] Depend on Alexandria
+***** DONE Import Alexandria and Serapeum
+***** TODO Refactor based on their shared functions
+****** TODO peal-off-documentation-string-and-declarations -> alexandria:parse-body
 *** SETF and SETQ walking is suspiciously different
 * Future Work
 *** TODO See if it would make sense to make nondeterministic functions funcallable instances.

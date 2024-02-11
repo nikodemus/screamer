@@ -4405,20 +4405,30 @@ Otherwise returns the value of X."
       ;;       not finite.
       (restrict-bounds!
        z
-       (infinity-min
-        (infinity-* (variable-lower-bound x) (variable-lower-bound y))
+       (s:nest
         (infinity-min
-         (infinity-* (variable-lower-bound x) (variable-upper-bound y))
-         (infinity-min
-          (infinity-* (variable-upper-bound x) (variable-lower-bound y))
-          (infinity-* (variable-upper-bound x) (variable-upper-bound y)))))
-       (infinity-max
-        (infinity-* (variable-lower-bound x) (variable-lower-bound y))
+         (infinity-* (variable-lower-bound x)
+                     (variable-lower-bound y)))
+        (infinity-min
+         (infinity-* (variable-lower-bound x)
+                     (variable-upper-bound y)))
+        (infinity-min
+         (infinity-* (variable-upper-bound x)
+                     (variable-lower-bound y))
+         (infinity-* (variable-upper-bound x)
+                     (variable-upper-bound y))))
+       (s:nest
         (infinity-max
-         (infinity-* (variable-lower-bound x) (variable-upper-bound y))
-         (infinity-max
-          (infinity-* (variable-upper-bound x) (variable-lower-bound y))
-          (infinity-* (variable-upper-bound x) (variable-upper-bound y)))))))
+         (infinity-* (variable-lower-bound x)
+                     (variable-lower-bound y)))
+        (infinity-max
+         (infinity-* (variable-lower-bound x)
+                     (variable-upper-bound y)))
+        (infinity-max
+         (infinity-* (variable-upper-bound x)
+                     (variable-lower-bound y))
+         (infinity-* (variable-upper-bound x)
+                     (variable-upper-bound y))))))
   (let ((x (value-of x))
         (y (value-of y))
         (z (value-of z)))
