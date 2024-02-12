@@ -98,7 +98,7 @@ to DEFPACKAGE, and automatically injects two additional options:
   "The threshold of closeness to consider 2 numbers equivalent.
 Use this to deal with floating-point errors, if necessary.")
 (defun roughly-= (a b)
-  "Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'"
+  ;; Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'
   (declare (number a b))
   (<= (abs (- a b)) *numeric-bounds-collapse-threshold*))
 
@@ -1955,9 +1955,6 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     (let ((segments (reverse segments))
           (dummy-argument (gensym "DUMMY-"))
           (other-arguments (gensym "OTHER-")))
-      ;; needs work: The closures created by LABELS functions aren't declared to
-      ;;             have DYNAMIC-EXTENT since I don't know how to do this in
-      ;;             Common Lisp.
       `(labels ,(mapcar
                  #'(lambda (segment)
                      (let ((next (rest (member segment segments :test #'eq))))
@@ -1971,6 +1968,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                            (or next value?)
                            environment))))
                  (rest segments))
+         (declare (dynamic-extent
+                   ,@(mapcar (lambda (seg) `(function ,(first seg)))
+                             (rest segments))))
          ,(let ((next (rest segments)))
             (cps-convert-progn
              (reverse (rest (first segments)))
