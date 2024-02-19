@@ -100,7 +100,9 @@ Use this to deal with floating-point errors, if necessary.")
 (defun-compile-time roughly-= (a b)
   ;; "Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'"
   (declare (number a b))
-  (<= (abs (- a b)) *numeric-bounds-collapse-threshold*))
+  (cond
+    ((or (floatp a) (floatp b)) (<= (abs (- a b)) *numeric-bounds-collapse-threshold*))
+    (t (= a b))))
 
 (defun-compile-time notf (f) (lambda (&rest xs) (not (apply f xs))))
 
