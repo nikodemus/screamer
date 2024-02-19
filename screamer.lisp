@@ -97,10 +97,12 @@ to DEFPACKAGE, and automatically injects two additional options:
 (defvar *numeric-bounds-collapse-threshold* 0.0000000000001
   "The threshold of closeness to consider 2 numbers equivalent.
 Use this to deal with floating-point errors, if necessary.")
-(defun roughly-= (a b)
-  ;; Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'
+(defun-compile-time roughly-= (a b)
+  ;; "Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'"
   (declare (number a b))
   (<= (abs (- a b)) *numeric-bounds-collapse-threshold*))
+
+(defun-compile-time notf (f) (lambda (&rest xs) (not (apply f xs))))
 
 (defvar-compile-time *function-record-table* (make-hash-table :test #'equal)
   "The function record table.")
@@ -6543,23 +6545,45 @@ restrictions and fail when any assertion causes X1 to be known to be equal to
 X2."
   (/=v-internal x xs))
 
-;;; == for simple equality-checking of atoms using `equal'
+;;; == for as close to proper unification as Screamer currently supports
+;;; Effectively a Screamer analogue of equalpv
 (defun known?-==v2-variable (x y)
-  (or (and (variable-real? x)
-           (variable-real? y)
-           (known?-<=v2-variable x y)
-           (known?-<=v2-variable y x))
-      (and (not (equal x (variable-value x)))
-           (not (equal y (variable-value y)))
-           (equal (variable-value x) (variable-value y)))))
+  (s:nest
+   (or (equalp x y))
+   (cond
+     ((and (variable-real? x)
+           (variable-real? y))
+      (and (known?-<=v2 x y)
+           (known?-<=v2 y x))))
+   ((and (ground? x)
+         (ground? y)))
+   (let ((x (variable-value x))
+         (y (variable-value y))))
+   (cond ((and (consp x) (consp y))
+          (and (known?-==v2 (car x) (car y))
+               (known?-==v2 (cdr x) (cdr y))))
+         ((and x y (s:sequencep x) (s:sequencep y)
+               (= (length x) (length y)))
+          (every #'known?-==v2 x y))
+         (t (equalp x y)))))
 
 (defun known?-/==v2-variable (x y)
-  (or (and (variable-real? x)
-           (variable-real? y)
+  (let ((xv (value-of x))
+        (yv (value-of y)))
+    (cond ((and (variable-real? x)
+                (variable-real? y))
            (or (known?-<v2-variable x y) (known?-<v2-variable y x)))
-      (and (not (equal x (variable-value x)))
-           (not (equal y (variable-value y)))
-           (not (equal (variable-value x) (variable-value y))))))
+          ((and (consp xv) (consp yv))
+           (and (known?-/==v2 (car xv) (car yv))
+                (known?-/==v2 (cdr xv) (cdr yv))))
+          ((and (s:sequencep xv) (s:sequencep yv)
+                xv yv ;; Make sure it's not just them being nil
+                )
+           (or (not (= (length xv) (length yv)))
+               (every #'known?-/==v2 xv yv)))
+          ;;; TODO: Make this correct when dealing with e.g. structs
+          ((and (bound? x) (bound? y)
+                (not (equalp xv yv))) t))))
 
 (defun known?-==v2-internal (x y)
   (known?-==v2-variable (variablize x) (variablize y)))
@@ -6591,59 +6615,71 @@ X2."
 (defun known?-/==v (x &rest xs) (known?-/==v-internal x xs))
 
 (defun ==-rule (x y)
-  (cond
-    ;; note: I forget why +-RULE *-RULE MIN-RULE and MAX-RULE must perform the
-    ;;       check in the second COND clause irrespective of whether the first
-    ;;       clause is executed.
-    ((and (variable-real? x) (variable-real? y))
-     (restrict-bounds! x (variable-lower-bound y) (variable-upper-bound y))
-     (restrict-bounds! y (variable-lower-bound x) (variable-upper-bound x)))
-    ((and (not (variable? x)) (not (variable? y)) (not (equal x y))) (fail))
-    ((known?-/==v2 x y) (fail)))
-  (when (or (variable? x) (variable? y))
-    (let ((xdom (cond
-                  ((and (variable? x)
-                        (subtypep (type-of (variable-enumerated-domain x)) 'list))
-                   (variable-enumerated-domain x))
-                  ((bound? x) (list (value-of x)))
-                  (t nil)))
-          (ydom (cond
-                  ((and (variable? y)
-                        (subtypep (type-of (variable-enumerated-domain y)) 'list))
-                   (variable-enumerated-domain y))
-                  ((bound? y) (list (value-of y)))
-                  (t nil))))
-      (cond ((and (bound? y) (not xdom))
-             (set-enumerated-domain! x ydom))
-            ((and (bound? x) (not ydom))
-             (set-enumerated-domain! y xdom))
-            (t
-             (when (and xdom ydom
-                        (or (variable? x) (variable? y)))
-               (let ((joined (intersection xdom ydom :test #'equal)))
-                 (mapc
-                  (lambda (v)
-                    (when (variable? v)
-                      (restrict-enumerated-domain! v joined)))
-                  (list x y)))))))))
+  (when (known?-/==v2 x y) (fail))
+  (when (and (variable-real? x) (variable-real? y))
+    (restrict-bounds! x (variable-lower-bound y) (variable-upper-bound y))
+    (restrict-bounds! y (variable-lower-bound x) (variable-upper-bound x)))
+  (let ((xv (when (bound? x) (value-of x)))
+        (yv (when (bound? y) (value-of y))))
+    (s:nest
+     (cond ((and (consp xv)
+                 (consp yv))
+            (==-rule (variablize (car xv))
+                     (variablize (car yv)))
+            (==-rule (variablize (cdr xv))
+                     (variablize (cdr yv))))
+           ((and (s:sequencep xv) (s:sequencep yv)
+                 xv yv ;; Make sure it's not just them being nil
+                 )
+            (map nil (lambda (a b) (==-rule (variablize a)
+                                            (variablize b)))
+                 xv yv)))
+     (t)
+     (let ((xdom (cond
+                   ((and (variable? x)
+                         (subtypep (type-of (variable-enumerated-domain x)) 'list))
+                    (variable-enumerated-domain x))
+                   ((bound? x) (list (value-of x)))
+                   (t nil)))
+           (ydom (cond
+                   ((and (variable? y)
+                         (subtypep (type-of (variable-enumerated-domain y)) 'list))
+                    (variable-enumerated-domain y))
+                   ((bound? y) (list (value-of y)))
+                   (t nil)))))
+     (cond ((and (bound? y) (not xdom))
+            (set-enumerated-domain! x ydom))
+           ((and (bound? x) (not ydom))
+            (set-enumerated-domain! y xdom)))
+     (t)
+     (when (and xdom ydom
+                (or (variable? x) (variable? y))))
+     (let ((joined (intersection xdom ydom :test #'equal))))
+     (mapc (lambda (v)
+             (when (variable? v)
+               (restrict-enumerated-domain! v joined)))
+           (list x y)))))
 
 (defun /==-rule (x y)
-  (let ((xv (value-of x))
-        (yv (value-of y)))
-    (when (known?-==v2 x y) (fail))
-    (cond ((and (not (variable? xv)) (not (variable? yv)) (equal xv yv)) (fail))
-          ((and (bound? xv)
-                (variable? y))
-           (if (subtypep (type-of (variable-enumerated-domain y)) 'list)
-               (when (member (value-of xv) (variable-enumerated-domain y))
-                 (restrict-enumerated-domain! y (remove (value-of xv) (variable-enumerated-domain y))))
-               (restrict-enumerated-antidomain! y (cons (value-of xv) (variable-enumerated-antidomain y)))))
-          ((and (bound? yv)
-                (variable? x))
-           (if (subtypep (type-of (variable-enumerated-domain x)) 'list)
-               (when (member (value-of yv) (variable-enumerated-domain x))
-                 (restrict-enumerated-domain! x (remove (value-of yv) (variable-enumerated-domain x))))
-               (restrict-enumerated-antidomain! x (cons (value-of yv) (variable-enumerated-antidomain x))))))))
+  ;; Note: sequences are handled in assert!-/==v2
+  (labels ((block-possible-value (var val)
+             (let ((dom (variable-enumerated-domain var))
+                   (antidom (variable-enumerated-antidomain var)))
+               (if (subtypep (type-of (variable-enumerated-domain var)) 'list)
+                   (when (member (value-of val) dom)
+                     (restrict-enumerated-domain! var
+                                                  (remove (value-of val) dom)))
+                   (restrict-enumerated-antidomain! var
+                                                    (cons (value-of val) antidom))))))
+    (let ((xv (value-of x))
+          (yv (value-of y)))
+      (when (known?-==v2 x y) (fail))
+      (when (and (bound? x)
+                 (variable? y))
+        (block-possible-value y xv))
+      (when (and (bound? y)
+                 (variable? x))
+        (block-possible-value x yv)))))
 
 (defun assert!-==v2 (x y)
   (let ((x (variablize x))
@@ -6651,11 +6687,49 @@ X2."
     (attach-noticer! #'(lambda () (==-rule x y)) x)
     (attach-noticer! #'(lambda () (==-rule x y)) y)))
 
+(defun assert!-==v-internal (x xs)
+  (unless (null xs)
+    (assert!-==v2 x (first xs))
+    (assert!-==v-internal (first xs) (rest xs))))
+
+(defun assert!-==v (x &rest xs) (assert!-==v-internal x xs))
+
 (defun assert!-/==v2 (x y)
-  (let ((x (variablize x))
-        (y (variablize y)))
-    (attach-noticer! #'(lambda () (/==-rule x y)) x)
-    (attach-noticer! #'(lambda () (/==-rule x y)) y)))
+  (let ((xv (value-of x))
+        (yv (value-of y)))
+    (cond
+      ((and (bound? x) (bound? y)
+            (s:sequencep xv) (s:sequencep yv))
+       (let ((known-mismatch nil)
+             (a-variables nil)
+             (b-variables nil))
+         (iter:iter
+           (iter:for a in-sequence xv)
+           (iter:for b in-sequence yv)
+           (if (or (not (bound? a))
+                   (not (bound? b)))
+               (progn
+                 (push a a-variables)
+                 (push b b-variables))
+               (unless (equalp (value-of a) (value-of b))
+                 (setf known-mismatch t)
+                 (return nil))))
+         (unless known-mismatch
+           (assert! (notv (apply #'andv
+                                 (mapcar #'==v
+                                         a-variables
+                                         b-variables)))))))
+      (t (let ((x (variablize x))
+               (y (variablize y)))
+           (attach-noticer! #'(lambda () (/==-rule x y)) x)
+           (attach-noticer! #'(lambda () (/==-rule x y)) y))))))
+
+(defun assert!-/==v-internal (x xs)
+  (unless (null xs)
+    (assert!-/==v2 x (first xs))
+    (assert!-/==v-internal (first xs) (rest xs))))
+
+(defun assert!-/==v (x &rest xs) (assert!-/==v-internal x xs))
 
 (defun ==v2 (x y)
   (cond ((known?-==v2-internal x y) t)
@@ -6724,6 +6798,9 @@ X2."
   "The inverse of `==v'"
   (/==v-internal x xs))
 
+(s:defalias == #'equalp)
+(s:defalias /== (notf #'equalp))
+
 (defun all-different (li &key (test #'equal))
   (if (null (cdr li))
       t
@@ -6741,8 +6818,6 @@ Works on nested sequences which potentially contain variables, e.g. (all-differe
   (let* ((val-diff-func (cond
                           ((every #'known?-numberpv inp)
                            #'/=v)
-                          ((some #'s:sequencep inp)
-                           (lambda (a b) (notv (equalv a b))))
                           (t #'/==v)))
          (seq-diff-func (lambda (a b) (notv (equalv a b))))
          (diff-func (lambda (a b)
@@ -6774,10 +6849,10 @@ Works on nested sequences which potentially contain variables, e.g. (all-differe
             ((variable? y)
              (and (not (eq (variable-value y) y))
                   (known?-equalv x (variable-value y))))
-            (t (and (consp x)
-                    (consp y)
-                    (known?-equalv (car x) (car y))
-                    (known?-equalv (cdr x) (cdr y)))))))
+            ((and (consp x) (consp y))
+             (known?-equalv (car x) (car y))
+             (known?-equalv (cdr x) (cdr y)))
+            (t (equal x y)))))
 
 (defun assert!-equalv (x y)
   (unless (eql x y)
@@ -6988,7 +7063,7 @@ nested in a call to KNOWN?, are similarly transformed."
                         (rest form)))))
         ((member (first form)
                  '(integerpv realpv numberpv memberv booleanpv
-                   =v <v <=v >v >=v /=v funcallv applyv equalv)
+                   =v <v <=v >v >=v /=v funcallv applyv ==v /==v equalv)
                  :test #'eq)
          (cons (cdr (assoc (first form)
                            (if polarity?
@@ -7005,6 +7080,8 @@ nested in a call to KNOWN?, are similarly transformed."
                                  (/=v . assert!-/=v)
                                  (funcallv . assert!-funcallv)
                                  (applyv . assert!-applyv)
+                                 (==v . assert!-==v)
+                                 (/==v . assert!-/==v)
                                  (equalv . assert!-equalv))
                                '((integerpv . assert!-notv-integerpv)
                                  (realpv . assert!-notv-realpv)
@@ -7019,6 +7096,8 @@ nested in a call to KNOWN?, are similarly transformed."
                                  (/=v . assert!-=v)
                                  (funcallv . assert!-notv-funcallv)
                                  (applyv . assert!-notv-applyv)
+                                 (==v . assert!-/==v)
+                                 (/==v . assert!-==v)
                                  (equalv . assert!-notv-equalv)))
                            :test #'eq))
                (rest form)))
@@ -7079,7 +7158,7 @@ directly nested in a call to ASSERT!, are similarly transformed."
                          (mapcar #'third result)))))
         ((member (first form)
                  '(integerpv realpv numberpv memberv booleanpv
-                   =v <v <=v >v >=v /=v funcallv applyv equalv)
+                   =v <v <=v >v >=v /=v funcallv applyv ==v /==v equalv)
                  :test #'eq)
          (let ((arguments (mapcar #'(lambda (argument)
                                       (declare (ignore argument))
@@ -7101,6 +7180,8 @@ directly nested in a call to ASSERT!, are similarly transformed."
                                            (/=v . assert!-/=v)
                                            (funcallv . assert!-funcallv)
                                            (applyv . assert!-applyv)
+                                           (==v . assert!-==v)
+                                           (/==v . assert!-/==v)
                                            (equalv . assert!-equalv))
                                          '((integerpv . assert!-notv-integerpv)
                                            (realpv . assert!-notv-realpv)
@@ -7115,6 +7196,8 @@ directly nested in a call to ASSERT!, are similarly transformed."
                                            (/=v . assert!-=v)
                                            (funcallv . assert!-notv-funcallv)
                                            (applyv . assert!-notv-applyv)
+                                           (==v . assert!-/==v)
+                                           (/==v . assert!-==v)
                                            (equalv . assert!-notv-equalv)))
                                      :test #'eq))
                          arguments)

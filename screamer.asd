@@ -35,7 +35,8 @@
   :maintainer "Swapneil Singh"
   :version "4.0.0"
   :depends-on ("alexandria"
-               "serapeum")
+               "serapeum"
+               "iterate")
   :components
   ((:file "package")
    (:file "screamer")))
