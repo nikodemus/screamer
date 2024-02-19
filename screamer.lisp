@@ -6803,14 +6803,18 @@ Works on nested sequences which potentially contain variables, e.g. (all-differe
 (defun known?-notv-equalv (x y) (one-value (progn (assert!-equalv x y) nil) t))
 
 (defun assert!-notv-equalv (x y)
-  ;; note: Can be made more efficient so that if you later find out that
-  ;;       X and Y are KNOWN?-NUMBERPV you can then ASSERT!-/=V2.
-  (if (known?-equalv x y) (fail))
-  (unless (known?-notv-equalv x y)
-    (let ((x (variablize x))
-          (y (variablize y)))
-      (attach-noticer! #'(lambda () (if (known?-equalv x y) (fail))) x)
-      (attach-noticer! #'(lambda () (if (known?-equalv x y) (fail))) y))))
+  (cond
+    ((known?-equalv x y) (fail))
+    ((not (known?-notv-equalv x y))
+     (let* ((x (variablize x))
+            (y (variablize y))
+            (noticer #'(lambda ()
+                         (cond ((and (known?-numberpv x)
+                                     (known?-numberpv y))
+                                (/=-rule x y))
+                               ((known?-equalv x y) (fail))))))
+       (attach-noticer! noticer x)
+       (attach-noticer! noticer y)))))
 
 (defun equalv (x y)
   "Returns T if the aggregate object X is known to equal the aggregate object
