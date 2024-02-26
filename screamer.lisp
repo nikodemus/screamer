@@ -2488,6 +2488,46 @@ most recent choice-point."
               ,(first alternatives)
               (either ,@(rest alternatives))))))
 
+(defmacro-compile-time either-prob-internal (&body alternatives)
+  ;; FIXME: ref to operators providing nondeterministic contexts
+  (cond ((not alternatives)
+         '(fail))
+        ((not (rest alternatives))
+         (let* ((alt (first alternatives))
+                (val (first alt))
+                (prob (second alt)))
+           `(progn
+              (trail-prob nil (* (current-probability)
+                                 ,prob))
+              ,val)))
+        (t
+         `(if (a-boolean)
+              (either-prob-internal ,(first alternatives))
+              (either-prob-internal ,@(rest alternatives))))))
+
+(defmacro-compile-time either-prob (&body alternatives)
+  "Nondeterministically evaluates and returns the value of one of its
+ALTERNATIVES, and updates the tracked probability measure accordingly.
+
+Acts as EITHER, but alternatives are 2-element lists
+of values and probabilities.
+Probabilities must be numbers between 0 and 1;
+rational numbers in this range are accepted.
+
+Probabilities cannot be provided as forms that evaluate
+to numbers."
+  (flet ((normalize (alt-list)
+           (let ((prob-sum (apply #'+
+                                  (mapcar #'second
+                                          alt-list))))
+             (mapcar (lambda (elem)
+                       (list (first elem)
+                             (/ (second elem)
+                                prob-sum)))
+                     alt-list))))
+    `(either-prob-internal
+       ,@(normalize alternatives))))
+
 (defmacro-compile-time local (&body body &environment environment)
   "Evaluates BODY in the same fashion as PROGN except that all SETF and SETQ
 forms lexically nested in its body result in local side effects which are
@@ -2662,6 +2702,34 @@ ALL-VALUES is analogous to the `bagof' primitive in Prolog."
                              ,last-value-cons (rest ,last-value-cons))))))
        ,values)))
 
+(defmacro-compile-time all-values-prob (&body body)
+  "Evaluates BODY as an implicit PROGN and returns a list pairing all of the
+nondeterministic values yielded by it with their corresponding probabilities.
+
+Other than the output format, semantics are equivalent to
+ALL-VALUES.
+
+Note that some possibilities may have duplicate return values.
+
+Note that the probabilities are measured with respect to the
+distributions provided at probabilistic choice points; if
+constraints or FAIL calls remove potential branches, then the
+sum of the probabilities returned will be less than 1."
+  (let ((values (gensym "VALUES"))
+        (last-value-cons (gensym "LAST-VALUE-CONS")))
+    `(let ((,values '())
+           (,last-value-cons nil))
+       (for-effects
+         (let ((value (progn ,@body)))
+           (global (if (null ,values)
+                       (setf ,last-value-cons (list (list value
+                                                          (current-probability *trail*)))
+                             ,values ,last-value-cons)
+                       (setf (rest ,last-value-cons) (list (list value
+                                                                 (current-probability *trail*)))
+                             ,last-value-cons (rest ,last-value-cons))))))
+       ,values)))
+
 (defmacro-compile-time n-values (n form &optional (default-on-failure nil) (default nil))
   "Returns the first N nondeterministic values yielded by FORM.
 
@@ -2706,6 +2774,28 @@ N."
                         (let ((,value ,form))
                           (decf ,counter)
                           (push ,value ,value-list)
+                          (when (zerop ,counter)
+                            (return-from n-values ,value-list)))))
+         ,(if default-on-failure default value-list)))))
+
+(defmacro-compile-time n-values-prob (n form &optional (default-on-failure nil) (default nil))
+  "Identical to N-VALUES, but returns pairs of values and probabilities.
+See the docstring of `ALL-VALUES-PROB' for more details."
+  (when (numberp n) (assert (and (integerp n) (>= n 0))))
+  (let ((counter (gensym "I"))
+        (value (gensym "value"))
+        (value-list (gensym "value-list")))
+    `(block n-values
+       (let (;; (screamer::*trail* (make-array 4096 :adjustable t :fill-pointer 0))
+             (,counter (value-of ,n))
+             (,value-list nil))
+         (declare (integer ,counter) ((or cons null) ,value-list))
+         (for-effects (unless (zerop ,counter)
+                        (let ((,value ,form))
+                          (decf ,counter)
+                          (push (list ,value
+                                      (current-probability *trail*))
+                                ,value-list)
                           (when (zerop ,counter)
                             (return-from n-values ,value-list)))))
          ,(if default-on-failure default value-list)))))
@@ -2772,6 +2862,17 @@ selection (due to either a normal return, or calling FAIL.)"
   (when *nondeterministic?*
     (vector-push-extend function *trail* 1024))
   function)
+(defun trail-prob (function prob)
+  (when *nondeterministic?*
+    (vector-push-extend
+     (cond ((and function prob) (list function prob))
+           (function function)
+           (prob prob))
+     *trail*
+     1024)))
+
+(defun pop-trail (trail)
+  (vector-pop trail))
 
 (defun unwind-trail-to (trail-pointer)
   (declare (fixnum trail-pointer))
@@ -2781,7 +2882,9 @@ selection (due to either a normal return, or calling FAIL.)"
   (let ((trail *trail*))
     (loop (when (<= (fill-pointer trail) trail-pointer)
             (return-from unwind-trail-to))
-          (funcall (vector-pop trail))
+          (let ((fun (pop-trail trail)))
+            (when (functionp fun)
+              (funcall fun)))
           ;; note: This is to allow the trail closures to be garbage collected.
           (setf (aref trail (fill-pointer trail)) nil))))
 
@@ -2808,6 +2911,18 @@ SIZE-FORM is a positive integer or a form which evaluates to a positive integer,
                                :adjustable t
                                :fill-pointer 0)))
        ,@body)))
+
+(defun current-probability (&optional (trail *trail*))
+  (labels ((zero-one (n) (and (numberp n) (<= 0 n 1)))
+           (get-trail-prob (elem)
+             (cond ((zero-one elem) elem)
+                   ((and (listp elem)
+                         (zero-one (second elem)))
+                    (second elem)))))
+    (or (find-if #'identity trail
+                 :from-end t
+                 :key #'get-trail-prob)
+        1)))
 
 (defun y-or-n-p
     (&optional (format-string nil format-string?) &rest format-args)
