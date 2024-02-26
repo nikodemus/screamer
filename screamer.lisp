@@ -112,7 +112,8 @@ Use this to deal with floating-point errors, if necessary.")
 (defun-compile-time andf (f &rest fs)
   (lambda (&rest xs)
     (and (apply f xs)
-         (and fs (apply (apply #'andf fs) xs)))))
+         (or (not fs)
+             (apply (apply #'andf fs) xs)))))
 (defun-compile-time orf (f &rest fs)
   (lambda (&rest xs)
     (or (apply f xs)
@@ -2507,23 +2508,60 @@ most recent choice-point."
 
 (defmacro-compile-time either-prob (&body alternatives)
   "Nondeterministically evaluates and returns the value of one of its
-ALTERNATIVES, and updates the tracked probability measure accordingly.
+ALTERNATIVES, and updates the current probability accordingly.
 
 Acts as EITHER, but alternatives are 2-element lists
 of values and probabilities.
-Probabilities must be numbers between 0 and 1;
-rational numbers in this range are accepted.
+
+Probabilities must be provided as numbers, which will be normalized
+to probabilities between 0 and 1 (i.e. (either-prob (1 2) (2 1/2))
+would give 4/5 chance to 1 and 1/5 chance to 2).
 
 Probabilities cannot be provided as forms that evaluate
-to numbers."
+to numbers.
+
+If any choices are provided without associated probabilities
+(i.e. not a 2-element list with the second element a number),
+then they will be assigned the average probability number of
+those elements where such was provided. If no elements
+match this pattern, then the uniform prior will be used.
+
+If a choice is a 2-element list with the second element nil,
+it will be treated as if the first element was the value
+and no probability was provided (i.e. (either-prob ((+ 1) nil) 2)
+gives equal probability to 1 and 2)."
   (flet ((normalize (alt-list)
-           (let ((prob-sum (apply #'+
-                                  (mapcar #'second
-                                          alt-list))))
+           (let* ((prob-pred (andf #'listp
+                                   (compose #'numberp
+                                            #'second)
+                                   (compose (curry #'= 2)
+                                            #'length)))
+                  (prob-provided (s:~>> alt-list
+                                        (s:filter prob-pred)
+                                        (mapcar #'second)))
+                  (prob-provided (or prob-provided (list 1)))
+                  (prob-sum (apply #'+ prob-provided))
+                  (prob-avg (/ prob-sum (length prob-provided)))
+                  (prob-sum (* prob-avg (length alt-list)))
+                  (prob-ignore-pred (andf #'listp
+                                          (compose #'null
+                                                   #'second)
+                                          (compose (curry #'= 2)
+                                                   #'length)))
+                  (alt-list (mapcar (lambda (elem)
+                                      (if (funcall prob-ignore-pred elem)
+                                          (list (first elem)
+                                                prob-avg)
+                                          elem))
+                                    alt-list)))
              (mapcar (lambda (elem)
-                       (list (first elem)
-                             (/ (second elem)
-                                prob-sum)))
+                       (if (funcall prob-pred elem)
+                           (list (first elem)
+                                 (/ (second elem)
+                                    prob-sum))
+                           (list elem
+                                 (/ prob-avg
+                                    prob-sum))))
                      alt-list))))
     `(either-prob-internal
        ,@(normalize alternatives))))
