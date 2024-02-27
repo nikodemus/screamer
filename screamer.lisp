@@ -94,6 +94,10 @@ to DEFPACKAGE, and automatically injects two additional options:
 
 (defvar *trail* (make-array 4096 :adjustable t :fill-pointer 0) "The trail.")
 
+(defvar-compile-time *possibility-consolidator* nil
+  "If non-nil, must be a function which compares 2 values, used for combining
+possibilities generated in ALL-VALUES, ALL-VALUES-PROB, and some similar forms.")
+
 (defvar *numeric-bounds-collapse-threshold* 0.0000000000001
   "The threshold of closeness to consider 2 numbers equivalent.
 Use this to deal with floating-point errors, if necessary.")
@@ -2738,7 +2742,18 @@ ALL-VALUES is analogous to the `bagof' primitive in Prolog."
                              ,values ,last-value-cons)
                        (setf (rest ,last-value-cons) (list value)
                              ,last-value-cons (rest ,last-value-cons))))))
-       ,values)))
+       (if *possibility-consolidator*
+           (flet ((merge-vals (vals)
+                    (let ((prev nil))
+                      (mapc (lambda (v)
+                              (if-let (prev-val (position v prev
+                                                          :test *possibility-consolidator*))
+                                nil
+                                (push v prev)))
+                            vals)
+                      prev)))
+             (merge-vals ,values))
+           ,values))))
 
 (defmacro-compile-time all-values-prob (&body body)
   "Evaluates BODY as an implicit PROGN and returns a list pairing all of the
@@ -2766,7 +2781,19 @@ sum of the probabilities returned will be less than 1."
                        (setf (rest ,last-value-cons) (list (list value
                                                                  (current-probability *trail*)))
                              ,last-value-cons (rest ,last-value-cons))))))
-       ,values)))
+       (if *possibility-consolidator*
+           (flet ((merge-vals (vals)
+                    (let ((prev nil))
+                      (mapc (lambda (v)
+                              (if-let (prev-val (assoc (first v) prev
+                                                       :test *possibility-consolidator*))
+                                (incf (second prev-val)
+                                      (second v))
+                                (push v prev)))
+                            vals)
+                      prev)))
+             (merge-vals ,values))
+           ,values))))
 
 (defmacro-compile-time expected-prob (&body body)
   "Returns the sum of the probabilities of all the values produced by
