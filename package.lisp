@@ -29,7 +29,8 @@
   (:use :cl :alexandria)
   (:local-nicknames (:s :serapeum)
                     (:iter :iterate))
-  (:export #:either #:either-prob
+  (:export #:either
+           #:either-prob
            #:fail
            #:local
            #:global
@@ -39,20 +40,24 @@
            #:necessarily?
            #:one-value #:all-values #:n-values #:ith-value
            #:all-values-prob #:n-values-prob
+           #:expected-prob
            #:print-values
            #:nondeterministic-function?
            #:funcall-nondeterministic
            #:apply-nondeterministic
            #:unwind-trail
            #:with-trail
-           #:trail #:trail-prob
+           #:trail
+           #:trail-prob
            #:current-probability
            #:purge
            #:unwedge-screamer
            #:local-output
            #:a-boolean
            #:an-integer #:an-integer-above #:an-integer-below #:an-integer-between
+           #:an-integer-between-prob
            #:a-member-of
+           #:a-member-of-prob
            #:when-failing
            #:count-failures
            #:boolean

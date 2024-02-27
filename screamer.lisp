@@ -2768,6 +2768,18 @@ sum of the probabilities returned will be less than 1."
                              ,last-value-cons (rest ,last-value-cons))))))
        ,values)))
 
+(defmacro-compile-time expected-prob (&body body)
+  "Returns the sum of the probabilities of all the values produced by
+ALL-VALUES-PROB.
+
+If there are no non-probabilistic branches in BODY, then this corresponds
+to the total probability of the constraints in BODY being satisfied."
+  `(s:nest
+    (apply #'+)
+    (mapcar #'second)
+    (all-values-prob
+      ,@body)))
+
 (defmacro-compile-time n-values (n form &optional (default-on-failure nil) (default nil))
   "Returns the first N nondeterministic values yielded by FORM.
 
@@ -3284,6 +3296,32 @@ integers. Fails if the interval does not contain any integers."
          (choice-point-internal (funcall continuation i))))
       (funcall continuation high))))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'an-integer-between-prob))
+
+(cl:defun an-integer-between-prob (low high)
+  "Nondeterministically returns an integer in the closed interval [LOW, HIGH].
+The results are returned in ascending order. Both LOW and HIGH must be
+integers. Fails if the interval does not contain any integers."
+  (declare (ignore low high))
+  (screamer-error
+   "AN-INTEGER-BETWEEN-PROB is a nondeterministic function. As such, it must be~%~
+   called only from a nondeterministic context."))
+
+(cl:defun an-integer-between-prob-nondeterministic (continuation low high)
+  (let* ((low (ceiling (value-of low)))
+         (high (floor (value-of high)))
+         (possibilities (max 0 (1+ (- high low))))
+         (prob-avg (if (zerop possibilities) 0 (/ 1 possibilities))))
+    (unless (> low high)
+      (choice-point-external
+       (do ((i low (1+ i))) ((= i high))
+         (choice-point-internal
+          (progn (trail-prob nil (* (current-probability) prob-avg))
+                 (funcall continuation i)))))
+      (progn (trail-prob nil (* (current-probability) prob-avg))
+             (funcall continuation high)))))
+
 (defmacro let-integers-betweenv (((min max) var-list) &rest body)
   "Defines multiple logic variables with numerical values between min and max (in the same manner as with an-integer-betweenv).
 Duplicate variable names will be ignored."
@@ -3304,24 +3342,66 @@ either a list or a vector."
    only from a nondeterministic context."))
 
 (cl:defun a-member-of-nondeterministic (continuation sequence)
-  (let ((sequence (value-of sequence)))
-    (cond
-      ((listp sequence)
-       (unless (null sequence)
-         (choice-point-external
-          (loop (if (null (rest sequence)) (return))
-                (choice-point-internal (funcall continuation (first sequence)))
-                (setf sequence (value-of (rest sequence)))))
-         (funcall continuation (first sequence))))
-      ((vectorp sequence)
-       (let ((n (length sequence)))
-         (unless (zerop n)
-           (let ((n (1- n)))
-             (choice-point-external
-              (dotimes (i n)
-                (choice-point-internal (funcall continuation (aref sequence i)))))
-             (funcall continuation (aref sequence n))))))
-      (t (error "SEQUENCE must be a sequence")))))
+  (serapeum:nest
+   (let* ((sequence (value-of sequence))))
+   (macrolet ((call-continuation (cont inp)
+                `(funcall ,cont ,inp))))
+   (cond
+     ((listp sequence)
+      (unless (null sequence)
+        (choice-point-external
+         (loop (if (null (rest sequence)) (return))
+               (choice-point-internal (call-continuation continuation (first sequence)))
+               (setf sequence (value-of (rest sequence)))))
+        (call-continuation continuation (first sequence))))
+     ((vectorp sequence)
+      (let ((n (length sequence)))
+        (unless (zerop n)
+          (let ((n (1- n)))
+            (choice-point-external
+             (dotimes (i n)
+               (choice-point-internal (call-continuation continuation (aref sequence i)))))
+            (call-continuation continuation (aref sequence n))))))
+     (t (error "SEQUENCE must be a sequence")))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'a-member-of-prob))
+
+(cl:defun a-member-of-prob (sequence)
+  "Nondeterministically returns an element of SEQUENCE. The elements are
+returned in the order that they appear in SEQUENCE. The SEQUENCE must be
+either a list or a vector."
+  (declare (ignore sequence))
+  (screamer-error
+   "A-MEMBER-OF-PROB is a nondeterministic function. As such, it must be called~%~
+   only from a nondeterministic context."))
+
+(cl:defun a-member-of-prob-nondeterministic (continuation sequence)
+  (serapeum:nest
+   (let* ((sequence (value-of sequence))
+          (seq-count (length sequence))
+          (prob-avg (if (zerop seq-count) 0 (/ 1 seq-count)))))
+   (macrolet ((call-continuation (cont inp)
+                `(progn
+                   (trail-prob nil (* (current-probability) prob-avg))
+                   (funcall ,cont ,inp)))))
+   (cond
+     ((listp sequence)
+      (unless (null sequence)
+        (choice-point-external
+         (loop (if (null (rest sequence)) (return))
+               (choice-point-internal (call-continuation continuation (first sequence)))
+               (setf sequence (value-of (rest sequence)))))
+        (call-continuation continuation (first sequence))))
+     ((vectorp sequence)
+      (let ((n (length sequence)))
+        (unless (zerop n)
+          (let ((n (1- n)))
+            (choice-point-external
+             (dotimes (i n)
+               (choice-point-internal (call-continuation continuation (aref sequence i)))))
+            (call-continuation continuation (aref sequence n))))))
+     (t (error "SEQUENCE must be a sequence")))))
 
 ;;; note: The following two functions work only when Screamer is running under
 ;;;       ILisp/GNUEmacs with iscream.el loaded.
