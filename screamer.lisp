@@ -2600,7 +2600,7 @@ gives equal probability to 1 and 2)."
                                     prob-sum))))
                      alt-list))))
     `(either-prob-internal
-       ,@(normalize alternatives))))
+       ,@(sort (normalize alternatives) #'> :key #'second))))
 
 (defmacro-compile-time local (&body body &environment environment)
   "Evaluates BODY in the same fashion as PROGN except that all SETF and SETQ
@@ -2841,6 +2841,24 @@ to the total probability of the constraints in BODY being satisfied."
     (mapcar #'second)
     (all-values-prob
       ,@body)))
+
+(defmacro-compile-time expected-value (&body body)
+  "Returns the sum of each value produced by body times its probability,
+divided by the sum of the probabilities.
+
+If there are no non-probabilistic branches in BODY, then this corresponds
+to the expected value of the output of BODY.
+
+Throws an exception if body outputs any non-numeric value.
+
+Returns NIL if all branches of BODY fail."
+  `(s:nest
+    (funcall (lambda (x) (unless (zerop (second x)) (/ (first x) (second x)))))
+    (funcall (s:juxt (compose (curry #'reduce #'+)
+                              (curry #'mapcar (curry #'reduce #'*)))
+                     (compose (curry #'reduce #'+)
+                              (curry #'mapcar #'second))))
+    (all-values-prob ,@body)))
 
 (defmacro-compile-time n-values (n form &optional (default-on-failure nil) (default nil))
   "Returns the first N nondeterministic values yielded by FORM.
@@ -3120,6 +3138,13 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
 (cl:defun a-boolean-nondeterministic (continuation)
   (choice-point (funcall continuation t))
   (funcall continuation nil))
+
+(defun a-boolean-prob (&optional (p 1/2))
+  "Equivalent to \(EITHER-PROB (T p) (NIL (- 1 p))."
+  (assert (<= 0 p 1))
+  (if (>= p 1/2)
+      (either-prob-internal (t p) (nil (- 1 p)))
+      (either-prob-internal (nil (- 1 p)) (t p))))
 
 (defvar *fail* (lambda ()
                  (if *nondeterministic?*

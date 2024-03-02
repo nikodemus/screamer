@@ -41,6 +41,7 @@
            #:one-value #:all-values #:n-values #:ith-value
            #:all-values-prob #:n-values-prob
            #:expected-prob
+           #:expected-value
            #:print-values
            #:nondeterministic-function?
            #:funcall-nondeterministic
@@ -54,6 +55,7 @@
            #:unwedge-screamer
            #:local-output
            #:a-boolean
+           #:a-boolean-prob
            #:an-integer #:an-integer-above #:an-integer-below #:an-integer-between
            #:an-integer-between-prob
            #:a-member-of
