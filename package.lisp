@@ -60,6 +60,7 @@
            #:an-integer-between-prob
            #:a-member-of
            #:a-member-of-prob
+           #:state-transition
            #:when-failing
            #:count-failures
            #:boolean
