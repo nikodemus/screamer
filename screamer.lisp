@@ -2586,19 +2586,21 @@ gives equal probability to 1 and 2)."
                                                    #'length)))
                   (alt-list (mapcar (lambda (elem)
                                       (if (funcall prob-ignore-pred elem)
-                                          (list (first elem)
-                                                prob-avg)
+                                          (get-cons (first elem)
+                                                    (get-cons prob-avg nil))
                                           elem))
-                                    alt-list)))
-             (mapcar (lambda (elem)
-                       (if (funcall prob-pred elem)
-                           (list (first elem)
-                                 (/ (second elem)
-                                    prob-sum))
-                           (list elem
-                                 (/ prob-avg
-                                    prob-sum))))
-                     alt-list))))
+                                    alt-list))
+                  (normalized (mapcar (lambda (elem)
+                                        (if (funcall prob-pred elem)
+                                            (get-cons (first elem)
+                                                      (get-cons (/ (second elem)
+                                                                   prob-sum) nil))
+                                            (get-cons elem
+                                                      (get-cons (/ prob-avg
+                                                                   prob-sum) nil))))
+                                      alt-list)))
+             (release-list alt-list)
+             normalized)))
     `(either-prob-internal
        ,@(sort (normalize alternatives) #'> :key #'second))))
 
@@ -3493,6 +3495,39 @@ either a list or a vector."
                (choice-point-internal (call-continuation continuation (aref sequence i)))))
             (call-continuation continuation (aref sequence n))))))
      (t (error "SEQUENCE must be a sequence")))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'state-transition))
+
+(cl:defun state-transition (state-machine current-state &optional (times 1))
+  "Transitions from the current state to all possible next states.
+
+STATE-MACHINE is an alist with keys being states and values being
+lists of state-probability pairs.
+
+Transition probabilities must be positive numbers summing to 1 for each state."
+  (declare (ignore state-machine current-state))
+  (screamer-error
+   "STATE-TRANSITION is a nondeterministic function. As such, it must be~%~
+   called only from a nondeterministic context."))
+
+(cl:defun state-transition-nondeterministic
+    (continuation state-machine current-state &optional (times 1))
+  (serapeum:nest
+   (let* ((current-state-spec (assoc current-state state-machine
+                                     :test 'equal))
+          (transitions (rest current-state-spec))
+          (prob-sum (reduce #'+ (mapcar #'second transitions)))))
+   (when (and (roughly-= prob-sum 1)
+              (mapcar (compose (curry #'<= 0) #'second) transitions)))
+   (let ((transitions (sort transitions #'> :key #'second))))
+   (choice-point-external)
+   (dolist (next transitions))
+   (choice-point-internal)
+   (progn (trail-prob nil (* (current-probability) (second next)))
+          (if (> times 1)
+              (state-transition-nondeterministic continuation state-machine (first next) (1- times))
+              (funcall continuation (first next))))))
 
 ;;; note: The following two functions work only when Screamer is running under
 ;;;       ILisp/GNUEmacs with iscream.el loaded.
