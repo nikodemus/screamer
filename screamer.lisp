@@ -3754,8 +3754,9 @@ TIMES must be a non-negative integer."
 
                 ;; Return the state probabilities after everything
                 state-probs))))
-   (let ((transitions (recurse-transitions current-state
-                                           times))))
+   (let* ((transitions (recurse-transitions current-state
+                                            times))
+          (transitions (sort transitions #'> :key #'second))))
 
    ;; Implement choice point over final set of possible states
    (choice-point-external)
