@@ -3530,10 +3530,6 @@ either a list or a vector."
 (cl:defun sample (dist &optional (count nil))
   "Continuously samples random values from DIST.
 
-NOTE: Execution will NOT backtrack past a SAMPLE statement!
-Ensure you limit the number of values you request, and do not
-expect choice points before a sample to be backtracked to!
-
 If DIST is a list, it is a plist where the keys are possible
 return values and the values are the probabilities of each
 value. Values will be normalized to sum to one, i.e.
@@ -3547,7 +3543,16 @@ If COUNT is nil, only a single value will be sampled per attempt.
 If it is a non-negative integer, then a list of samples will be
 returned. In this case samples are treated as probabilistically
 independent, i.e. the chance of the returned list is the product
-of the chance of each sample taken."
+of the chance of each sample taken.
+
+NOTE: Execution will NOT backtrack past a SAMPLE statement!
+Ensure you limit the number of values you request, and do not
+expect choice points before a sample to be backtracked to!
+
+If you want to use SAMPLE inside a larger nondeterministic
+block, it may be useful to wrap it in its own ALL-VALUES,
+ALL-VALUES-PROB, N-VALUES, N-VALUES-PROB, ONE-VALUE, or
+similar form."
   (declare (ignore dist count))
   (screamer-error
    "SAMPLE is a nondeterministic function. As such, it must be~%~
