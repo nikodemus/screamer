@@ -96,7 +96,7 @@ to DEFPACKAGE, and automatically injects two additional options:
 
 (defparameter *possibility-consolidator* nil
   "If non-nil, must be a function which compares 2 values, used for combining
-possibilities generated in ALL-VALUES, ALL-VALUES-PROB, and some similar forms.")
+possibilities generated in ALL-VALUES and ALL-VALUES-PROB.")
 
 (defvar *numeric-bounds-collapse-threshold* 0.0000000000001
   "The threshold of closeness to consider 2 numbers equivalent.
@@ -3541,6 +3541,11 @@ Transition probabilities must be positive numbers summing to 1 for each state."
                               transitions))))
              state-machine)
        (fail))
+   (let ((recursion-check-interval (s:nest
+                                    (* 256)
+                                    (max 1)
+                                    (floor)
+                                    (float-precision *numeric-bounds-collapse-threshold*)))))
    (labels ((get-state (state machine)
               (or (assoc state machine :test 'equal)
                   (let ((c (get-list state)))
@@ -3552,6 +3557,8 @@ Transition probabilities must be positive numbers summing to 1 for each state."
                     ;; Track the next probability distribution
                     (new-probs nil))
                 (s:nest
+                 ;; Allow short-circuiting if transitions have stabilized.
+                 (block short-circuit)
                  ;; Gets the probabilities in a distribution
                  ;; so we can increment them
                  (labels ((get-new-prob (state)
@@ -3561,7 +3568,7 @@ Transition probabilities must be positive numbers summing to 1 for each state."
                                   c)))))
 
                  ;; Recurse over the state machine n times
-                 (iter:iter (iter:for i from 1 to n)
+                 (iter:iter (iter:for i below n)
                    (setf new-probs nil))
 
                  (progn
@@ -3578,6 +3585,13 @@ Transition probabilities must be positive numbers summing to 1 for each state."
                        ;; Increment the probability by the current probability
                        ;; times the odds of the transition
                        (incf (second targ-new-prob) (* p targ-p))))
+
+                   ;; If the state machine stabilizes, return early
+                   (when (and (zerop (mod i recursion-check-interval))
+                              (equal state-probs new-probs))
+                     (release-list state-probs)
+                     (setf state-probs new-probs)
+                     (return-from short-circuit))
 
                    ;; Replace the old probability state with the new one
                    (release-list state-probs)
