@@ -101,6 +101,7 @@ possibilities generated in ALL-VALUES, ALL-VALUES-PROB, and some similar forms."
 (defvar *numeric-bounds-collapse-threshold* 0.0000000000001
   "The threshold of closeness to consider 2 numbers equivalent.
 Use this to deal with floating-point errors, if necessary.")
+
 (defun-compile-time roughly-= (a b)
   ;; "Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'"
   (declare (number a b))
@@ -109,6 +110,15 @@ Use this to deal with floating-point errors, if necessary.")
      (or (= a b)
          (<= (abs (- a b)) *numeric-bounds-collapse-threshold*)))
     (t (= a b))))
+
+(defun-compile-time roughly-<= (a b)
+  ;; "Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'"
+  (declare (number a b))
+  (cond
+    ((or (floatp a) (floatp b))
+     (or (<= a b)
+         (<= (abs (- a b)) *numeric-bounds-collapse-threshold*)))
+    (t (<= a b))))
 
 (defvar-compile-time *cons-cache* (cons nil nil)
   "A cache of conses, to hopefully reduce memory usage")
@@ -131,8 +141,10 @@ Use this to deal with floating-point errors, if necessary.")
     (setf (cadr *cons-cache*) nil)
     (incf *cons-cache-len*)))
 
-(defun-compile-time get-list (&rest vals)
-  vals)
+(defmacro-compile-time get-list (v &rest vals)
+  `(get-cons ,v ,(if (not vals) nil `(get-list ,@vals))))
+(defmacro-compile-time get-list* (v &optional v2 &rest vals)
+  `(get-cons ,v ,(if vals `(get-list* ,v2 ,@vals) v2)))
 (defun-compile-time release-list (l)
   (iter:iter
     (iter:for x initially l then y)
@@ -1266,11 +1278,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     (lambda-list (error "This shouldn't happen"))
     ((variable go) form)
     ((eval-when)
-     (get-cons (first form)
-               (get-cons (second form)
-                         (mapcar #'(lambda (subform)
-                                     (funcall function subform environment))
-                                 (rest (rest form))))))
+     (get-list* (first form)
+                (second form)
+                (mapcar #'(lambda (subform)
+                            (funcall function subform environment))
+                        (rest (rest form)))))
     ((flet labels)
      `(,(first form)
        ,(mapcar
@@ -2586,18 +2598,18 @@ gives equal probability to 1 and 2)."
                                                    #'length)))
                   (alt-list (mapcar (lambda (elem)
                                       (if (funcall prob-ignore-pred elem)
-                                          (get-cons (first elem)
-                                                    (get-cons prob-avg nil))
+                                          (get-list (first elem)
+                                                    prob-avg)
                                           elem))
                                     alt-list))
                   (normalized (mapcar (lambda (elem)
                                         (if (funcall prob-pred elem)
-                                            (get-cons (first elem)
-                                                      (get-cons (/ (second elem)
-                                                                   prob-sum) nil))
-                                            (get-cons elem
-                                                      (get-cons (/ prob-avg
-                                                                   prob-sum) nil))))
+                                            (get-list (first elem)
+                                                      (/ (second elem)
+                                                         prob-sum))
+                                            (get-list elem
+                                                      (/ prob-avg
+                                                         prob-sum))))
                                       alt-list)))
              (release-list alt-list)
              normalized)))
@@ -3513,21 +3525,73 @@ Transition probabilities must be positive numbers summing to 1 for each state."
 
 (cl:defun state-transition-nondeterministic
     (continuation state-machine current-state &optional (times 1))
+  (assert (typep times 'non-negative-integer))
   (serapeum:nest
-   (let* ((current-state-spec (assoc current-state state-machine
-                                     :test 'equal))
-          (transitions (rest current-state-spec))
-          (prob-sum (reduce #'+ (mapcar #'second transitions)))))
-   (when (and (roughly-= prob-sum 1)
-              (mapcar (compose (curry #'<= 0) #'second) transitions)))
-   (let ((transitions (sort transitions #'> :key #'second))))
+   (if (some (s:nest
+              (lambda (state-spec))
+              (let* ((transitions (rest state-spec))
+                     (prob-sum (reduce (lambda (a b)
+                                         (+ (second b) a))
+                                       transitions
+                                       :initial-value 0))))
+              (or (emptyp transitions)
+                  (not (roughly-= prob-sum 1))
+                  (not (every (compose (curry #'<= 0)
+                                       #'second)
+                              transitions))))
+             state-machine)
+       (fail))
+   (labels ((get-state (state machine)
+              (or (assoc state machine :test 'equal)
+                  (let ((c (get-list state)))
+                    (get-push c machine)
+                    c)))
+            (recurse-transitions (start &optional (n 1))
+              ;; Get the starting probability distribution
+              (let ((state-probs (get-list (get-list start 1)))
+                    ;; Track the next probability distribution
+                    (new-probs nil))
+                (s:nest
+                 ;; Gets the probabilities in a distribution
+                 ;; so we can increment them
+                 (labels ((get-new-prob (state)
+                            (or (assoc state new-probs :test 'equal)
+                                (let ((c (get-list state 0)))
+                                  (get-push c new-probs)
+                                  c)))))
+
+                 ;; Recurse over the state machine n times
+                 (iter:iter (iter:for i from 1 to n)
+                   (setf new-probs nil))
+
+                 (progn
+                   ;; Iterate over currently-possible states
+                   (iter:iter (iter:for (s p) in state-probs)
+                     (iter:for s-spec = (get-state s state-machine))
+
+                     ;; Get the follow-up states and each of their odds
+                     (iter:for s-trans = (cdr s-spec))
+
+                     (iter:iterate (iter:for (targ targ-p) in s-trans)
+                       ;; Get the currently-tracked probability for the target
+                       (iter:for targ-new-prob = (get-new-prob targ))
+                       ;; Increment the probability by the current probability
+                       ;; times the odds of the transition
+                       (incf (second targ-new-prob) (* p targ-p))))
+
+                   ;; Replace the old probability state with the new one
+                   (release-list state-probs)
+                   (setf state-probs new-probs)))
+
+                ;; Return the state probabilities after everything
+                state-probs))))
+   (let ((transitions (recurse-transitions current-state
+                                           times))))
    (choice-point-external)
    (dolist (next transitions))
    (choice-point-internal)
    (progn (trail-prob nil (* (current-probability) (second next)))
-          (if (> times 1)
-              (state-transition-nondeterministic continuation state-machine (first next) (1- times))
-              (funcall continuation (first next))))))
+          (funcall continuation (first next)))))
 
 ;;; note: The following two functions work only when Screamer is running under
 ;;;       ILisp/GNUEmacs with iscream.el loaded.
