@@ -31,9 +31,9 @@
   :serial t
   :licence "MIT"
   :description "Nondeterministic programming and constraint propagation."
-  :author "Jeffrey Mark Siskind & David Allen McAllester"
+  :author "Originally Jeffrey Mark Siskind & David Allen McAllester, extended by Swapneil Singh"
   :maintainer "Swapneil Singh"
-  :version "4.1.0"
+  :version "5.0.0"
   :depends-on ("alexandria"
                "serapeum"
                "iterate")
