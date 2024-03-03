@@ -94,6 +94,16 @@ to DEFPACKAGE, and automatically injects two additional options:
 
 (defvar *trail* (make-array 4096 :adjustable t :fill-pointer 0) "The trail.")
 
+(defmacro-compile-time with-trail (size-form &rest body)
+  "Evaluates the BODY forms with *trail* set to a new array of the specified size. (*trail* is part of Screamer's backtracking mechanism.)
+SIZE-FORM is a positive integer or a form which evaluates to a positive integer, used as the size of the *trail* array."
+  (when (numberp size-form) (assert (and (integerp size-form) (>= size-form 0))))
+  `(let ((screamer::*trail* (make-array
+                             (or ,size-form 2048)
+                             :adjustable t
+                             :fill-pointer 0)))
+     ,@body))
+
 (defparameter *possibility-consolidator* nil
   "If non-nil, must be a function which compares 2 values, used for combining
 possibilities generated in ALL-VALUES and ALL-VALUES-PROB.")
@@ -2824,6 +2834,10 @@ sum of the probabilities returned will be less than 1."
         (last-value-cons (gensym "LAST-VALUE-CONS")))
     `(let ((,values '())
            (,last-value-cons nil))
+       ;; Reset probability
+       (trail-prob nil 1)
+
+       ;; Process BODY
        (for-effects
          (let ((value (progn ,@body)))
            (global (if (null ,values)
@@ -2835,6 +2849,7 @@ sum of the probabilities returned will be less than 1."
                                                       (get-list value
                                                                 (current-probability *trail*)))
                              ,last-value-cons (rest ,last-value-cons))))))
+       ;; Consolidate probabilities
        (if *possibility-consolidator*
            (flet ((merge-vals (vals)
                     (let ((prev nil))
@@ -2939,10 +2954,13 @@ See the docstring of `ALL-VALUES-PROB' for more details."
         (value (gensym "value"))
         (value-list (gensym "value-list")))
     `(block n-values
-       (let (;; (screamer::*trail* (make-array 4096 :adjustable t :fill-pointer 0))
-             (,counter (value-of ,n))
+       (let ((,counter (value-of ,n))
              (,value-list nil))
          (declare (integer ,counter) ((or cons null) ,value-list))
+         ;; Reset probability
+         (trail-prob nil 1)
+
+         ;; Process BODY
          (for-effects (unless (zerop ,counter)
                         (let ((,value ,form))
                           (decf ,counter)
@@ -3057,17 +3075,6 @@ eg. undo effects of local assignments -- hence users should never call it. It
 is provided at the moment only for backwards compatibility with classic
 Screamer."
   (unwind-trail-to 0))
-
-(defmacro-compile-time with-trail (size-form &rest body)
-  "Evaluates the BODY forms with *trail* set to a new array of the specified size. (*trail* is part of Screamer's backtracking mechanism.)
-SIZE-FORM is a positive integer or a form which evaluates to a positive integer, used as the size of the *trail* array."
-  (when (numberp size-form) (assert (and (integerp size-form) (>= size-form 0))))
-  (let ((s (gensym "size")))
-    `(let ((screamer::*trail* (make-array
-                               (let ((,s ,size-form)) (if ,s ,s 2048))
-                               :adjustable t
-                               :fill-pointer 0)))
-       ,@body)))
 
 (defun current-probability (&optional (trail *trail*))
   (labels ((zero-one (n) (and (numberp n) (<= 0 n 1)))
@@ -3518,16 +3525,114 @@ either a list or a vector."
      (t (error "SEQUENCE must be a sequence")))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'sample))
+
+(cl:defun sample (dist &optional (count nil))
+  "Continuously samples random values from DIST.
+
+NOTE: Execution will NOT backtrack past a SAMPLE statement!
+Ensure you limit the number of values you request, and do not
+expect choice points before a sample to be backtracked to!
+
+If DIST is a list, it is a plist where the keys are possible
+return values and the values are the probabilities of each
+value. Values will be normalized to sum to one, i.e.
+'((hi 3) (bye 7)) gives 0.3 probability to hi and 0.7 to bye.
+
+If DIST is a function, it will be called to return a 2-member
+list with the first element being the value and the second being
+a number between 0 and 1 representing its probability.
+
+If COUNT is nil, only a single value will be sampled per attempt.
+If it is a non-negative integer, then a list of samples will be
+returned. In this case samples are treated as probabilistically
+independent, i.e. the chance of the returned list is the product
+of the chance of each sample taken."
+  (declare (ignore dist count))
+  (screamer-error
+   "SAMPLE is a nondeterministic function. As such, it must be~%~
+   called only from a nondeterministic context."))
+
+(cl:defun sample-nondeterministic (continuation dist &optional count)
+  (s:nest
+   (flet ((normalize (d psum)
+            ;; Normalize a list-distribution given the sum
+            ;; of the probabilities
+            (mapcar (lambda (c)
+                      (get-list (first c)
+                                (/ (second c)
+                                   psum)))
+                    d))))
+   ;; Normalize the input distribution if its a plist
+   (let ((dist (typecase dist
+                 ((or function null) dist)
+                 (cons
+                  (normalize dist
+                             (reduce #'+ dist
+                                     :key #'second)))))))
+   ;; Get an individual sample from a distribution
+   ;; Returns a list of the value and the probability
+   (labels ((sample-internal (dist)
+              (typecase dist
+                (function (funcall dist))
+                (list
+                 (let* ((probs (mapcar #'second dist))
+                        (selection (random 1.0))
+                        (index (iter:iter
+                                 (iter:with sum = 0)
+                                 (iter:for i from 0)
+                                 ;; Note: probabilities must be normalized
+                                 (iter:for p in probs)
+                                 (incf sum p)
+                                 ;; Stop when we pass the random selection
+                                 (iter:while (< sum selection))
+                                 ;; Return the current index
+                                 (iter:finally (return i)))))
+                   (release-list probs)
+                   (nth index dist)))))))
+   ;; Syntax sugar for updating probabilities and calling CONTINUATION
+   (macrolet ((call-continuation (cont inp)
+                `(progn
+                   (trail-prob nil (* (current-probability)
+                                      (second ,inp)))
+                   (funcall ,cont (first ,inp))))))
+   (typecase count
+     ;; When count is provided
+     (non-negative-integer
+      (s:nest
+       (choice-point-external)
+       (loop)
+       ;; Keep sampling with every loop iteration
+       (choice-point-internal)
+       ;; Get the list of values and multiply their probabilities together
+       (let ((ret (iter:iter (iter:for i below count)
+                    (iter:for (s sp) = (sample-internal dist))
+                    (iter:collect s into members)
+                    (iter:multiply sp into prob)
+                    (iter:finally (return (list members prob)))))))
+       ;; Call the continuation with the given values
+       (call-continuation continuation)
+       ret))
+     ;; When count is absent
+     (null
+      (s:nest
+       (choice-point-external)
+       (loop)
+       (choice-point-internal)
+       (call-continuation continuation)
+       (sample-internal dist))))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'state-transition))
 
 (cl:defun state-transition (state-machine current-state &optional (times 1))
   "Transitions from the current state to all possible next states.
 
 STATE-MACHINE may be an alist with keys being states and values being
-lists of state-probability pairs of the transition states.
+plists of state-probability pairs of the transition states.
 
 STATE-MACHINE may instead be a single-argument function which takes a state
-as input and returns a list of state-probability pairs of the transition states.
+as input and returns a plist of state-probability pairs of the transition states.
 
 These transition probabilities must be positive numbers summing to 1 for each
 state (measured per `SCREAMER::ROUGHLY-='). If STATE-MACHINE is an alist this
