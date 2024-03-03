@@ -133,16 +133,15 @@ Use this to deal with floating-point errors, if necessary.")
         c)
       (cons a b)))
 (defun-compile-time release-cons (c)
-  (when (>= *cons-cache-len* *cons-cache-max-len*)
-    (setf *cons-cache* (cons nil nil))
-    (setf *cons-cache-len* 0))
-  (when (consp c)
+  (when (and (consp c)
+             ;; Cache isn't already full to capacity.
+             (not (>= *cons-cache-len* *cons-cache-max-len*)))
     (rotatef (cdr c) (cdr *cons-cache*) c)
     (setf (cadr *cons-cache*) nil)
     (incf *cons-cache-len*)))
 
 (defmacro-compile-time get-list (v &rest vals)
-  `(get-cons ,v ,(if (not vals) nil `(get-list ,@vals))))
+  `(get-cons ,v ,(when vals `(get-list ,@vals))))
 (defmacro-compile-time get-list* (v &optional v2 &rest vals)
   `(get-cons ,v ,(if vals `(get-list* ,v2 ,@vals) v2)))
 (defun-compile-time release-list (l)
@@ -1291,9 +1290,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                  (peal-off-documentation-string-and-declarations
                   (rest (rest binding)) t)
                `(,(first binding)
-                 ;; needs work: To process subforms of lambda list.
+                 ;; TODO: Fix to process subforms of lambda list.
                  ,(second binding)
-                 ,@(if documentation-string (list documentation-string))
+                 ,@(if documentation-string (get-list documentation-string))
                  ,@declarations
                  ,@(mapcar
                     #'(lambda (subform) (funcall function subform environment))
@@ -1327,7 +1326,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
      (cl:multiple-value-bind (body declarations documentation-string)
          (peal-off-documentation-string-and-declarations
           (rest (rest (first form))) t)
-       ;; needs work: To process subforms of lambda list.
+       ;; TODO: Fix to process subforms of lambda list.
        `((lambda ,(second (first form))
            ,@(if documentation-string (list documentation-string))
            ,@declarations
@@ -1532,7 +1531,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                    (rest (rest (second form))) t)
                 (if (every #'(lambda (form) (deterministic? form environment))
                            body)
-                    ;; needs work: To process subforms of lambda list.
+                    ;; TODO: Fix to process subforms of lambda list.
                     `#'(lambda ,(second (second form))
                          ,@(if documentation-string (list documentation-string))
                          ,@declarations
@@ -1546,7 +1545,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                       ;;       price to pay for a lot of error checking.
                       `(make-nondeterministic-function
                         :function
-                        ;; needs work: To process subforms of lambda list.
+                        ;; TODO: Fix to process subforms of lambda list.
                         #'(lambda (,continuation ,@(second (second form)))
                             ,@(if documentation-string (list documentation-string))
                             ,@declarations
@@ -2383,7 +2382,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
         (peal-off-documentation-string-and-declarations body t)
       (if (function-record-deterministic? function-record)
           (let ((*block-tags* (list (list function-name nil))))
-            ;; needs work: To process subforms of lambda list.
+            ;; TODO: Fix to process subforms of lambda list.
             (list `(cl:defun ,function-name ,lambda-list
                      ,@(if documentation-string (list documentation-string))
                      ,@declarations
@@ -3514,10 +3513,22 @@ either a list or a vector."
 (cl:defun state-transition (state-machine current-state &optional (times 1))
   "Transitions from the current state to all possible next states.
 
-STATE-MACHINE is an alist with keys being states and values being
+STATE-MACHINE may be an alist with keys being states and values being
 lists of state-probability pairs.
 
-Transition probabilities must be positive numbers summing to 1 for each state."
+STATE-MACHINE may instead be a single-argument function which takes a state
+as input and returns a list of state-probability pairs.
+
+These transition probabilities must be positive numbers summing to 1 for each
+state (measured per `SCREAMER::ROUGHLY-='). If STATE-MACHINE is an alist this
+will be verified. If it is a function, then the user is expected to assure this
+condition.
+
+When STATE-MACHINE is an alist, note that you can transition to a state which
+was not specified in the alist, in which case it will be treated as a node with
+no successors.
+
+TIMES must be a non-negative integer."
   (declare (ignore state-machine current-state))
   (screamer-error
    "STATE-TRANSITION is a nondeterministic function. As such, it must be~%~
@@ -3527,31 +3538,51 @@ Transition probabilities must be positive numbers summing to 1 for each state."
     (continuation state-machine current-state &optional (times 1))
   (assert (typep times 'non-negative-integer))
   (serapeum:nest
-   (if (some (s:nest
-              (lambda (state-spec))
-              (let* ((transitions (rest state-spec))
-                     (prob-sum (reduce (lambda (a b)
-                                         (+ (second b) a))
-                                       transitions
-                                       :initial-value 0))))
-              (or (emptyp transitions)
-                  (not (roughly-= prob-sum 1))
-                  (not (every (compose (curry #'<= 0)
-                                       #'second)
-                              transitions))))
-             state-machine)
-       (fail))
-   (let ((recursion-check-interval (s:nest
-                                    (* 256)
-                                    (max 1)
-                                    (floor)
-                                    (float-precision *numeric-bounds-collapse-threshold*)))))
+   (let* ((alist-machine (typecase state-machine (cons t)))
+          (test (or (and alist-machine
+                         (cond ((every (compose (rcurry #'typep 'symbol)
+                                                #'first)
+                                       state-machine)
+                                'eq)
+                               ((every (compose (rcurry #'typep '(or symbol character))
+                                                #'first)
+                                       state-machine)
+                                'eql)
+                               ((every (compose (rcurry #'typep 'number)
+                                                #'first)
+                                       state-machine)
+                                '=)))
+                    'equal))))
    (labels ((get-state (state machine)
-              (or (assoc state machine :test 'equal)
-                  (let ((c (get-list state)))
-                    (get-push c machine)
-                    c)))
-            (recurse-transitions (start &optional (n 1))
+              (typecase machine
+                (list
+                 (or (assoc state machine :test test)
+                     (get-list state)))
+                (function
+                 (funcall machine state))))))
+   ;; For alist state-machines, check that all transition-probability sets sum to 1
+   (if (and alist-machine
+            (some (s:nest
+                   (lambda (state-spec))
+                   (let* ((transitions (rest state-spec))
+                          (prob-sum (reduce (lambda (a b)
+                                              (+ (second b) a))
+                                            transitions
+                                            :initial-value 0))))
+                   (or (emptyp transitions)
+                       (not (roughly-= prob-sum 1))
+                       (not (every (compose (curry #'<= 0)
+                                            #'second)
+                                   transitions))))
+                  state-machine))
+       (fail))
+
+   (let ((recursion-check-interval (s:nest
+                                    (ash 16)
+                                    (max 1)
+                                    (integer-length)
+                                    (float-precision *numeric-bounds-collapse-threshold*)))))
+   (labels ((recurse-transitions (start &optional (n 1))
               ;; Get the starting probability distribution
               (let ((state-probs (get-list (get-list start 1)))
                     ;; Track the next probability distribution
@@ -3562,13 +3593,13 @@ Transition probabilities must be positive numbers summing to 1 for each state."
                  ;; Gets the probabilities in a distribution
                  ;; so we can increment them
                  (labels ((get-new-prob (state)
-                            (or (assoc state new-probs :test 'equal)
+                            (or (assoc state new-probs :test test)
                                 (let ((c (get-list state 0)))
                                   (get-push c new-probs)
                                   c)))))
 
                  ;; Recurse over the state machine n times
-                 (iter:iter (iter:for i below n)
+                 (iter:iter (iter:for i from 1 to n)
                    (setf new-probs nil))
 
                  (progn
@@ -3601,6 +3632,8 @@ Transition probabilities must be positive numbers summing to 1 for each state."
                 state-probs))))
    (let ((transitions (recurse-transitions current-state
                                            times))))
+
+   ;; Implement choice point over final set of possible states
    (choice-point-external)
    (dolist (next transitions))
    (choice-point-internal)
