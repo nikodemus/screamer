@@ -2831,12 +2831,13 @@ distributions provided at probabilistic choice points; if
 constraints or FAIL calls remove potential branches, then the
 sum of the probabilities returned will be less than 1."
   (let ((values (gensym "VALUES"))
-        (last-value-cons (gensym "LAST-VALUE-CONS")))
+        (last-value-cons (gensym "LAST-VALUE-CONS"))
+        (pointer (gensym "enclosing-trail-pointer")))
     `(let ((,values '())
-           (,last-value-cons nil))
-       ;; Reset probability
-       (trail-prob nil 1)
-
+           (,last-value-cons nil)
+           ;; Reset probability
+           (,pointer (prog1 (fill-pointer *trail*)
+                       (trail-prob nil 1))))
        ;; Process BODY
        (for-effects
          (let ((value (progn ,@body)))
@@ -2849,6 +2850,8 @@ sum of the probabilities returned will be less than 1."
                                                       (get-list value
                                                                 (current-probability *trail*)))
                              ,last-value-cons (rest ,last-value-cons))))))
+       ;; Return to enclosing trail context
+       (unwind-trail-to ,pointer)
        ;; Consolidate probabilities
        (if *possibility-consolidator*
            (flet ((merge-vals (vals)
@@ -2952,14 +2955,15 @@ See the docstring of `ALL-VALUES-PROB' for more details."
   (when (numberp n) (assert (and (integerp n) (>= n 0))))
   (let ((counter (gensym "I"))
         (value (gensym "value"))
-        (value-list (gensym "value-list")))
+        (value-list (gensym "value-list"))
+        (pointer (gensym "enclosing-trail-pointer")))
     `(block n-values
        (let ((,counter (value-of ,n))
-             (,value-list nil))
+             (,value-list nil)
+             ;; Reset probability
+             (,pointer (prog1 (fill-pointer *trail*)
+                         (trail-prob nil 1))))
          (declare (integer ,counter) ((or cons null) ,value-list))
-         ;; Reset probability
-         (trail-prob nil 1)
-
          ;; Process BODY
          (for-effects (unless (zerop ,counter)
                         (let ((,value ,form))
@@ -2968,7 +2972,11 @@ See the docstring of `ALL-VALUES-PROB' for more details."
                                               (current-probability *trail*))
                                     ,value-list)
                           (when (zerop ,counter)
+                            ;; Return to enclosing trail context
+                            (unwind-trail-to ,pointer)
                             (return-from n-values ,value-list)))))
+         ;; Return to enclosing trail context
+         (unwind-trail-to ,pointer)
          ,(if default-on-failure default value-list)))))
 
 (defmacro-compile-time ith-value (i form &optional (default '(fail)))
