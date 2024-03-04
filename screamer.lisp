@@ -447,6 +447,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                                   environment))
       (funcall map-function lambda-list 'lambda-list)))
 
+;;; TODO: Fix this to get nondeterminism working properly with return-from calls
 (defun-compile-time walk-block
     (map-function reduce-function screamer? partial? nested? form environment)
   (unless (null (rest (last form))) (error "Improper BLOCK: ~S" form))
@@ -517,6 +518,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                   environment)
       (funcall map-function nil 'quote)))
 
+;;; TODO: Set up walkers for labels and flet forms
+;;; to be converted into local functions on the trail,
+;;; NOTE: The above would allow implementing loops and
+;;; recursion as local functions, rather than having
+;;; to use SCREAMER::DEFUN
 (defun-compile-time walk-flet/labels
     (map-function reduce-function screamer? partial? nested? form environment
                   form-type)
@@ -882,6 +888,10 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                                (every-other (rest (rest form))))))
       (funcall map-function form 'setq)))
 
+;;; TODO: Get this to work properly with tag calls
+;;; NOTE: The above would also allow macroexpanding loops and then
+;;; making them nondeterministic, rather than having to put looping
+;;; constructs in top-level defuns
 (defun-compile-time walk-tagbody
     (map-function reduce-function screamer? partial? nested? form environment)
   (unless (null (rest (last form))) (error "Improper TAGBODY: ~S" form))
@@ -2194,6 +2204,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                     types
                     (perform-substitutions form environment)
                     value?))
+                  ;; TODO: Make GO in TAGBODY forms walkable?
+                  ;; There may be other ways to make TAGBODY
+                  ;; work properly, though...
                   (go (error "This shouldn't happen"))
                   (if (cps-convert-if (second form)
                                       (third form)
@@ -3897,14 +3910,16 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 (defun contains-variables? (x)
   (typecase x
     (cons (or (contains-variables? (car x)) (contains-variables? (cdr x))))
+    (vector (some #'contains-variables? x))
     (variable t)
     (otherwise nil)))
 
 (defun eliminate-variables (x)
   (if (contains-variables? x)
-      (if (consp x)
-          (get-cons (eliminate-variables (car x)) (eliminate-variables (cdr x)))
-          (eliminate-variables (variable-value x)))
+      (typecase x
+        (cons (get-cons (eliminate-variables (car x)) (eliminate-variables (cdr x))))
+        (vector (map 'vector #'eliminate-variables x))
+        (t (eliminate-variables (variable-value x))))
       x))
 
 (defun print-variable (x stream print-level)
