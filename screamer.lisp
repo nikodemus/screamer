@@ -163,10 +163,36 @@ Use this to deal with floating-point errors, if necessary.")
     (release-cons x)))
 (defmacro-compile-time get-push (v place)
   `(setf ,place (get-cons ,v ,place)))
+(defun-compile-time get-mapcar (f s)
+  "Mapcar on one sequence at a time, but uses
+`*cons-cache*' to reduce consing.
+
+Note that performance optimizations can rarely
+be generalized; use your own judgement and
+experimentation to determine the value of this
+in comparison to `cl:mapcar'"
+  (s:nest
+   ;; Remove the `nil' added to the front
+   (rest)
+   ;; Get the head of the collected list
+   ;; Note that the first item was tracking
+   ;; the tail of the collection so we could
+   ;; keep adding to the end.
+   (second)
+   (reduce (lambda (a b)
+             (prog2 (setf (cdr (first a))
+                          (get-list (funcall f b)))
+                 (get-cons (rest (car a)) (cdr a))
+               (release-cons a)))
+           s
+           :initial-value
+           (let ((temp (get-cons s nil)))
+             (get-cons temp temp)))))
 
 (defun-compile-time notf (f)
   (lambda (&rest xs)
-    (not (apply f xs))))
+    (prog1 (not (apply f xs))
+      (release-list xs))))
 (defun-compile-time andf (f &rest fs)
   (lambda (&rest xs)
     (and (apply f xs)
@@ -2614,10 +2640,15 @@ most recent choice-point."
          (let* ((alt (first alternatives))
                 (val (first alt))
                 (prob (second alt)))
-           `(progn
-              (trail-prob nil (* (current-probability)
-                                 ,prob))
-              ,val)))
+           (prog1
+               `(progn
+                  (trail-prob nil (* (current-probability)
+                                     ,prob))
+                  ,val)
+             ;; TODO: Figure out why using `release-cons' here
+             ;; leads to a stack overflow
+             ;; (release-cons alternatives)
+             )))
         (t
          `(if (a-boolean)
               (either-prob-internal ,(first alternatives))
@@ -3141,7 +3172,10 @@ Screamer."
   (unwind-trail-to 0))
 
 (defun current-probability (&optional (trail *trail*))
-  (labels ((zero-one (n) (and (numberp n) (<= 0 n 1)))
+  (labels ((zero-one (n)
+             (typecase n
+               ;; N is a number between 0 and 1
+               (number (<= 0 n 1))))
            (get-trail-prob (elem)
              (cond ((zero-one elem) elem)
                    ((and (listp elem)
@@ -4774,12 +4808,12 @@ Otherwise returns the value of X."
     (cond ((eq (variable-enumerated-domain x) t)
            ;; needs work: This is sound only if VALUE does not contain any
            ;;             variables.
-           (setf (variable-enumerated-domain x) (list value))
+           (setf (variable-enumerated-domain x) (get-list value))
            (setf (variable-enumerated-antidomain x) '()))
           ((not (null (rest (variable-enumerated-domain x))))
            ;; needs work: This is sound only if VALUE does not contain any
            ;;             variables.
-           (setf (variable-enumerated-domain x) (list value)))))
+           (setf (variable-enumerated-domain x) (get-list value)))))
   (run-noticers x))
 
 (defun restrict-true! (x)
@@ -8062,7 +8096,7 @@ VALUES can be either a vector or a list designator."
 (defun variables-in (x)
   (typecase x
     (cons (append (variables-in (car x)) (variables-in (cdr x))))
-    (variable (list x))
+    (variable (get-list x))
     (otherwise nil)))
 
 ;;; NOTE: SOLUTION and LINEAR-FORCE used to be here but was moved to be before
