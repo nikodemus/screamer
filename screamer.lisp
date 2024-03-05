@@ -1196,6 +1196,26 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
   (cond
     ((self-evaluating? form) (funcall map-function form 'quote))
     ((symbolp form) (funcall map-function form 'variable))
+
+
+    ;; TODO: Test these, and maybe remove them.
+
+    ;; ((eq (first form) 'dolist)
+    ;;  (walk map-function reduce-function screamer? partial? nested?
+    ;;        (macroexpand form environment) environment))
+
+    ;; NOTE: `dotimes' seems to work fine?
+    ;; Not sure how to test more rigorously...
+    ;; Example test case:
+    ;; (s:nest
+    ;;  (all-values-prob)
+    ;;  (let ((a (dotimes (v 2) (if (a-boolean-prob 7/10) (return v) ))))
+    ;;    a))
+    ((eq (first form) 'dotimes)
+     (walk map-function reduce-function screamer? partial? nested?
+           (macroexpand form environment) environment))
+
+
     ((eq (first form) 'block)
      (walk-block
       map-function reduce-function screamer? partial? nested? form environment))
@@ -2028,41 +2048,46 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 
 (defun-compile-time cps-convert-tagbody
     (body continuation types value? environment)
-  (let ((segments (list (list 'header)))
-        (*tagbody-tags* *tagbody-tags*)) ;cool!
-    (dolist (form body)
-      (if (consp form)
-          (get-push form (rest (first segments)))
-          (let ((c (gensym "CONTINUATION-")))
-            (get-push (list form c) *tagbody-tags*)
-            (get-push (list c) segments))))
-    (get-push nil (rest (first segments)))
-    (let ((segments (reverse segments))
-          (dummy-argument (gensym "DUMMY-"))
-          (other-arguments (gensym "OTHER-")))
-      `(labels ,(mapcar
-                 #'(lambda (segment)
-                     (let ((next (rest (member segment segments :test #'eq))))
-                       `(,(first segment)
-                         (&optional ,dummy-argument &rest ,other-arguments)
-                         (declare (ignore ,dummy-argument ,other-arguments))
-                         ,(cps-convert-progn
-                           (reverse (rest segment))
-                           (if next `#',(first (first next)) continuation)
-                           (if next '() types)
-                           (or next value?)
-                           environment))))
-                 (rest segments))
-         (declare (dynamic-extent
-                   ,@(mapcar (lambda (seg) `(function ,(first seg)))
-                             (rest segments))))
-         ,(let ((next (rest segments)))
-            (cps-convert-progn
-             (reverse (rest (first segments)))
-             (if next `#',(first (first next)) continuation)
-             (if next '() types)
-             (or next value?)
-             environment))))))
+  ;; TODO: Remove this print
+  ;; (print (list "input: " body))
+  (s:nest
+   ;; TODO: Remove this print
+   ;; (print)
+   (let ((segments (list (list 'header)))
+         (*tagbody-tags* *tagbody-tags*)) ;cool!
+     (dolist (form body)
+       (if (consp form)
+           (get-push form (rest (first segments)))
+           (let ((c (gensym "CONTINUATION-")))
+             (get-push (list form c) *tagbody-tags*)
+             (get-push (list c) segments))))
+     (get-push nil (rest (first segments))))
+   (let ((segments (reverse segments))
+         (dummy-argument (gensym "DUMMY-"))
+         (other-arguments (gensym "OTHER-"))))
+   `(labels ,(mapcar
+              #'(lambda (segment)
+                  (let ((next (rest (member segment segments :test #'eq))))
+                    `(,(first segment)
+                      (&optional ,dummy-argument &rest ,other-arguments)
+                      (declare (ignore ,dummy-argument ,other-arguments))
+                      ,(cps-convert-progn
+                        (reverse (rest segment))
+                        (if next `#',(first (first next)) continuation)
+                        (if next '() types)
+                        (or next value?)
+                        environment))))
+              (rest segments))
+      (declare (dynamic-extent
+                ,@(mapcar (lambda (seg) `(function ,(first seg)))
+                          (rest segments))))
+      ,(let ((next (rest segments)))
+         (cps-convert-progn
+          (reverse (rest (first segments)))
+          (if next `#',(first (first next)) continuation)
+          (if next '() types)
+          (or next value?)
+          environment)))))
 
 (defun-compile-time cps-convert-local-setf/setq
     (arguments continuation types value? environment)
