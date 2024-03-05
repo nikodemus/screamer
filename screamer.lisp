@@ -448,6 +448,8 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
       (funcall map-function lambda-list 'lambda-list)))
 
 ;;; TODO: Fix this to get nondeterminism working properly with return-from calls
+;;; NOTE: Do we actually have a failing test case using return-from?
+;;; Or does this work already?
 (defun-compile-time walk-block
     (map-function reduce-function screamer? partial? nested? form environment)
   (unless (null (rest (last form))) (error "Improper BLOCK: ~S" form))
@@ -892,6 +894,8 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 ;;; NOTE: The above would also allow macroexpanding loops and then
 ;;; making them nondeterministic, rather than having to put looping
 ;;; constructs in top-level defuns
+;;; NOTE: Do we actually have a failing test case using tags?
+;;; Or does this work already?
 (defun-compile-time walk-tagbody
     (map-function reduce-function screamer? partial? nested? form environment)
   (unless (null (rest (last form))) (error "Improper TAGBODY: ~S" form))
@@ -1198,7 +1202,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     ((symbolp form) (funcall map-function form 'variable))
 
 
-    ;; TODO: Test these, and maybe remove them.
+    ;; TODO: Test `do' form-types, and either remove them or ensure they work.
 
     ;; ((eq (first form) 'dolist)
     ;;  (walk map-function reduce-function screamer? partial? nested?
@@ -1206,11 +1210,23 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 
     ;; NOTE: `dotimes' seems to work fine?
     ;; Not sure how to test more rigorously...
-    ;; Example test case:
+    ;; Example test cases:
     ;; (s:nest
     ;;  (all-values-prob)
     ;;  (let ((a (dotimes (v 2) (if (a-boolean-prob 7/10) (return v) ))))
     ;;    a))
+    ;; (let ((len 2))
+    ;;   (s:nest
+    ;;    (all-values-prob)
+    ;;    (let* ((a (dotimes (v len (1+ v))
+    ;;                (let ((c (a-boolean-prob)))
+    ;;                  (if c (return v)
+    ;;                      (print v)))))
+    ;;           (b (+ (typecase a
+    ;;                   (number a)
+    ;;                   (t (print "unexpected NIL") -1))
+    ;;                 (an-integer-between-prob 2 3))))
+    ;;      (solution (list a b) (static-ordering #'linear-force)))))
     ((eq (first form) 'dotimes)
      (walk map-function reduce-function screamer? partial? nested?
            (macroexpand form environment) environment))
@@ -2230,8 +2246,10 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                     (perform-substitutions form environment)
                     value?))
                   ;; TODO: Make GO in TAGBODY forms walkable?
-                  ;; There may be other ways to make TAGBODY
-                  ;; work properly, though...
+                  ;; NOTE: Is it already? Not sure if we have
+                  ;; any actual failing test cases...
+                  ;; NOTE: There may be other ways to make
+                  ;; TAGBODY work properly, though...
                   (go (error "This shouldn't happen"))
                   (if (cps-convert-if (second form)
                                       (third form)
