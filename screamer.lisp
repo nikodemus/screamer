@@ -920,8 +920,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 ;;; NOTE: The above would also allow macroexpanding loops and then
 ;;; making them nondeterministic, rather than having to put looping
 ;;; constructs in top-level defuns
-;;; NOTE: Do we actually have a failing test case using tags?
-;;; Or does this work already?
+;;; NOTE: See the `dotimes' test case for a failing test involving tags
 (defun-compile-time walk-tagbody
     (map-function reduce-function screamer? partial? nested? form environment)
   (unless (null (rest (last form))) (error "Improper TAGBODY: ~S" form))
@@ -1230,13 +1229,12 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 
     ;; TODO: Test `do' form-types, and either remove them or ensure they work.
 
+    ;; `dolist' case
     ;; ((eq (first form) 'dolist)
     ;;  (walk map-function reduce-function screamer? partial? nested?
     ;;        (macroexpand form environment) environment))
 
-    ;; NOTE: `dotimes' seems to work fine?
-    ;; Not sure how to test more rigorously...
-    ;; Example test cases:
+    ;; `dotimes' succeeding test cases:
     ;; (s:nest
     ;;  (all-values-prob)
     ;;  (let ((a (dotimes (v 2) (if (a-boolean-prob 7/10) (return v) ))))
@@ -1253,9 +1251,21 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     ;;                   (t (print "unexpected NIL") -1))
     ;;                 (an-integer-between-prob 2 3))))
     ;;      (solution (list a b) (static-ordering #'linear-force)))))
-    ((eq (first form) 'dotimes)
-     (walk map-function reduce-function screamer? partial? nested?
-           (macroexpand form environment) environment))
+    ;; `dotimes' failing test cases:
+    ;; (all-values-prob
+    ;;   (let (a)
+    ;;     (dotimes (v 3)
+    ;;       (push (either-prob (1 1) (2 2) (3 3)) a))
+    ;;     (solution a (static-ordering #'linear-force))))
+    ;; (all-values-prob
+    ;;   (let ((a 3))
+    ;;     (dotimes (v 3)
+    ;;       (setf a (+ (either 1 2 3) a)))
+    ;;     (solution a (static-ordering #'linear-force))))
+    ;; `dotimes' case
+    ;; ((eq (first form) 'dotimes)
+    ;;  (walk map-function reduce-function screamer? partial? nested?
+    ;;        (macroexpand form environment) environment))
 
 
     ((eq (first form) 'block)
