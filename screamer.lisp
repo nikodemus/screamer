@@ -3930,6 +3930,10 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 ;;; lifted logical inference (e.g. in cases where the same
 ;;; variable appears multiple times in an arithmetic
 ;;; structure).
+;;; NOTE: How would this actually be /used/ to resolve
+;;; the second case? It seems that if grounding would
+;;; be a valid approach then it would already be done
+;;; via the noticer system...
 #-screamer-clos
 (defstruct-compile-time (variable (:print-function print-variable)
                                   (:predicate variable?)
@@ -8417,8 +8421,11 @@ This is useful for creating patterns to be unified with other structures."
 ;; integer without a finite range. We don't track which atoms a variable
 ;; is dependent on, so we aren't able to recognize that (+ (+ 1 2 a 4) a)
 ;; is the same as (+ 1 2 4 (* 2 a))
-;; NOTE: How to resolve this? Figure out how to track atoms? Do a compilation
-;; pass of the variable graph in `solution' before trying to actually solve it?
+;; NOTE: How to resolve this? Figure out how to track atoms and use that
+;; somehow? Do a compilation pass of the variable graph in `solution'
+;; before trying to actually solve it?
+;; NOTE: Using flow-cl here would be pretty useful... Organize the
+;; current state as a standalone library and publish it?
 ;; (all-values
 ;;      (let* ((b (template '(1 2 ?a 4 ?a)))
 ;;             (c (applyv #'+v b)))
