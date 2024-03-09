@@ -134,7 +134,7 @@ Use this to deal with floating-point errors, if necessary.")
   "A cache of conses, to hopefully reduce memory usage")
 (defvar-compile-time *cons-cache-len* 0)
 (defvar-compile-time *cons-cache-max-len* 2048)
-(defun-compile-time get-cons (a b)
+(defun-compile-time cached-cons (a b)
   (if (cdr *cons-cache*)
       (let ((c (cdr *cons-cache*)))
         (setf (cdr *cons-cache*) (cdr c))
@@ -151,19 +151,19 @@ Use this to deal with floating-point errors, if necessary.")
     (setf (cadr *cons-cache*) nil)
     (incf *cons-cache-len*)))
 
-(defmacro-compile-time get-list (v &rest vals)
-  `(get-cons ,v ,(when vals `(get-list ,@vals))))
-(defmacro-compile-time get-list* (v &optional v2 &rest vals)
-  `(get-cons ,v ,(if vals `(get-list* ,v2 ,@vals) v2)))
+(defmacro-compile-time cached-list (v &rest vals)
+  `(cached-cons ,v ,(when vals `(cached-list ,@vals))))
+(defmacro-compile-time cached-list* (v &optional v2 &rest vals)
+  `(cached-cons ,v ,(if vals `(cached-list* ,v2 ,@vals) v2)))
 (defun-compile-time release-list (l)
   (iter:iter
     (iter:for x initially l then y)
     (iter:for y = (cdr x))
     (iter:while y)
     (release-cons x)))
-(defmacro-compile-time get-push (v place)
-  `(setf ,place (get-cons ,v ,place)))
-(defun-compile-time get-mapcar (f s)
+(defmacro-compile-time cached-push (v place)
+  `(setf ,place (cached-cons ,v ,place)))
+(defun-compile-time cached-mapcar (f s)
   "Mapcar on one sequence at a time, but uses
 `*cons-cache*' to reduce consing.
 
@@ -181,13 +181,14 @@ in comparison to `cl:mapcar'"
    (second)
    (reduce (lambda (a b)
              (prog2 (setf (cdr (first a))
-                          (get-list (funcall f b)))
-                 (get-cons (rest (car a)) (cdr a))
+                          (cached-list (funcall f b)))
+                 (cached-cons (rest (car a)) (cdr a))
                (release-cons a)))
            s
            :initial-value
-           (let ((temp (get-cons s nil)))
-             (get-cons temp temp)))))
+           (let ((temp (cached-cons s nil)))
+             (cached-cons temp temp)))))
+
 
 (defun-compile-time notf (f)
   (lambda (&rest xs)
@@ -281,7 +282,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                        (consp (first body))
                        (eq (first (first body)) 'declare))
             (return))
-          (get-push (first body) declarations)
+          (cached-push (first body) declarations)
           (pop body))
     (values body (reverse declarations) documentation-string)))
 
@@ -319,7 +320,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 (defun-compile-time every-other (list)
   (cond ((null list) list)
         ((null (rest list)) list)
-        (t (get-cons (first list) (every-other (rest (rest list)))))))
+        (t (cached-cons (first list) (every-other (rest (rest list)))))))
 
 (defun-compile-time check-lambda-list-internal (lambda-list &optional mode)
   (cond
@@ -474,8 +475,10 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
       (funcall map-function lambda-list 'lambda-list)))
 
 ;;; TODO: Fix this to get nondeterminism working properly with return-from calls
-;;; NOTE: Do we actually have a failing test case using return-from?
-;;; Or does this work already?
+;;; NOTE: The above with TAGBODY fixes could also allow macroexpanding loops
+;;; and then making them nondeterministic, rather than having to put looping
+;;; constructs in top-level defuns
+;;; NOTE: See the `dotimes' test case for a failing test involving tags
 (defun-compile-time walk-block
     (map-function reduce-function screamer? partial? nested? form environment)
   (unless (null (rest (last form))) (error "Improper BLOCK: ~S" form))
@@ -917,9 +920,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
       (funcall map-function form 'setq)))
 
 ;;; TODO: Get this to work properly with tag calls
-;;; NOTE: The above would also allow macroexpanding loops and then
-;;; making them nondeterministic, rather than having to put looping
-;;; constructs in top-level defuns
+;;; NOTE: The above with BLOCK changes would also allow macroexpanding
+;;; loops and then making them nondeterministic, rather than having to
+;;; put looping constructs in top-level defuns
 ;;; NOTE: See the `dotimes' test case for a failing test involving tags
 (defun-compile-time walk-tagbody
     (map-function reduce-function screamer? partial? nested? form environment)
@@ -1370,11 +1373,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     (lambda-list (error "This shouldn't happen"))
     ((variable go) form)
     ((eval-when)
-     (get-list* (first form)
-                (second form)
-                (mapcar #'(lambda (subform)
-                            (funcall function subform environment))
-                        (rest (rest form)))))
+     (cached-list* (first form)
+                   (second form)
+                   (mapcar #'(lambda (subform)
+                               (funcall function subform environment))
+                           (rest (rest form)))))
     ((flet labels)
      `(,(first form)
        ,(mapcar
@@ -1385,7 +1388,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                `(,(first binding)
                  ;; TODO: Fix to process subforms of lambda list.
                  ,(second binding)
-                 ,@(if documentation-string (get-list documentation-string))
+                 ,@(if documentation-string (cached-list documentation-string))
                  ,@declarations
                  ,@(mapcar
                     #'(lambda (subform) (funcall function subform environment))
@@ -1429,9 +1432,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
             #'(lambda (subform) (funcall function subform environment))
             (rest form)))))
     (otherwise
-     (get-cons (first form)
-               (mapcar #'(lambda (subform) (funcall function subform environment))
-                       (rest form))))))
+     (cached-cons (first form)
+                  (mapcar #'(lambda (subform) (funcall function subform environment))
+                          (rest form))))))
 
 (defun-compile-time deterministic? (form environment)
   (walk
@@ -1538,7 +1541,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
             (indirect-callees-internal
              (rest function-names)
              (indirect-callees-internal
-              (callees function-name) (get-cons function-name callees)))))))
+              (callees function-name) (cached-cons function-name callees)))))))
 
 (defun-compile-time indirect-callees (function-name)
   (indirect-callees-internal (callees function-name) '()))
@@ -1548,7 +1551,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
         (function-names '()))
     (maphash #'(lambda (function-name function-record)
                  (declare (ignore function-record))
-                 (get-push function-name function-names))
+                 (cached-push function-name function-names))
              *function-record-table*)
     (dolist (caller function-names)
       (if (member function-name (callees caller) :test #'equal)
@@ -1564,7 +1567,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
             (indirect-callers-internal
              (rest function-names)
              (indirect-callers-internal
-              (callers function-name) (get-cons function-name callers)))))))
+              (callers function-name) (cached-cons function-name callers)))))))
 
 (defun-compile-time indirect-callers (function-name)
   (indirect-callers-internal (callers function-name) '()))
@@ -1608,7 +1611,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
              (lambda-list (error "This shouldn't happen"))
              (variable (error "This shouldn't happen"))
              (block (let ((*block-tags*
-                            (get-cons (list (second form) nil) *block-tags*)))
+                            (cached-cons (list (second form) nil) *block-tags*)))
                       (process-subforms
                        #'perform-substitutions form form-type environment)))
              (function-lambda
@@ -1851,7 +1854,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 (defun-compile-time cps-convert-block
     (name body continuation types value? environment)
   (let* ((c (gensym "CONTINUATION-"))
-         (*block-tags* (get-cons (list name c types value?) *block-tags*)))
+         (*block-tags* (cached-cons (list name c types value?) *block-tags*)))
     (possibly-beta-reduce-funcall
      `#'(lambda (,c)
           (declare (magic))
@@ -1922,8 +1925,8 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                                 types
                                 value?
                                 environment
-                                (get-cons (list binding-variable dummy-argument)
-                                          new-bindings)))
+                                (cached-cons (list binding-variable dummy-argument)
+                                             new-bindings)))
          '()
          t
          environment))))
@@ -1987,7 +1990,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
               (declare (magic))
               ,(cps-convert-multiple-value-call-internal
                 nondeterministic? function (rest forms) continuation types value?
-                environment (get-cons dummy-argument arguments)))
+                environment (cached-cons dummy-argument arguments)))
          nil
          t
          environment))))
@@ -2028,7 +2031,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          types
          t
          environment))
-      (cps-convert-progn (get-cons form forms) continuation types nil environment)))
+      (cps-convert-progn (cached-cons form forms) continuation types nil environment)))
 
 (defun-compile-time cps-convert-progn
     (body continuation types value? environment)
@@ -2109,11 +2112,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          (*tagbody-tags* *tagbody-tags*)) ;cool!
      (dolist (form body)
        (if (consp form)
-           (get-push form (rest (first segments)))
+           (cached-push form (rest (first segments)))
            (let ((c (gensym "CONTINUATION-")))
-             (get-push (list form c) *tagbody-tags*)
-             (get-push (list c) segments))))
-     (get-push nil (rest (first segments))))
+             (cached-push (list form c) *tagbody-tags*)
+             (cached-push (list c) segments))))
+     (cached-push nil (rest (first segments))))
    (let ((segments (reverse segments))
          (dummy-argument (gensym "DUMMY-"))
          (other-arguments (gensym "OTHER-"))))
@@ -2215,7 +2218,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                 types
                 value?
                 environment
-                (get-cons dummy-argument dummy-arguments)))
+                (cached-cons dummy-argument dummy-arguments)))
          '()
          t
          environment))))
@@ -2250,7 +2253,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                 types
                 value?
                 environment
-                (get-cons dummy-argument dummy-arguments)))
+                (cached-cons dummy-argument dummy-arguments)))
          '()
          t
          environment))))
@@ -2352,7 +2355,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                             (rest form) continuation types value? environment))
                   (the (cps-convert (third form)
                                     continuation
-                                    (get-cons (second form) types)
+                                    (cached-cons (second form) types)
                                     value?
                                     environment))
                   (for-effects (possibly-beta-reduce-funcall
@@ -2474,7 +2477,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     (unless (member caller function-names :test #'equal)
       (determine-whether-deterministic caller environment)
       (determine-whether-callers-are-deterministic
-       caller (get-cons caller function-names) environment))))
+       caller (cached-cons caller function-names) environment))))
 
 (defun-compile-time function-definition (function-name environment)
   ;; NOTE: This is using the current rather than the saved ENVIRONMENT.
@@ -2535,21 +2538,21 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     (setf (function-record-old-deterministic? function-record)
           (function-record-deterministic? function-record))
     (setf (function-record-deterministic? function-record) t)
-    (get-push function-record function-records)
+    (cached-push function-record function-records)
     (dolist (caller callers)
       (let ((function-record (get-function-record caller)))
         (unless (member function-record function-records :test #'eq)
           (setf (function-record-old-deterministic? function-record)
                 (function-record-deterministic? function-record))
           (setf (function-record-deterministic? function-record) t)
-          (get-push function-record function-records))))
+          (cached-push function-record function-records))))
     (dolist (caller callers)
       (dolist (callee (callees caller))
         (let ((function-record (get-function-record callee)))
           (unless (member function-record function-records :test #'eq)
             (setf (function-record-old-deterministic? function-record)
                   (function-record-deterministic? function-record))
-            (get-push function-record function-records)))))
+            (cached-push function-record function-records)))))
     (determine-whether-deterministic function-name environment)
     (determine-whether-callers-are-deterministic function-name nil environment)
     (let ((definitions (function-definition function-name environment)))
@@ -2699,7 +2702,7 @@ gives equal probability to 1 and 2)."
                                         (s:filter prob-pred)
                                         ;; Extract probability values
                                         (mapcar #'second)))
-                  (prob-provided (or prob-provided (get-list 1)))
+                  (prob-provided (or prob-provided (cached-list 1)))
                   (prob-sum (apply #'+ prob-provided))
                   (prob-avg (/ prob-sum (length prob-provided)))
                   (prob-sum (* prob-avg (length alt-list)))
@@ -2710,18 +2713,18 @@ gives equal probability to 1 and 2)."
                                                    #'length)))
                   (alt-list (mapcar (lambda (elem)
                                       (if (funcall prob-ignore-pred elem)
-                                          (get-list (first elem)
-                                                    prob-avg)
+                                          (cached-list (first elem)
+                                                       prob-avg)
                                           elem))
                                     alt-list))
                   (normalized (mapcar (lambda (elem)
                                         (if (funcall prob-pred elem)
-                                            (get-list (first elem)
-                                                      (/ (second elem)
-                                                         prob-sum))
-                                            (get-list elem
-                                                      (/ prob-avg
-                                                         prob-sum))))
+                                            (cached-list (first elem)
+                                                         (/ (second elem)
+                                                            prob-sum))
+                                            (cached-list elem
+                                                         (/ prob-avg
+                                                            prob-sum))))
                                       alt-list)))
              (release-list prob-provided)
              (release-list alt-list)
@@ -2897,9 +2900,9 @@ ALL-VALUES is analogous to the `bagof' primitive in Prolog."
        (for-effects
          (let ((value (progn ,@body)))
            (global (if (null ,values)
-                       (setf ,last-value-cons (get-list value)
+                       (setf ,last-value-cons (cached-list value)
                              ,values ,last-value-cons)
-                       (setf (rest ,last-value-cons) (get-list value)
+                       (setf (rest ,last-value-cons) (cached-list value)
                              ,last-value-cons (rest ,last-value-cons))))))
        (if *possibility-consolidator*
            (flet ((merge-vals (vals)
@@ -2907,7 +2910,7 @@ ALL-VALUES is analogous to the `bagof' primitive in Prolog."
                       (mapc (lambda (v)
                               (unless (position v prev
                                                 :test *possibility-consolidator*)
-                                (get-push v prev)))
+                                (cached-push v prev)))
                             vals)
                       (release-list vals)
                       prev)))
@@ -2939,13 +2942,13 @@ sum of the probabilities returned will be less than 1."
        (for-effects
          (let ((value (progn ,@body)))
            (global (if (null ,values)
-                       (setf ,last-value-cons (get-list
-                                               (get-list value
-                                                         (current-probability *trail*)))
+                       (setf ,last-value-cons (cached-list
+                                               (cached-list value
+                                                            (current-probability *trail*)))
                              ,values ,last-value-cons)
-                       (setf (rest ,last-value-cons) (get-list
-                                                      (get-list value
-                                                                (current-probability *trail*)))
+                       (setf (rest ,last-value-cons) (cached-list
+                                                      (cached-list value
+                                                                   (current-probability *trail*)))
                              ,last-value-cons (rest ,last-value-cons))))))
        ;; Return to enclosing trail context
        (unwind-trail-to ,pointer)
@@ -2959,7 +2962,7 @@ sum of the probabilities returned will be less than 1."
                                 (progn (incf (second prev-val)
                                              (second v))
                                        (release-cons v))
-                                (get-push v prev)))
+                                (cached-push v prev)))
                             vals)
                       (release-list vals)
                       prev)))
@@ -3041,7 +3044,7 @@ N."
          (for-effects (unless (zerop ,counter)
                         (let ((,value ,form))
                           (decf ,counter)
-                          (get-push ,value ,value-list)
+                          (cached-push ,value ,value-list)
                           (when (zerop ,counter)
                             (return-from n-values ,value-list)))))
          ,(if default-on-failure default value-list)))))
@@ -3065,9 +3068,9 @@ See the docstring of `ALL-VALUES-PROB' for more details."
          (for-effects (unless (zerop ,counter)
                         (let ((,value ,form))
                           (decf ,counter)
-                          (get-push (get-list ,value
-                                              (current-probability *trail*))
-                                    ,value-list)
+                          (cached-push (cached-list ,value
+                                                    (current-probability *trail*))
+                                       ,value-list)
                           (when (zerop ,counter)
                             ;; Return to enclosing trail context
                             (unwind-trail-to ,pointer)
@@ -3672,9 +3675,9 @@ similar form."
             ;; Normalize a list-distribution given the sum
             ;; of the probabilities
             (mapcar (lambda (c)
-                      (get-list (first c)
-                                (/ (second c)
-                                   psum)))
+                      (cached-list (first c)
+                                   (/ (second c)
+                                      psum)))
                     d))))
    ;; Normalize the input distribution if its a plist
    (let ((dist (typecase dist
@@ -3785,9 +3788,9 @@ TIMES must be a non-negative integer."
               (typecase machine
                 (list
                  (or (assoc state machine :test test)
-                     (get-list state)))
+                     (cached-list state)))
                 (function
-                 (get-cons state (funcall machine state)))))))
+                 (cached-cons state (funcall machine state)))))))
    ;; For alist state-machines, check that all transition-probability sets sum to 1
    (if (and alist-machine
             (some (s:nest
@@ -3812,7 +3815,7 @@ TIMES must be a non-negative integer."
                                     (float-precision *numeric-bounds-collapse-threshold*)))))
    (labels ((recurse-transitions (start &optional (n 1))
               ;; Get the starting probability distribution
-              (let ((state-probs (get-list (get-list start 1)))
+              (let ((state-probs (cached-list (cached-list start 1)))
                     ;; Track the next probability distribution
                     (new-probs nil))
                 (s:nest
@@ -3822,8 +3825,8 @@ TIMES must be a non-negative integer."
                  ;; so we can increment them
                  (labels ((get-new-prob (state)
                             (or (assoc state new-probs :test test)
-                                (let ((c (get-list state 0)))
-                                  (get-push c new-probs)
+                                (let ((c (cached-list state 0)))
+                                  (cached-push c new-probs)
                                   c)))))
 
                  ;; Recurse over the state machine n times
@@ -3919,22 +3922,30 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew :screamer-clos *features* :test #'eq))
 
+;;; TODO: Figure out how to track atoms that a variable
+;;; is dependent on, and its relationship to said atoms
+;;; (e.g. relative lower/upper bounds, etc)
+;;; This is necessary both for probabilistic reasoning by
+;;; weighted model counting, as well as for correct
+;;; lifted logical inference (e.g. in cases where the same
+;;; variable appears multiple times in an arithmetic
+;;; structure).
 #-screamer-clos
 (defstruct-compile-time (variable (:print-function print-variable)
                                   (:predicate variable?)
                                   (:constructor make-variable-internal))
   name
-  (noticers nil)
-  (enumerated-domain t)
-  (enumerated-antidomain nil)
+  (noticers nil :type list)
+  (enumerated-domain t :type (or boolean list))
+  (enumerated-antidomain nil :type (or boolean list))
   value
-  (possibly-integer? t)
-  (possibly-noninteger-real? t)
-  (possibly-nonreal-number? t)
-  (possibly-boolean? t)
-  (possibly-nonboolean-nonnumber? t)
-  (lower-bound nil)
-  (upper-bound nil))
+  (possibly-integer? t :type boolean)
+  (possibly-noninteger-real? t :type boolean)
+  (possibly-nonreal-number? t :type boolean)
+  (possibly-boolean? t :type boolean)
+  (possibly-nonboolean-nonnumber? t :type boolean)
+  (lower-bound nil :type (or null number))
+  (upper-bound nil :type (or null number)))
 
 #+screamer-clos
 (defclass variable ()
@@ -3956,12 +3967,21 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
    (lower-bound :accessor variable-lower-bound :initform nil)
    (upper-bound :accessor variable-upper-bound :initform nil)))
 
+;;; Helpers to interact with variable objects
 #+screamer-clos
 (defmethod print-object ((variable variable) stream)
   (print-variable variable stream nil))
 
 #+screamer-clos
 (defun-compile-time variable? (thing) (typep thing 'variable))
+
+(defun-compile-time noticer-member (val var)
+  (declare (function val) (variable var))
+  (iter:iter
+    (iter:for i in (variable-noticers var))
+    (when (typecase i (function (eq val i)))
+      (return t))))
+
 
 (defun integers-between (low high)
   (cond ((and (typep low 'fixnum) (typep high 'fixnum))
@@ -3972,13 +3992,13 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
               (i low (1+ i)))
              ((> i high) (nreverse result))
            (declare (type fixnum i))
-           (get-push i result)))
+           (cached-push i result)))
         (t
          ;; KLUDGE: As above.
          (do ((result nil)
               (i low (1+ i)))
              ((> i high) (nreverse result))
-           (get-push i result)))))
+           (cached-push i result)))))
 
 (defun booleanp (x)
   "Returns true iff X is T or NIL."
@@ -4004,7 +4024,7 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 (defun eliminate-variables (x)
   (if (contains-variables? x)
       (typecase x
-        (cons (get-cons (eliminate-variables (car x)) (eliminate-variables (cdr x))))
+        (cons (cached-cons (eliminate-variables (car x)) (eliminate-variables (cdr x))))
         (vector (map 'vector #'eliminate-variables x))
         (t (eliminate-variables (variable-value x))))
       x))
@@ -4172,7 +4192,7 @@ a freshly consed copy of the tree with all variables dereferenced.
 Otherwise returns the value of X."
   (let ((x (value-of x)))
     (if (consp x)
-        (get-cons (apply-substitution (car x)) (apply-substitution (cdr x)))
+        (cached-cons (apply-substitution (car x)) (apply-substitution (cdr x)))
         x)))
 
 (defun occurs-in? (x value)
@@ -4187,19 +4207,20 @@ Otherwise returns the value of X."
 
 (defun attach-noticer!-internal (noticer x)
   ;; NOTE: Will loop if X is circular.
-  (typecase x
-    (cons
-     (attach-noticer!-internal noticer (car x))
-     (attach-noticer!-internal noticer (cdr x)))
-    (variable
-     (if (eq x (variable-value x))
-         ;; NOTE: I can't remember why this check for duplication is
-         ;;       here.
-         (unless (member noticer (variable-noticers x) :test #'eq)
-           ;; NOTE: This can't be a PUSH because of the Lucid screw.
-           (local (setf (variable-noticers x)
-                        (get-cons noticer (variable-noticers x)))))
-         (attach-noticer!-internal noticer (variable-value x))))))
+  (s:nest
+   (typecase x
+     (cons
+      (attach-noticer!-internal noticer (car x))
+      (attach-noticer!-internal noticer (cdr x))))
+   (variable)
+   (if (eq x (variable-value x))
+       ;; NOTE: I can't remember why this check for duplication is
+       ;;       here.
+       (unless (noticer-member noticer x)
+         ;; NOTE: This can't be a PUSH because of the Lucid screw.
+         (local (setf (variable-noticers x)
+                      (cached-cons noticer (variable-noticers x)))))
+       (attach-noticer!-internal noticer (variable-value x)))))
 
 (defun attach-noticer! (noticer x)
   (attach-noticer!-internal noticer x)
@@ -4818,12 +4839,12 @@ Otherwise returns the value of X."
     (cond ((eq (variable-enumerated-domain x) t)
            ;; needs work: This is sound only if VALUE does not contain any
            ;;             variables.
-           (setf (variable-enumerated-domain x) (get-list value))
+           (setf (variable-enumerated-domain x) (cached-list value))
            (setf (variable-enumerated-antidomain x) '()))
           ((not (null (rest (variable-enumerated-domain x))))
            ;; needs work: This is sound only if VALUE does not contain any
            ;;             variables.
-           (setf (variable-enumerated-domain x) (get-list value)))))
+           (setf (variable-enumerated-domain x) (cached-list value)))))
   (run-noticers x))
 
 (defun restrict-true! (x)
@@ -5309,13 +5330,13 @@ Otherwise returns the value of X."
            (if (listp (variable-enumerated-domain y))
                (when (member (value-of xv) (variable-enumerated-domain y))
                  (restrict-enumerated-domain! y (remove (value-of xv) (variable-enumerated-domain y))))
-               (restrict-enumerated-antidomain! y (get-cons (value-of xv) (variable-enumerated-antidomain y)))))
+               (restrict-enumerated-antidomain! y (cached-cons (value-of xv) (variable-enumerated-antidomain y)))))
           ((and (bound? yv)
                 (variable? x))
            (if (listp (variable-enumerated-domain x))
                (when (member (value-of yv) (variable-enumerated-domain x))
                  (restrict-enumerated-domain! x (remove (value-of yv) (variable-enumerated-domain x))))
-               (restrict-enumerated-antidomain! x (get-cons (value-of yv) (variable-enumerated-antidomain x))))))))
+               (restrict-enumerated-antidomain! x (cached-cons (value-of yv) (variable-enumerated-antidomain x))))))))
 
 ;;; Lifted Arithmetic Functions (Two argument optimized)
 
@@ -6241,8 +6262,8 @@ arguments. Secondly, any non-boolean argument causes it to fail."
           (let ((x (first xrest))
                 (p (first prest)))
             (unless (eq x (not p))
-              (get-push x new-xs)
-              (get-push p new-ps))))
+              (cached-push x new-xs)
+              (cached-push p new-ps))))
         (let ((count (length new-xs)))
           (cond ((zerop count) (fail))
                 ((= count 1)
@@ -6527,11 +6548,11 @@ sufficient hooks for the user to define her own force functions.)"
 (defun a-tuple (variables variable value)
   (if (null variables)
       nil
-      (get-cons (cond ((eq (first variables) variable) value)
-                      ((variable? (first variables))
-                       (a-member-of (variable-enumerated-domain (first variables))))
-                      (t (first variables)))
-                (a-tuple (rest variables) variable value))))
+      (cached-cons (cond ((eq (first variables) variable) value)
+                         ((variable? (first variables))
+                          (a-member-of (variable-enumerated-domain (first variables))))
+                         (t (first variables)))
+                   (a-tuple (rest variables) variable value))))
 
 (defun propagate-ac (predicate polarity? variables)
   (unless (some #'(lambda (variable)
@@ -6654,7 +6675,7 @@ restricted to be consistent with other arguments."
         (apply f (mapcar #'value-of x))
         (let ((z (make-variable)))
           (assert!-constraint
-           #'(lambda (&rest x) (equal (first x) (apply f (rest x)))) t (get-cons z x))
+           #'(lambda (&rest x) (equal (first x) (apply f (rest x)))) t (cached-cons z x))
           (dolist (argument x)
             (attach-noticer!
              #'(lambda ()
@@ -6664,10 +6685,10 @@ restricted to be consistent with other arguments."
           z))))
 
 (defun arguments-for-applyv (x xs)
-  (unless (bound? (first (last (get-cons x xs))))
+  (unless (bound? (first (last (cached-cons x xs))))
     (error "The current implementation does not allow the last argument to~%~
           APPLYV to be an unbound variable"))
-  (apply #'list* (mapcar #'value-of (get-cons x xs))))
+  (apply #'list* (mapcar #'value-of (cached-cons x xs))))
 
 (defun known?-applyv (f x &rest xs)
   (known?-constraint f t (arguments-for-applyv x xs)))
@@ -6704,7 +6725,7 @@ restricted to be consistent with other arguments."
             (assert!-constraint
              #'(lambda (&rest x) (equal (first x) (apply f (rest x))))
              t
-             (get-cons z arguments))
+             (cached-cons z arguments))
             (dolist (argument arguments)
               (attach-noticer!
                #'(lambda ()
@@ -7390,7 +7411,7 @@ X2."
                      (restrict-enumerated-domain! var
                                                   (remove (value-of val) dom)))
                    (restrict-enumerated-antidomain! var
-                                                    (get-cons (value-of val) antidom))))))
+                                                    (cached-cons (value-of val) antidom))))))
     (let ((xv (value-of x))
           (yv (value-of y)))
       (when (known?-==v2 x y) (fail))
@@ -7429,8 +7450,8 @@ X2."
            (if (or (not (bound? a))
                    (not (bound? b)))
                (progn
-                 (get-push a a-variables)
-                 (get-push b b-variables))
+                 (cached-push a a-variables)
+                 (cached-push b b-variables))
                (unless (equalp (value-of a) (value-of b))
                  (setf known-mismatch t)
                  (return nil))))
@@ -7530,7 +7551,7 @@ X2."
          (loop for i in li
                when (member i l :test test)
                  return t
-               do (get-push i l))))))
+               do (cached-push i l))))))
 
 (defun all-differentv (inp)
   "Functionally the same as (apply #'/=v inp), but faster.
@@ -7680,49 +7701,49 @@ disunification operator available in Prolog-II."
               (= (length form) 2))
          (transform-known? (second form) (not polarity?)))
         ((eq (first form) 'andv)
-         (get-cons (if polarity? 'and 'or)
-                   (mapcar #'(lambda (form) (transform-known? form polarity?))
-                           (rest form))))
+         (cached-cons (if polarity? 'and 'or)
+                      (mapcar #'(lambda (form) (transform-known? form polarity?))
+                              (rest form))))
         ((eq (first form) 'orv)
-         (get-cons (if polarity? 'or 'and)
-                   (mapcar #'(lambda (form) (transform-known? form polarity?))
-                           (rest form))))
+         (cached-cons (if polarity? 'or 'and)
+                      (mapcar #'(lambda (form) (transform-known? form polarity?))
+                              (rest form))))
         ((member (first form)
                  '(integerpv realpv numberpv memberv booleanpv
                    =v <v <=v >v >=v /=v funcallv applyv equalv)
                  :test #'eq)
-         (get-cons (cdr (assoc (first form)
-                               (if polarity?
-                                   '((integerpv . known?-integerpv)
-                                     (realpv . known?-realpv)
-                                     (numberpv . known?-numberpv)
-                                     (memberv . known?-memberv)
-                                     (booleanpv . known?-booleanpv)
-                                     (=v . known?-=v)
-                                     (<v . known?-<v)
-                                     (<=v . known?-<=v)
-                                     (>v . known?->v)
-                                     (>=v . known?->=v)
-                                     (/=v . known?-/=v)
-                                     (funcallv . known?-funcallv)
-                                     (applyv . known?-applyv)
-                                     (equalv . known?-equalv))
-                                   '((integerpv . known?-notv-integerpv)
-                                     (realpv . known?-notv-realpv)
-                                     (numberpv . known?-notv-numberpv)
-                                     (memberv . known?-notv-memberv)
-                                     (booleanpv . known?-notv-booleanpv)
-                                     (=v . known?-/=v)
-                                     (<v . known?->=v)
-                                     (<=v . known?->v)
-                                     (>v . known?-<=v)
-                                     (>=v . known?-<v)
-                                     (/=v . known?-=v)
-                                     (funcallv . known?-notv-funcallv)
-                                     (applyv . known?-notv-applyv)
-                                     (equalv . known?-notv-equalv)))
-                               :test #'eq))
-                   (rest form)))
+         (cached-cons (cdr (assoc (first form)
+                                  (if polarity?
+                                      '((integerpv . known?-integerpv)
+                                        (realpv . known?-realpv)
+                                        (numberpv . known?-numberpv)
+                                        (memberv . known?-memberv)
+                                        (booleanpv . known?-booleanpv)
+                                        (=v . known?-=v)
+                                        (<v . known?-<v)
+                                        (<=v . known?-<=v)
+                                        (>v . known?->v)
+                                        (>=v . known?->=v)
+                                        (/=v . known?-/=v)
+                                        (funcallv . known?-funcallv)
+                                        (applyv . known?-applyv)
+                                        (equalv . known?-equalv))
+                                      '((integerpv . known?-notv-integerpv)
+                                        (realpv . known?-notv-realpv)
+                                        (numberpv . known?-notv-numberpv)
+                                        (memberv . known?-notv-memberv)
+                                        (booleanpv . known?-notv-booleanpv)
+                                        (=v . known?-/=v)
+                                        (<v . known?->=v)
+                                        (<=v . known?->v)
+                                        (>v . known?-<=v)
+                                        (>=v . known?-<v)
+                                        (/=v . known?-=v)
+                                        (funcallv . known?-notv-funcallv)
+                                        (applyv . known?-notv-applyv)
+                                        (equalv . known?-notv-equalv)))
+                                  :test #'eq))
+                      (rest form)))
         (polarity? `(known?-true ,form))
         (t `(known?-false ,form)))
       (if polarity? `(known?-true ,form) `(known?-false ,form))))
@@ -7785,42 +7806,42 @@ nested in a call to KNOWN?, are similarly transformed."
                  '(integerpv realpv numberpv memberv booleanpv
                    =v <v <=v >v >=v /=v funcallv applyv ==v /==v equalv)
                  :test #'eq)
-         (get-cons (cdr (assoc (first form)
-                               (if polarity?
-                                   '((integerpv . assert!-integerpv)
-                                     (realpv . assert!-realpv)
-                                     (numberpv . assert!-numberpv)
-                                     (memberv . assert!-memberv)
-                                     (booleanpv . assert!-booleanpv)
-                                     (=v . assert!-=v)
-                                     (<v . assert!-<v)
-                                     (<=v . assert!-<=v)
-                                     (>v . assert!->v)
-                                     (>=v . assert!->=v)
-                                     (/=v . assert!-/=v)
-                                     (funcallv . assert!-funcallv)
-                                     (applyv . assert!-applyv)
-                                     (==v . assert!-==v)
-                                     (/==v . assert!-/==v)
-                                     (equalv . assert!-equalv))
-                                   '((integerpv . assert!-notv-integerpv)
-                                     (realpv . assert!-notv-realpv)
-                                     (numberpv . assert!-notv-numberpv)
-                                     (memberv . assert!-notv-memberv)
-                                     (booleanpv . assert!-notv-booleanpv)
-                                     (=v . assert!-/=v)
-                                     (<v . assert!->=v)
-                                     (<=v . assert!->v)
-                                     (>v . assert!-<=v)
-                                     (>=v . assert!-<v)
-                                     (/=v . assert!-=v)
-                                     (funcallv . assert!-notv-funcallv)
-                                     (applyv . assert!-notv-applyv)
-                                     (==v . assert!-/==v)
-                                     (/==v . assert!-==v)
-                                     (equalv . assert!-notv-equalv)))
-                               :test #'eq))
-                   (rest form)))
+         (cached-cons (cdr (assoc (first form)
+                                  (if polarity?
+                                      '((integerpv . assert!-integerpv)
+                                        (realpv . assert!-realpv)
+                                        (numberpv . assert!-numberpv)
+                                        (memberv . assert!-memberv)
+                                        (booleanpv . assert!-booleanpv)
+                                        (=v . assert!-=v)
+                                        (<v . assert!-<v)
+                                        (<=v . assert!-<=v)
+                                        (>v . assert!->v)
+                                        (>=v . assert!->=v)
+                                        (/=v . assert!-/=v)
+                                        (funcallv . assert!-funcallv)
+                                        (applyv . assert!-applyv)
+                                        (==v . assert!-==v)
+                                        (/==v . assert!-/==v)
+                                        (equalv . assert!-equalv))
+                                      '((integerpv . assert!-notv-integerpv)
+                                        (realpv . assert!-notv-realpv)
+                                        (numberpv . assert!-notv-numberpv)
+                                        (memberv . assert!-notv-memberv)
+                                        (booleanpv . assert!-notv-booleanpv)
+                                        (=v . assert!-/=v)
+                                        (<v . assert!->=v)
+                                        (<=v . assert!->v)
+                                        (>v . assert!-<=v)
+                                        (>=v . assert!-<v)
+                                        (/=v . assert!-=v)
+                                        (funcallv . assert!-notv-funcallv)
+                                        (applyv . assert!-notv-applyv)
+                                        (==v . assert!-/==v)
+                                        (/==v . assert!-==v)
+                                        (equalv . assert!-notv-equalv)))
+                                  :test #'eq))
+                      (rest form)))
         (polarity? `(assert!-true ,form))
         (t `(assert!-false ,form)))
       (if polarity? `(assert!-true ,form) `(assert!-false ,form))))
@@ -7862,20 +7883,20 @@ directly nested in a call to ASSERT!, are similarly transformed."
                                     (transform-decide form polarity?)))
                                (rest form))))
            (values (reduce #'append (mapcar #'first result))
-                   (get-cons (if polarity? 'progn 'either)
-                             (mapcar #'second result))
-                   (get-cons (if polarity? 'either 'progn)
-                             (mapcar #'third result)))))
+                   (cached-cons (if polarity? 'progn 'either)
+                                (mapcar #'second result))
+                   (cached-cons (if polarity? 'either 'progn)
+                                (mapcar #'third result)))))
         ((eq (first form) 'orv)
          (let ((result (mapcar #'(lambda (form)
                                    (multiple-value-list
                                     (transform-decide form polarity?)))
                                (rest form))))
            (values (reduce #'append (mapcar #'first result))
-                   (get-cons (if polarity? 'either 'progn)
-                             (mapcar #'second result))
-                   (get-cons (if polarity? 'progn 'either)
-                             (mapcar #'third result)))))
+                   (cached-cons (if polarity? 'either 'progn)
+                                (mapcar #'second result))
+                   (cached-cons (if polarity? 'progn 'either)
+                                (mapcar #'third result)))))
         ((member (first form)
                  '(integerpv realpv numberpv memberv booleanpv
                    =v <v <=v >v >=v /=v funcallv applyv ==v /==v equalv)
@@ -7885,74 +7906,74 @@ directly nested in a call to ASSERT!, are similarly transformed."
                                       (gensym "ARGUMENT-"))
                                   (rest form))))
            (values (mapcar #'list arguments (rest form))
-                   (get-cons (cdr (assoc (first form)
-                                         (if polarity?
-                                             '((integerpv . assert!-integerpv)
-                                               (realpv . assert!-realpv)
-                                               (numberpv . assert!-numberpv)
-                                               (memberv . assert!-memberv)
-                                               (booleanpv . assert!-booleanpv)
-                                               (=v . assert!-=v)
-                                               (<v . assert!-<v)
-                                               (<=v . assert!-<=v)
-                                               (>v . assert!->v)
-                                               (>=v . assert!->=v)
-                                               (/=v . assert!-/=v)
-                                               (funcallv . assert!-funcallv)
-                                               (applyv . assert!-applyv)
-                                               (==v . assert!-==v)
-                                               (/==v . assert!-/==v)
-                                               (equalv . assert!-equalv))
-                                             '((integerpv . assert!-notv-integerpv)
-                                               (realpv . assert!-notv-realpv)
-                                               (numberpv . assert!-notv-numberpv)
-                                               (memberv . assert!-notv-memberv)
-                                               (booleanpv . assert!-notv-booleanpv)
-                                               (=v . assert!-/=v)
-                                               (<v . assert!->=v)
-                                               (<=v . assert!->v)
-                                               (>v . assert!-<=v)
-                                               (>=v . assert!-<v)
-                                               (/=v . assert!-=v)
-                                               (funcallv . assert!-notv-funcallv)
-                                               (applyv . assert!-notv-applyv)
-                                               (==v . assert!-/==v)
-                                               (/==v . assert!-==v)
-                                               (equalv . assert!-notv-equalv)))
-                                         :test #'eq))
-                             arguments)
-                   (get-cons (cdr (assoc (first form)
-                                         (if polarity?
-                                             '((integerpv . assert!-notv-integerpv)
-                                               (realpv . assert!-notv-realpv)
-                                               (numberpv . assert!-notv-numberpv)
-                                               (memberv . assert!-notv-memberv)
-                                               (booleanpv . assert!-notv-booleanpv)
-                                               (=v . assert!-/=v)
-                                               (<v . assert!->=v)
-                                               (<=v . assert!->v)
-                                               (>v . assert!-<=v)
-                                               (>=v . assert!-<v)
-                                               (/=v . assert!-=v)
-                                               (funcallv . assert!-notv-funcallv)
-                                               (applyv . assert!-notv-applyv)
-                                               (equalv . assert!-notv-equalv))
-                                             '((integerpv . assert!-integerpv)
-                                               (realpv . assert!-realpv)
-                                               (numberpv . assert!-numberpv)
-                                               (memberv . assert!-memberv)
-                                               (booleanpv . assert!-booleanpv)
-                                               (=v . assert!-=v)
-                                               (<v . assert!-<v)
-                                               (<=v . assert!-<=v)
-                                               (>v . assert!->v)
-                                               (>=v . assert!->=v)
-                                               (/=v . assert!-/=v)
-                                               (funcallv . assert!-funcallv)
-                                               (applyv . assert!-applyv)
-                                               (equalv . assert!-equalv)))
-                                         :test #'eq))
-                             arguments))))
+                   (cached-cons (cdr (assoc (first form)
+                                            (if polarity?
+                                                '((integerpv . assert!-integerpv)
+                                                  (realpv . assert!-realpv)
+                                                  (numberpv . assert!-numberpv)
+                                                  (memberv . assert!-memberv)
+                                                  (booleanpv . assert!-booleanpv)
+                                                  (=v . assert!-=v)
+                                                  (<v . assert!-<v)
+                                                  (<=v . assert!-<=v)
+                                                  (>v . assert!->v)
+                                                  (>=v . assert!->=v)
+                                                  (/=v . assert!-/=v)
+                                                  (funcallv . assert!-funcallv)
+                                                  (applyv . assert!-applyv)
+                                                  (==v . assert!-==v)
+                                                  (/==v . assert!-/==v)
+                                                  (equalv . assert!-equalv))
+                                                '((integerpv . assert!-notv-integerpv)
+                                                  (realpv . assert!-notv-realpv)
+                                                  (numberpv . assert!-notv-numberpv)
+                                                  (memberv . assert!-notv-memberv)
+                                                  (booleanpv . assert!-notv-booleanpv)
+                                                  (=v . assert!-/=v)
+                                                  (<v . assert!->=v)
+                                                  (<=v . assert!->v)
+                                                  (>v . assert!-<=v)
+                                                  (>=v . assert!-<v)
+                                                  (/=v . assert!-=v)
+                                                  (funcallv . assert!-notv-funcallv)
+                                                  (applyv . assert!-notv-applyv)
+                                                  (==v . assert!-/==v)
+                                                  (/==v . assert!-==v)
+                                                  (equalv . assert!-notv-equalv)))
+                                            :test #'eq))
+                                arguments)
+                   (cached-cons (cdr (assoc (first form)
+                                            (if polarity?
+                                                '((integerpv . assert!-notv-integerpv)
+                                                  (realpv . assert!-notv-realpv)
+                                                  (numberpv . assert!-notv-numberpv)
+                                                  (memberv . assert!-notv-memberv)
+                                                  (booleanpv . assert!-notv-booleanpv)
+                                                  (=v . assert!-/=v)
+                                                  (<v . assert!->=v)
+                                                  (<=v . assert!->v)
+                                                  (>v . assert!-<=v)
+                                                  (>=v . assert!-<v)
+                                                  (/=v . assert!-=v)
+                                                  (funcallv . assert!-notv-funcallv)
+                                                  (applyv . assert!-notv-applyv)
+                                                  (equalv . assert!-notv-equalv))
+                                                '((integerpv . assert!-integerpv)
+                                                  (realpv . assert!-realpv)
+                                                  (numberpv . assert!-numberpv)
+                                                  (memberv . assert!-memberv)
+                                                  (booleanpv . assert!-booleanpv)
+                                                  (=v . assert!-=v)
+                                                  (<v . assert!-<v)
+                                                  (<=v . assert!-<=v)
+                                                  (>v . assert!->v)
+                                                  (>=v . assert!->=v)
+                                                  (/=v . assert!-/=v)
+                                                  (funcallv . assert!-funcallv)
+                                                  (applyv . assert!-applyv)
+                                                  (equalv . assert!-equalv)))
+                                            :test #'eq))
+                                arguments))))
         (t (let ((argument (gensym "ARGUMENT-")))
              (values (list (list argument form))
                      (if polarity?
@@ -8106,7 +8127,7 @@ VALUES can be either a vector or a list designator."
 (defun variables-in (x)
   (typecase x
     (cons (append (variables-in (car x)) (variables-in (cdr x))))
-    (variable (get-list x))
+    (variable (cached-list x))
     (otherwise nil)))
 
 ;;; NOTE: SOLUTION and LINEAR-FORCE used to be here but was moved to be before
@@ -8358,13 +8379,13 @@ nikodemus@random-state.net."
        (if binding
            (values (cdr binding) variables)
            (let ((variable (make-variable template)))
-             (values variable (get-cons (get-cons template variable) variables))))))
+             (values variable (cached-cons (cached-cons template variable) variables))))))
     ((consp template)
      (cl:multiple-value-bind (car-template car-variables)
          (template-internal (car template) variables)
        (cl:multiple-value-bind (cdr-template cdr-variables)
            (template-internal (cdr template) car-variables)
-         (values (get-cons car-template cdr-template) cdr-variables))))
+         (values (cached-cons car-template cdr-template) cdr-variables))))
     (t (values template variables))))
 
 (defun template (template)
@@ -8388,4 +8409,24 @@ This is useful for creating patterns to be unified with other structures."
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew :screamer *features* :test #'eq))
 
-;;; Tam V'Nishlam Shevah L'El Borei Olam
+;;; TODO: Fix the below examples:
+
+;; NOTE: Seems to have something to do with integer bounds not propagating
+;; properly when one of the values wasn't initially known to be an integer?
+;; NOTE: This occurs because the sum of the first 4 elements of b is an
+;; integer without a finite range. We don't track which atoms a variable
+;; is dependent on, so we aren't able to recognize that (+ (+ 1 2 a 4) a)
+;; is the same as (+ 1 2 4 (* 2 a))
+;; NOTE: How to resolve this? Figure out how to track atoms? Do a compilation
+;; pass of the variable graph in `solution' before trying to actually solve it?
+;; (all-values
+;;      (let* ((b (template '(1 2 ?a 4 ?a)))
+;;             (c (applyv #'+v b)))
+;;        (print b)
+;;        (print c)
+;;        (assert! (integerpv (third b)))
+;;        (assert! (=v (an-integer-betweenv 1 3) c))
+;;        (assert! (integerpv c))
+;;        (print b)
+;;        (print c)
+;;        (solution (list b c) (static-ordering #'linear-force))))
