@@ -61,6 +61,7 @@
            #:a-member-of
            #:a-member-of-prob
            #:sample
+           #:sample-optimizing
            #:state-transition
            #:when-failing
            #:count-failures

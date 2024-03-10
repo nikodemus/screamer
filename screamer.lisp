@@ -104,6 +104,10 @@ SIZE-FORM is a positive integer or a form which evaluates to a positive integer,
                              :fill-pointer 0)))
      ,@body))
 
+(defvar *screamer-results* nil
+  "A global variable storing the results of the nearest enclosing `-VALUES' or `-VALUES-PROB' form.
+Can be used for finer-grained control of nondeterminism.")
+
 (defparameter *possibility-consolidator* nil
   "If non-nil, must be a function which compares 2 values, used for combining
 possibilities generated in ALL-VALUES and ALL-VALUES-PROB.")
@@ -2893,8 +2897,8 @@ always in a nondeterministic context. An ALL-VALUES expression itself is
 always deterministic.
 
 ALL-VALUES is analogous to the `bagof' primitive in Prolog."
-  (let ((values (gensym "VALUES"))
-        (last-value-cons (gensym "LAST-VALUE-CONS")))
+  (let ((values '*screamer-results*)
+        (last-value-cons (gensym "last-value-cons")))
     `(let ((,values '())
            (,last-value-cons nil))
        (for-effects
@@ -2930,8 +2934,8 @@ Note that the probabilities are measured with respect to the
 distributions provided at probabilistic choice points; if
 constraints or FAIL calls remove potential branches, then the
 sum of the probabilities returned will be less than 1."
-  (let ((values (gensym "VALUES"))
-        (last-value-cons (gensym "LAST-VALUE-CONS"))
+  (let ((values '*screamer-results*)
+        (last-value-cons (gensym "last-value-cons"))
         (pointer (gensym "enclosing-trail-pointer")))
     `(let ((,values '())
            (,last-value-cons nil)
@@ -3035,18 +3039,26 @@ N."
   (when (numberp n) (assert (and (integerp n) (>= n 0))))
   (let ((counter (gensym "I"))
         (value (gensym "value"))
-        (value-list (gensym "value-list")))
+        (value-list '*screamer-results*)
+        (last-value-cons (gensym "last-value-cons")))
     `(block n-values
-       (let (;; (screamer::*trail* (make-array 4096 :adjustable t :fill-pointer 0))
-             (,counter (value-of ,n))
-             (,value-list nil))
+       (let* ((,counter (value-of ,n))
+              (,value-list nil)
+              (,last-value-cons nil))
          (declare (integer ,counter) ((or cons null) ,value-list))
-         (for-effects (unless (zerop ,counter)
-                        (let ((,value ,form))
-                          (decf ,counter)
-                          (cached-push ,value ,value-list)
-                          (when (zerop ,counter)
-                            (return-from n-values ,value-list)))))
+         (for-effects
+           (unless (zerop ,counter)
+             (global
+               (let ((,value ,form))
+                 (decf ,counter)
+                 ;; Add the value to the collected list
+                 (if (null ,value-list)
+                     (setf ,last-value-cons (cached-list ,value)
+                           ,value-list ,last-value-cons)
+                     (setf (rest ,last-value-cons) (cached-list ,value)
+                           ,last-value-cons (rest ,last-value-cons)))
+                 (when (zerop ,counter)
+                   (return-from n-values ,value-list))))))
          ,(if default-on-failure default value-list)))))
 
 (defmacro-compile-time n-values-prob (n form &optional (default-on-failure nil) (default nil))
@@ -3055,26 +3067,34 @@ See the docstring of `ALL-VALUES-PROB' for more details."
   (when (numberp n) (assert (and (integerp n) (>= n 0))))
   (let ((counter (gensym "I"))
         (value (gensym "value"))
-        (value-list (gensym "value-list"))
+        (value-list '*screamer-results*)
+        (last-value-cons (gensym "last-value-cons"))
         (pointer (gensym "enclosing-trail-pointer")))
     `(block n-values
        (let ((,counter (value-of ,n))
              (,value-list nil)
+             (,last-value-cons nil)
              ;; Reset probability
              (,pointer (prog1 (fill-pointer *trail*)
                          (trail-prob nil 1))))
          (declare (integer ,counter) ((or cons null) ,value-list))
          ;; Process BODY
-         (for-effects (unless (zerop ,counter)
-                        (let ((,value ,form))
-                          (decf ,counter)
-                          (cached-push (cached-list ,value
-                                                    (current-probability *trail*))
-                                       ,value-list)
-                          (when (zerop ,counter)
-                            ;; Return to enclosing trail context
-                            (unwind-trail-to ,pointer)
-                            (return-from n-values ,value-list)))))
+         (for-effects
+           (unless (zerop ,counter)
+             (let* ((,value ,form)
+                    (,value (cached-list ,value
+                                         (current-probability *trail*))))
+               (decf ,counter)
+               ;; Add the value to the collected list
+               (if (null ,value-list)
+                   (setf ,last-value-cons (cached-list ,value)
+                         ,value-list ,last-value-cons)
+                   (setf (rest ,last-value-cons) (cached-list ,value)
+                         ,last-value-cons (rest ,last-value-cons)))
+               (when (zerop ,counter)
+                 ;; Return to enclosing trail context
+                 (unwind-trail-to ,pointer)
+                 (return-from n-values ,value-list)))))
          ;; Return to enclosing trail context
          (unwind-trail-to ,pointer)
          ,(if default-on-failure default value-list)))))
@@ -3113,7 +3133,12 @@ nondeterministically return multiple times.
 If I is nondeterministic then the ITH-VALUE expression operates
 nondeterministically on each value of I. In this case, backtracking for each
 value of FORM and DEFAULT is nested in, and restarted for, each backtrack of
-I."
+I.
+
+Note that ITH-VALUE does not collect the results it encounters, and so cannot
+provide that information to other screamer functions that interact with prior
+results. For this functionality, use `N-VALUES' and get the last element of
+the output."
   (let ((counter (gensym "I")))
     `(block ith-value
        (let ((,counter (value-of ,i)))
@@ -3638,15 +3663,15 @@ either a list or a vector."
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'sample))
 
-(cl:defun sample (dist &optional (count nil))
-  "Continuously samples random values from DIST.
+(cl:defun sample (source &optional (count nil))
+  "Continuously samples random values from SOURCE.
 
-If DIST is a list, it is a plist where the keys are possible
+If SOURCE is a list, it is a plist where the keys are possible
 return values and the values are the probabilities of each
 value. Values will be normalized to sum to one, i.e.
 '((hi 3) (bye 7)) gives 0.3 probability to hi and 0.7 to bye.
 
-If DIST is a function, it will be called to return a 2-member
+If SOURCE is a function, it will be called to return a 2-member
 list with the first element being the value and the second being
 a number between 0 and 1 representing its probability.
 
@@ -3664,12 +3689,12 @@ If you want to use SAMPLE inside a larger nondeterministic
 block, it may be useful to wrap it in its own ALL-VALUES,
 ALL-VALUES-PROB, N-VALUES, N-VALUES-PROB, ONE-VALUE, or
 similar form."
-  (declare (ignore dist count))
+  (declare (ignore source count))
   (screamer-error
    "SAMPLE is a nondeterministic function. As such, it must be~%~
    called only from a nondeterministic context."))
 
-(cl:defun sample-nondeterministic (continuation dist &optional count)
+(cl:defun sample-nondeterministic (continuation source &optional count)
   (s:nest
    (flet ((normalize (d psum)
             ;; Normalize a list-distribution given the sum
@@ -3680,32 +3705,33 @@ similar form."
                                       psum)))
                     d))))
    ;; Normalize the input distribution if its a plist
-   (let ((dist (typecase dist
-                 ((or function null) dist)
-                 (cons
-                  (normalize dist
-                             (reduce #'+ dist
-                                     :key #'second)))))))
+   (let ((source (typecase source
+                   ((or function null) source)
+                   (cons
+                    (normalize source
+                               (reduce #'+ source
+                                       :key #'second)))))))
    ;; Get an individual sample from a distribution
    ;; Returns a list of the value and the probability
-   (labels ((sample-internal (dist)
-              (typecase dist
-                (function (funcall dist))
-                (list
-                 (let* ((probs (mapcar #'second dist))
-                        (selection (random 1.0))
-                        (index (iter:iter
-                                 (iter:with sum = 0)
-                                 (iter:for i from 0)
-                                 ;; Note: probabilities must be normalized
-                                 (iter:for p in probs)
-                                 (incf sum p)
-                                 ;; Stop when we pass the random selection
-                                 (iter:while (< sum selection))
-                                 ;; Return the current index
-                                 (iter:finally (return i)))))
-                   (release-list probs)
-                   (nth index dist)))))))
+   (flet ((sample-internal (source)
+            (typecase source
+              (function (funcall source))
+              (list
+               (let* ((probs (mapcar #'second source))
+                      (selection (random 1.0))
+                      (index (iter:iter
+                               (iter:with sum = 0)
+                               (iter:for i from 0)
+                               ;; Note: probabilities must be normalized
+                               (iter:for p in probs)
+                               (incf sum p)
+                               ;; Stop when we pass the random selection
+                               (iter:while (< sum selection))
+                               ;; Return the current index
+                               (iter:finally (return i)))))
+                 (release-list probs)
+                 (nth index source))))))
+     (declare (inline sample-internal)))
    ;; Syntax sugar for updating probabilities and calling CONTINUATION
    (macrolet ((call-continuation (cont inp)
                 `(progn
@@ -3722,7 +3748,7 @@ similar form."
        (choice-point-internal)
        ;; Get the list of values and multiply their probabilities together
        (let ((ret (iter:iter (iter:for i below count)
-                    (iter:for (s sp) = (sample-internal dist))
+                    (iter:for (s sp) = (sample-internal source))
                     (iter:collect s into members)
                     (iter:multiply sp into prob)
                     (iter:finally (return (list members prob)))))))
@@ -3736,7 +3762,72 @@ similar form."
        (loop)
        (choice-point-internal)
        (call-continuation continuation)
-       (sample-internal dist))))))
+       (sample-internal source))))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'sample-optimizing))
+
+(cl:defun sample-optimizing (source &optional (stop nil stop-supplied) (test 'eql))
+  "Continuously samples values from SOURCE.
+
+SOURCE must be a function which takes as input a list of prior outputs
+from the next enclosing `-VALUES' or `-VALUES-PROB' form (i.e. the current
+value of `screamer::*screamer-results*'). This may be `nil'. Note that
+this means the input will be different in probabilistic vs non-probabilistic
+forms, as the former collect lists of values and corresponding probabilities.
+
+Every time this choice point is encountered, SAMPLE will be called and
+its result will be interpreted as a list of possible outputs, represented
+as 2-element lists of a value and a probability. For each possible output,
+the value will be used as a potential output of this form, and the
+probability will modify the value of `current-probability'. The probabilities
+should be numbers between 0 and 1. If an element of the output of SAMPLE is
+not a list, then it will be wrapped in a list with probability element 1.
+
+If STOP is explicitly provided as an argument, each output of SAMPLE will
+be checked against STOP using TEST (i.e. (funcall test sample stop)). If
+the output of this is non-`nil', this form will `fail' rather than giving
+an output."
+  (declare (ignore source stop stop-supplied test))
+  (screamer-error
+   "SAMPLE-OPTIMIZING is a nondeterministic function. As such, it must be~%~
+   called only from a nondeterministic context."))
+
+(cl:defun sample-optimizing-nondeterministic (continuation source &optional (stop nil stop-supplied) (test 'eql))
+  (s:nest
+   (flet ((ensure-prob-list (e)
+            (typecase e
+              (list e)
+              (t (list e 1)))))
+     (declare (inline ensure-prob-list)))
+   (flet ((sample-internal ()
+            (print "sample-start")
+            (format t "~%current results: ~A" *screamer-results*)
+            (let ((ans (s:nest
+
+                        (mapcar #'ensure-prob-list)
+                        (print)
+                        (funcall source *screamer-results*))))
+              (format t "~%output of sample: ~A" ans)
+              ans))
+          (check-stop (val) (and stop-supplied (funcall test val stop))))
+     (declare (inline sample-internal check-stop)))
+   (macrolet ((call-continuation (cont inp)
+                (with-gensyms (val)
+                  `(let ((,val ,inp))
+                     (print ,val)
+                     (trail-prob nil (* (current-probability)
+                                        (second ,val)))
+                     (funcall ,cont (first ,val)))))))
+   (choice-point-external)
+   (block sample-optimizing-block)
+   (iter:iter
+     (iter:for possibilities = (sample-internal))
+     (iter:while possibilities))
+   (iter:iter (iter:for poss in possibilities))
+   (if (check-stop poss) (return-from sample-optimizing-block))
+   (choice-point-internal)
+   (call-continuation continuation poss)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'state-transition))
