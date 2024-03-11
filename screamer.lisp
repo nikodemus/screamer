@@ -3882,7 +3882,8 @@ TIMES must be a non-negative integer."
               (typecase machine
                 (list
                  (or (assoc state machine :test test)
-                     (cached-list state)))
+                     ;; If not found, loop to the same state
+                     (cached-list state (cached-list state 1))))
                 (function
                  (cached-cons state (funcall machine state)))))))
    ;; For alist state-machines, check that all transition-probability sets sum to 1
