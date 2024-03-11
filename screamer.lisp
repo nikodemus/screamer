@@ -3873,7 +3873,10 @@ TIMES must be a non-negative integer."
                                ((every (compose (rcurry #'typep 'number)
                                                 #'first)
                                        state-machine)
-                                '=)))
+                                ;; Note: not using '= because there might be unlisted
+                                ;; states with non-numeric values
+                                ;; Example: '((nil (nil 0.99) (t 0.01)))
+                                'eq)))
                     'equal))))
    (labels ((get-state (state machine)
               (typecase machine
