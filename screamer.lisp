@@ -3946,7 +3946,11 @@ TIMES must be a non-negative integer."
                        (release-cons s-spec)))
 
                    ;; If the state machine stabilizes, return early
-                   (when (and (zerop (mod i recursion-check-interval))
+                   ;; NOTE: We don't do this for function machines,
+                   ;; as we don't know what latent variables are involved
+                   ;; in generating the function output.
+                   (when (and alist-machine
+                              (zerop (mod i recursion-check-interval))
                               (equal state-probs new-probs))
                      (mapc #'release-list state-probs)
                      (release-list state-probs)
