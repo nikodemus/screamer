@@ -75,15 +75,6 @@ to DEFPACKAGE, and automatically injects two additional options:
 (defparameter *screamer-version* (asdf:component-version (asdf:find-system :screamer))
   "The version of Screamer which is loaded.")
 
-(defvar-compile-time *dynamic-extent?*
-    ;; SBCL cannot stack-allocate LET-bound lambdas that screamer
-    ;; currently uses, so setting dynamic-extent to T will only
-    ;; generate compiler notes about it inability to do so.
-    #-sbcl t
-    #+sbcl nil
-    "Set to T to enable the dynamic extent optimization, NIL to
-disable it. Default is platform dependent.")
-
 (defvar *iscream?* nil
   "T if Screamer is running under ILisp/GNUEmacs with iscream.el loaded.")
 
@@ -103,6 +94,120 @@ disable it. Default is platform dependent.")
 
 (defvar *trail* (make-array 4096 :adjustable t :fill-pointer 0) "The trail.")
 
+(defmacro-compile-time with-trail (size-form &rest body)
+  "Evaluates the BODY forms with *trail* set to a new array of the specified size. (*trail* is part of Screamer's backtracking mechanism.)
+SIZE-FORM is a positive integer or a form which evaluates to a positive integer, used as the size of the *trail* array."
+  (when (numberp size-form) (assert (and (integerp size-form) (>= size-form 0))))
+  `(let ((screamer::*trail* (make-array
+                             (or ,size-form 2048)
+                             :adjustable t
+                             :fill-pointer 0)))
+     ,@body))
+
+(defvar *screamer-results* nil
+  "A global variable storing the results of the nearest enclosing `-VALUES' or `-VALUES-PROB' form.
+Can be used for finer-grained control of nondeterminism.")
+
+(defparameter *possibility-consolidator* nil
+  "If non-nil, must be a function which compares 2 values, used for combining
+possibilities generated in ALL-VALUES and ALL-VALUES-PROB.")
+
+(defvar *numeric-bounds-collapse-threshold* 0.0000000000001
+  "The threshold of closeness to consider 2 numbers equivalent.
+Use this to deal with floating-point errors, if necessary.")
+
+(defun-compile-time roughly-= (a b)
+  ;; "Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'"
+  (declare (number a b))
+  (cond
+    ((or (floatp a) (floatp b))
+     (or (= a b)
+         (<= (abs (- a b)) *numeric-bounds-collapse-threshold*)))
+    (t (= a b))))
+
+(defun-compile-time roughly-<= (a b)
+  ;; "Tests approximate numeric equality using `*numeric-bounds-collapse-threshold*'"
+  (declare (number a b))
+  (cond
+    ((or (floatp a) (floatp b))
+     (or (<= a b)
+         (<= (abs (- a b)) *numeric-bounds-collapse-threshold*)))
+    (t (<= a b))))
+
+(defvar-compile-time *cons-cache* (cons nil nil)
+  "A cache of conses, to hopefully reduce memory usage")
+(defvar-compile-time *cons-cache-len* 0)
+(defvar-compile-time *cons-cache-max-len* 2048)
+(defun-compile-time cached-cons (a b)
+  (if (cdr *cons-cache*)
+      (let ((c (cdr *cons-cache*)))
+        (setf (cdr *cons-cache*) (cdr c))
+        (setf (car c) a (cdr c) b)
+        (decf *cons-cache-len*)
+        c)
+      (cons a b)))
+(defun-compile-time release-cons (c)
+  (when (and (consp c)
+             ;; Cache isn't already full to capacity.
+             (not (>= *cons-cache-len* *cons-cache-max-len*)))
+    ;; Insert cons as the second element of the cache
+    (rotatef (cdr c) (cdr *cons-cache*) c)
+    (setf (cadr *cons-cache*) nil)
+    (incf *cons-cache-len*)))
+
+(defmacro-compile-time cached-list (v &rest vals)
+  `(cached-cons ,v ,(when vals `(cached-list ,@vals))))
+(defmacro-compile-time cached-list* (v &optional v2 &rest vals)
+  `(cached-cons ,v ,(if vals `(cached-list* ,v2 ,@vals) v2)))
+(defun-compile-time release-list (l)
+  (iter:iter
+    (iter:for x initially l then y)
+    (iter:for y = (cdr x))
+    (iter:while y)
+    (release-cons x)))
+(defmacro-compile-time cached-push (v place)
+  `(setf ,place (cached-cons ,v ,place)))
+(defun-compile-time cached-mapcar (f s)
+  "Mapcar on one sequence at a time, but uses
+`*cons-cache*' to reduce consing.
+
+Note that performance optimizations can rarely
+be generalized; use your own judgement and
+experimentation to determine the value of this
+in comparison to `cl:mapcar'"
+  (s:nest
+   ;; Remove the `nil' added to the front
+   (rest)
+   ;; Get the head of the collected list
+   ;; Note that the first item was tracking
+   ;; the tail of the collection so we could
+   ;; keep adding to the end.
+   (second)
+   (reduce (lambda (a b)
+             (prog2 (setf (cdr (first a))
+                          (cached-list (funcall f b)))
+                 (cached-cons (rest (car a)) (cdr a))
+               (release-cons a)))
+           s
+           :initial-value
+           (let ((temp (cached-cons s nil)))
+             (cached-cons temp temp)))))
+
+
+(defun-compile-time notf (f)
+  (lambda (&rest xs)
+    (prog1 (not (apply f xs))
+      (release-list xs))))
+(defun-compile-time andf (f &rest fs)
+  (lambda (&rest xs)
+    (and (apply f xs)
+         (or (not fs)
+             (apply (apply #'andf fs) xs)))))
+(defun-compile-time orf (f &rest fs)
+  (lambda (&rest xs)
+    (or (apply f xs)
+        (and fs (apply (apply #'orf fs) xs)))))
+
 (defvar-compile-time *function-record-table* (make-hash-table :test #'equal)
   "The function record table.")
 
@@ -117,7 +222,7 @@ disable it. Default is platform dependent.")
          (unwind-trail-to trail-pointer)))))
 
 (defmacro-compile-time choice-point-external (&rest forms)
-  ;; note: Is it really better to use VECTOR-PUSH-EXTEND than CONS for the
+  ;; NOTE: Is it really better to use VECTOR-PUSH-EXTEND than CONS for the
   ;;       trail?
   `(let ((trail-pointer (fill-pointer *trail*))) ,@forms))
 
@@ -166,7 +271,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 
 (defun-compile-time peal-off-documentation-string-and-declarations
     (body &optional documentation-string?)
-  ;; note: This will need to be done as well for LOCALLY and MACROLET when we
+  ;; NOTE: This will need to be done as well for LOCALLY and MACROLET when we
   ;;       eventually implement them.
   ;; needs work: This requires that the documentation string preceed all
   ;;             declarations which needs to be fixed.
@@ -181,8 +286,8 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                        (consp (first body))
                        (eq (first (first body)) 'declare))
             (return))
-      (push (first body) declarations)
-      (pop body))
+          (cached-push (first body) declarations)
+          (pop body))
     (values body (reverse declarations) documentation-string)))
 
 (defun-compile-time self-evaluating? (thing)
@@ -219,7 +324,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 (defun-compile-time every-other (list)
   (cond ((null list) list)
         ((null (rest list)) list)
-        (t (cons (first list) (every-other (rest (rest list)))))))
+        (t (cached-cons (first list) (every-other (rest (rest list)))))))
 
 (defun-compile-time check-lambda-list-internal (lambda-list &optional mode)
   (cond
@@ -292,9 +397,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
           (error "&ALLOW-OTHER-KEYS must not be followed by a parameter: ~S"
                  lambda-list))))
   (let ((keywords
-         (remove-if-not #'(lambda (argument)
-                            (member argument lambda-list-keywords :test #'eq))
-                        lambda-list)))
+          (remove-if-not #'(lambda (argument)
+                             (member argument lambda-list-keywords :test #'eq))
+                         lambda-list)))
     (unless (every #'(lambda (keyword)
                        (member keyword *ordered-lambda-list-keywords* :test #'eq))
                    keywords)
@@ -373,6 +478,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                                   environment))
       (funcall map-function lambda-list 'lambda-list)))
 
+;;; TODO: Fix this to get nondeterminism working properly with return-from calls
+;;; NOTE: The above with TAGBODY fixes could also allow macroexpanding loops
+;;; and then making them nondeterministic, rather than having to put looping
+;;; constructs in top-level defuns
+;;; NOTE: See the `dotimes' test case for a failing test involving tags
 (defun-compile-time walk-block
     (map-function reduce-function screamer? partial? nested? form environment)
   (unless (null (rest (last form))) (error "Improper BLOCK: ~S" form))
@@ -443,6 +553,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                   environment)
       (funcall map-function nil 'quote)))
 
+;;; TODO: Set up walkers for labels and flet forms
+;;; to be converted into local functions on the trail,
+;;; NOTE: The above would allow implementing loops and
+;;; recursion as local functions, rather than having
+;;; to use SCREAMER::DEFUN
 (defun-compile-time walk-flet/labels
     (map-function reduce-function screamer? partial? nested? form environment
                   form-type)
@@ -808,6 +923,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                                (every-other (rest (rest form))))))
       (funcall map-function form 'setq)))
 
+;;; TODO: Get this to work properly with tag calls
+;;; NOTE: The above with BLOCK changes would also allow macroexpanding
+;;; loops and then making them nondeterministic, rather than having to
+;;; put looping constructs in top-level defuns
+;;; NOTE: See the `dotimes' test case for a failing test involving tags
 (defun-compile-time walk-tagbody
     (map-function reduce-function screamer? partial? nested? form environment)
   (unless (null (rest (last form))) (error "Improper TAGBODY: ~S" form))
@@ -908,7 +1028,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 (defun-compile-time walk-for-effects
     (map-function reduce-function screamer? partial? nested? form environment)
   (unless (null (rest (last form))) (error "Improper FOR-EFFECTS: ~S" form))
-  ;; note: We used to think that we should never walk the body of FOR-EFFECTS
+  ;; NOTE: We used to think that we should never walk the body of FOR-EFFECTS
   ;;       as we thought that the walker would get confused on the code
   ;;       generated by FOR-EFFECTS and that FOR-EFFECTS called
   ;;       CPS-CONVERT-PROGN on its body and that CPS-CONVERT-PROGN did the
@@ -1112,6 +1232,49 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
   (cond
     ((self-evaluating? form) (funcall map-function form 'quote))
     ((symbolp form) (funcall map-function form 'variable))
+
+
+    ;; TODO: Test `do' form-types, and either remove them or ensure they work.
+
+    ;; `dolist' case
+    ;; ((eq (first form) 'dolist)
+    ;;  (walk map-function reduce-function screamer? partial? nested?
+    ;;        (macroexpand form environment) environment))
+
+    ;; `dotimes' succeeding test cases:
+    ;; (s:nest
+    ;;  (all-values-prob)
+    ;;  (let ((a (dotimes (v 2) (if (a-boolean-prob 7/10) (return v) ))))
+    ;;    a))
+    ;; (let ((len 2))
+    ;;   (s:nest
+    ;;    (all-values-prob)
+    ;;    (let* ((a (dotimes (v len (1+ v))
+    ;;                (let ((c (a-boolean-prob)))
+    ;;                  (if c (return v)
+    ;;                      (print v)))))
+    ;;           (b (+ (typecase a
+    ;;                   (number a)
+    ;;                   (t (print "unexpected NIL") -1))
+    ;;                 (an-integer-between-prob 2 3))))
+    ;;      (solution (list a b) (static-ordering #'linear-force)))))
+    ;; `dotimes' failing test cases:
+    ;; (all-values-prob
+    ;;   (let (a)
+    ;;     (dotimes (v 3)
+    ;;       (push (either-prob (1 1) (2 2) (3 3)) a))
+    ;;     (solution a (static-ordering #'linear-force))))
+    ;; (all-values-prob
+    ;;   (let ((a 3))
+    ;;     (dotimes (v 3)
+    ;;       (setf a (+ (either 1 2 3) a)))
+    ;;     (solution a (static-ordering #'linear-force))))
+    ;; `dotimes' case
+    ;; ((eq (first form) 'dotimes)
+    ;;  (walk map-function reduce-function screamer? partial? nested?
+    ;;        (macroexpand form environment) environment))
+
+
     ((eq (first form) 'block)
      (walk-block
       map-function reduce-function screamer? partial? nested? form environment))
@@ -1214,44 +1377,44 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     (lambda-list (error "This shouldn't happen"))
     ((variable go) form)
     ((eval-when)
-     (cons (first form)
-           (cons (second form)
-                 (mapcar #'(lambda (subform)
-                             (funcall function subform environment))
-                         (rest (rest form))))))
+     (cached-list* (first form)
+                   (second form)
+                   (mapcar #'(lambda (subform)
+                               (funcall function subform environment))
+                           (rest (rest form)))))
     ((flet labels)
      `(,(first form)
-        ,(mapcar
-          #'(lambda (binding)
-              (cl:multiple-value-bind (body declarations documentation-string)
-                  (peal-off-documentation-string-and-declarations
-                   (rest (rest binding)) t)
-                `(,(first binding)
-                   ;; needs work: To process subforms of lambda list.
-                   ,(second binding)
-                   ,@(if documentation-string (list documentation-string))
-                   ,@declarations
-                   ,@(mapcar
-                      #'(lambda (subform) (funcall function subform environment))
-                      body))))
-          (second form))
-        ,@(mapcar
-           #'(lambda (subform) (funcall function subform environment))
-           (rest (rest form)))))
+       ,(mapcar
+         #'(lambda (binding)
+             (cl:multiple-value-bind (body declarations documentation-string)
+                 (peal-off-documentation-string-and-declarations
+                  (rest (rest binding)) t)
+               `(,(first binding)
+                 ;; TODO: Fix to process subforms of lambda list.
+                 ,(second binding)
+                 ,@(if documentation-string (cached-list documentation-string))
+                 ,@declarations
+                 ,@(mapcar
+                    #'(lambda (subform) (funcall function subform environment))
+                    body))))
+         (second form))
+       ,@(mapcar
+          #'(lambda (subform) (funcall function subform environment))
+          (rest (rest form)))))
     ((let let*)
      (cl:multiple-value-bind (body declarations)
          (peal-off-documentation-string-and-declarations (rest (rest form)))
        `(,(first form)
-          ,(mapcar
-            #'(lambda (binding)
-                (if (and (consp binding) (= (length binding) 2))
-                    `(,(first binding)
-                       ,(funcall function (second binding) environment))
-                    binding))
-            (second form))
-          ,@declarations
-          ,@(mapcar
-             #'(lambda (subform) (funcall function subform environment)) body))))
+         ,(mapcar
+           #'(lambda (binding)
+               (if (and (consp binding) (= (length binding) 2))
+                   `(,(first binding)
+                     ,(funcall function (second binding) environment))
+                   binding))
+           (second form))
+         ,@declarations
+         ,@(mapcar
+            #'(lambda (subform) (funcall function subform environment)) body))))
     (progn
       `(progn ,@(mapcar
                  #'(lambda (subform) (funcall function subform environment))
@@ -1263,7 +1426,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
      (cl:multiple-value-bind (body declarations documentation-string)
          (peal-off-documentation-string-and-declarations
           (rest (rest (first form))) t)
-       ;; needs work: To process subforms of lambda list.
+       ;; TODO: Fix to process subforms of lambda list.
        `((lambda ,(second (first form))
            ,@(if documentation-string (list documentation-string))
            ,@declarations
@@ -1273,9 +1436,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
             #'(lambda (subform) (funcall function subform environment))
             (rest form)))))
     (otherwise
-     (cons (first form)
-           (mapcar #'(lambda (subform) (funcall function subform environment))
-                   (rest form))))))
+     (cached-cons (first form)
+                  (mapcar #'(lambda (subform) (funcall function subform environment))
+                          (rest form))))))
 
 (defun-compile-time deterministic? (form environment)
   (walk
@@ -1284,9 +1447,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          ((symbol-call setf-call)
           (function-record-deterministic? (get-function-record (first form))))
          (multiple-value-call-nondeterministic nil)
-         ;; note: not really sure about CATCH, THROW and UNWIND-PROTECT
+         ;; NOTE: not really sure about CATCH, THROW and UNWIND-PROTECT
          (otherwise t)))
-   ;; note: potentially inefficient because must walk entire form even
+   ;; NOTE: potentially inefficient because must walk entire form even
    ;;       after it is known to be nondeterministic
    #'(lambda (&optional (x nil x?) y) (if x? (and x y) t))
    t
@@ -1302,9 +1465,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          ((symbol-call setf-call)
           (function-record-deterministic? (get-function-record (first form))))
          (multiple-value-call-nondeterministic nil)
-         ;; note: not really sure about CATCH, THROW and UNWIND-PROTECT
+         ;; NOTE: not really sure about CATCH, THROW and UNWIND-PROTECT
          (otherwise t)))
-   ;; note: potentially inefficient because must walk entire form even
+   ;; NOTE: potentially inefficient because must walk entire form even
    ;;       after it is known to be nondeterministic
    #'(lambda (&optional (x nil x?) y) (if x? (and x y) t))
    t
@@ -1333,7 +1496,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          (setq *local?*)
          (local-setf t)
          (otherwise nil)))
-   ;; note: potentially inefficient because must walk entire form even
+   ;; NOTE: potentially inefficient because must walk entire form even
    ;;       after it is known to need substitution
    #'(lambda (&optional (x nil x?) y) (if x? (or x y) '()))
    t
@@ -1347,7 +1510,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
             (declare (ignore form))
             (or (and *local?* (eq form-type 'setq))
                 (eq form-type 'local-setf)))
-        ;; note: potentially inefficient because must walk entire form even
+        ;; NOTE: potentially inefficient because must walk entire form even
         ;;       after it is known to contain a LOCAL SETF/SETQ special form
         #'(lambda (&optional (x nil x?) y) (if x? (or x y) '()))
         t
@@ -1382,7 +1545,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
             (indirect-callees-internal
              (rest function-names)
              (indirect-callees-internal
-              (callees function-name) (cons function-name callees)))))))
+              (callees function-name) (cached-cons function-name callees)))))))
 
 (defun-compile-time indirect-callees (function-name)
   (indirect-callees-internal (callees function-name) '()))
@@ -1392,7 +1555,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
         (function-names '()))
     (maphash #'(lambda (function-name function-record)
                  (declare (ignore function-record))
-                 (push function-name function-names))
+                 (cached-push function-name function-names))
              *function-record-table*)
     (dolist (caller function-names)
       (if (member function-name (callees caller) :test #'equal)
@@ -1408,7 +1571,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
             (indirect-callers-internal
              (rest function-names)
              (indirect-callers-internal
-              (callers function-name) (cons function-name callers)))))))
+              (callers function-name) (cached-cons function-name callers)))))))
 
 (defun-compile-time indirect-callers (function-name)
   (indirect-callers-internal (callers function-name) '()))
@@ -1422,7 +1585,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
             (get-setf-expansion (first pairs) environment)
           `(let* (,@(mapcar #'list vars vals)
                   (,dummy-argument ,(second pairs))
-                    (,d ,access-form))
+                  (,d ,access-form))
              (trail #'(lambda () ,(subst d (first stores) store-form)))
              ,@(if (null (rest (rest pairs)))
                    (list (subst dummy-argument (first stores) store-form))
@@ -1452,7 +1615,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
              (lambda-list (error "This shouldn't happen"))
              (variable (error "This shouldn't happen"))
              (block (let ((*block-tags*
-                           (cons (list (second form) nil) *block-tags*)))
+                            (cached-cons (list (second form) nil) *block-tags*)))
                       (process-subforms
                        #'perform-substitutions form form-type environment)))
              (function-lambda
@@ -1468,7 +1631,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                    (rest (rest (second form))) t)
                 (if (every #'(lambda (form) (deterministic? form environment))
                            body)
-                    ;; needs work: To process subforms of lambda list.
+                    ;; TODO: Fix to process subforms of lambda list.
                     `#'(lambda ,(second (second form))
                          ,@(if documentation-string (list documentation-string))
                          ,@declarations
@@ -1477,12 +1640,12 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                                 (perform-substitutions subform environment))
                             body))
                     (let ((continuation (gensym "CONTINUATION-")))
-                      ;; note: This conses every time #'(LAMBDA (...) ...) is
+                      ;; NOTE: This conses every time #'(LAMBDA (...) ...) is
                       ;;       accessed when it is nondeterministic. A small
                       ;;       price to pay for a lot of error checking.
                       `(make-nondeterministic-function
                         :function
-                        ;; needs work: To process subforms of lambda list.
+                        ;; TODO: Fix to process subforms of lambda list.
                         #'(lambda (,continuation ,@(second (second form)))
                             ,@(if documentation-string (list documentation-string))
                             ,@declarations
@@ -1496,13 +1659,13 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
               (if (function-record-deterministic?
                    (get-function-record (second form)))
                   form
-                  ;; note: This conses every time #'FOO  or #'(SETF FOO) is
+                  ;; NOTE: This conses every time #'FOO  or #'(SETF FOO) is
                   ;;       accessed when FOO or (SETF FOO) is nondeterministic.
                   ;;       A small price to pay for a lot of error checking.
                   `(make-nondeterministic-function
                     :function #',(cps-convert-function-name (second form)))))
              (go (let ((tag (assoc (second form) *tagbody-tags*)))
-                   ;; note: Can't issue an error here if tag not found since it
+                   ;; NOTE: Can't issue an error here if tag not found since it
                    ;;       might be outside the scope of a FOR-EFFECTS.
                    (if (and tag (second tag)) `(,(second tag)) form)))
              (quote (error "This shouldn't happen"))
@@ -1511,7 +1674,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                     (value (perform-substitutions
                             (if (= (length form) 3) (third form) nil)
                             environment)))
-                ;; note: Can't issue an error here if tag not found since it
+                ;; NOTE: Can't issue an error here if tag not found since it
                 ;;       might be outside the scope of a FOR-EFFECTS.
                 (if (and tag (second tag))
                     (possibly-beta-reduce-funcall
@@ -1522,9 +1685,9 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                        (process-subforms
                         #'perform-substitutions form form-type environment)))
              (tagbody (let ((*tagbody-tags*
-                             (append (mapcar #'(lambda (tag) (list tag nil))
-                                             (remove-if #'consp (rest form)))
-                                     *tagbody-tags*)))
+                              (append (mapcar #'(lambda (tag) (list tag nil))
+                                              (remove-if #'consp (rest form)))
+                                      *tagbody-tags*)))
                         (process-subforms
                          #'perform-substitutions form form-type environment)))
              (for-effects (perform-substitutions
@@ -1585,10 +1748,10 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          (if (null types)
              (if (consp form)
                  `(multiple-value-call ,continuation ,form)
-                 ;; note: This optimization is technically unsound if FORM
+                 ;; NOTE: This optimization is technically unsound if FORM
                  ;;       is a symbol macro that returns multiple values.
                  `(funcall ,continuation ,form))
-             ;; note: This optimization assumes that there are no VALUES
+             ;; NOTE: This optimization assumes that there are no VALUES
              ;;       types.
              `(funcall ,continuation (the (and ,@types) ,form)))
          `(progn ,form (funcall ,continuation))))
@@ -1597,10 +1760,10 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          (if (null types)
              (if (consp form)
                  `(multiple-value-call ,continuation ,form)
-                 ;; note: This optimization is technically unsound if FORM
+                 ;; NOTE: This optimization is technically unsound if FORM
                  ;;       is a symbol macro that returns multiple values.
                  `(,(second continuation) ,form))
-             ;; note: This optimization assumes that there are no VALUES
+             ;; NOTE: This optimization assumes that there are no VALUES
              ;;       types.
              `(,(second continuation) (the (and ,@types) ,form)))
          `(progn ,form (,(second continuation)))))
@@ -1612,11 +1775,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                ((eq (first (second (second continuation))) '&rest)
                 (if (null types)
                     `(let ((,(magic-continuation-argument continuation)
-                            (multiple-value-list ,form)))
+                             (multiple-value-list ,form)))
                        ;; Peal off LAMBDA, arguments, and DECLARE.
                        ,@(rest (rest (rest (second continuation)))))
                     `(let ((,(magic-continuation-argument continuation)
-                            (list (the (and ,@types) ,form))))
+                             (list (the (and ,@types) ,form))))
                        ;; Peal off LAMBDA, arguments, and DECLARE.
                        ,@(rest (rest (rest (second continuation)))))))
                ((or (and (consp form)
@@ -1629,20 +1792,19 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                     (symbol-package (magic-continuation-argument continuation)))
                 (if (null types)
                     `(let ((,(magic-continuation-argument continuation) ,form))
-                       ,@(if (and *dynamic-extent?* (is-magic-continuation? form))
-                             `((declare
-                                (dynamic-extent
-                                 ,(magic-continuation-argument continuation)))))
+                       (declare
+                        (dynamic-extent
+                         ,(magic-continuation-argument continuation)))
                        ;; Peal off LAMBDA, arguments, and DECLARE.
                        ,@(rest (rest (rest (second continuation)))))
                     `(let ((,(magic-continuation-argument continuation)
-                            (the (and ,@types) ,form)))
+                             (the (and ,@types) ,form)))
                        (declare
                         (type (and ,@types)
                               ,(magic-continuation-argument continuation)))
                        ;; Peal off LAMBDA, arguments, and DECLARE.
                        ,@(rest (rest (rest (second continuation)))))))
-               ;; note: This case may be unsoundly taken in the following cases:
+               ;; NOTE: This case may be unsoundly taken in the following cases:
                ;;       a. (MAGIC-CONTINUATION-ARGUMENT CONTINUATION) is a
                ;;          non-Screamer GENSYM. This can only happen if a
                ;;          a BINDING-VARIABLE is a GENSYM in CPS-CONVERT-LET*.
@@ -1674,7 +1836,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
               (is-magic-continuation? continuation))
     (error "Please report this bug; This shouldn't happen (D)"))
   (let ((dummy-argument (gensym "DUMMY-")))
-    ;; note: We could get rid of this bogosity by having two versions of each
+    ;; NOTE: We could get rid of this bogosity by having two versions of each
     ;;       nondeterministic function, one which returned a value and one which
     ;;       didn't.
     `#'(lambda (&rest ,dummy-argument)
@@ -1696,7 +1858,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 (defun-compile-time cps-convert-block
     (name body continuation types value? environment)
   (let* ((c (gensym "CONTINUATION-"))
-         (*block-tags* (cons (list name c types value?) *block-tags*)))
+         (*block-tags* (cached-cons (list name c types value?) *block-tags*)))
     (possibly-beta-reduce-funcall
      `#'(lambda (,c)
           (declare (magic))
@@ -1748,11 +1910,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          ,(cps-convert-progn body continuation types value? environment))
       (let* ((binding (first bindings))
              (binding-variable
-              (if (symbolp binding) binding (first binding)))
+               (if (symbolp binding) binding (first binding)))
              (binding-form
-              (if (and (consp binding) (= (length binding) 2))
-                  (second binding)
-                  nil))
+               (if (and (consp binding) (= (length binding) 2))
+                   (second binding)
+                   nil))
              (dummy-argument (gensym "DUMMY-"))
              (other-arguments (gensym "OTHER-")))
         (cps-convert
@@ -1767,8 +1929,8 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                                 types
                                 value?
                                 environment
-                                (cons (list binding-variable dummy-argument)
-                                      new-bindings)))
+                                (cached-cons (list binding-variable dummy-argument)
+                                             new-bindings)))
          '()
          t
          environment))))
@@ -1788,11 +1950,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
              ,(cps-convert-progn body continuation types value? environment)))
       (let* ((binding (first bindings))
              (binding-variable
-              (if (symbolp binding) binding (first binding)))
+               (if (symbolp binding) binding (first binding)))
              (binding-form
-              (if (and (consp binding) (= (length binding) 2))
-                  (second binding)
-                  nil))
+               (if (and (consp binding) (= (length binding) 2))
+                   (second binding)
+                   nil))
              (other-arguments (gensym "OTHER-")))
         (cps-convert
          binding-form
@@ -1832,7 +1994,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
               (declare (magic))
               ,(cps-convert-multiple-value-call-internal
                 nondeterministic? function (rest forms) continuation types value?
-                environment (cons dummy-argument arguments)))
+                environment (cached-cons dummy-argument arguments)))
          nil
          t
          environment))))
@@ -1873,7 +2035,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          types
          t
          environment))
-      (cps-convert-progn (cons form forms) continuation types nil environment)))
+      (cps-convert-progn (cached-cons form forms) continuation types nil environment)))
 
 (defun-compile-time cps-convert-progn
     (body continuation types value? environment)
@@ -1895,7 +2057,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
   (let ((tag (assoc name *block-tags* :test #'eq)))
     (if (and tag (second tag))
         (cps-convert result (second tag) (third tag) (fourth tag) environment)
-        ;; note: Can't issue an error here if tag not found since it might be
+        ;; NOTE: Can't issue an error here if tag not found since it might be
         ;;       outside the scope of a FOR-EFFECTS. Thus we must compile a
         ;;       RETURN-FROM nondeterministic code to deterministic code.
         ;;       Likewise, can't issue an error here if tag is found but
@@ -1945,41 +2107,46 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 
 (defun-compile-time cps-convert-tagbody
     (body continuation types value? environment)
-  (let ((segments (list (list 'header)))
-        (*tagbody-tags* *tagbody-tags*)) ;cool!
-    (dolist (form body)
-      (if (consp form)
-          (push form (rest (first segments)))
-          (let ((c (gensym "CONTINUATION-")))
-            (push (list form c) *tagbody-tags*)
-            (push (list c) segments))))
-    (push nil (rest (first segments)))
-    (let ((segments (reverse segments))
-          (dummy-argument (gensym "DUMMY-"))
-          (other-arguments (gensym "OTHER-")))
-      ;; needs work: The closures created by LABELS functions aren't declared to
-      ;;             have DYNAMIC-EXTENT since I don't know how to do this in
-      ;;             Common Lisp.
-      `(labels ,(mapcar
-                 #'(lambda (segment)
-                     (let ((next (rest (member segment segments :test #'eq))))
-                       `(,(first segment)
-                          (&optional ,dummy-argument &rest ,other-arguments)
-                          (declare (ignore ,dummy-argument ,other-arguments))
-                          ,(cps-convert-progn
-                            (reverse (rest segment))
-                            (if next `#',(first (first next)) continuation)
-                            (if next '() types)
-                            (or next value?)
-                            environment))))
-                 (rest segments))
-         ,(let ((next (rest segments)))
-               (cps-convert-progn
-                (reverse (rest (first segments)))
-                (if next `#',(first (first next)) continuation)
-                (if next '() types)
-                (or next value?)
-                environment))))))
+  ;; TODO: Remove this print
+  ;; (print (list "input: " body))
+  (s:nest
+   ;; TODO: Remove this print
+   ;; (print)
+   (let ((segments (list (list 'header)))
+         (*tagbody-tags* *tagbody-tags*)) ;cool!
+     (dolist (form body)
+       (if (consp form)
+           (cached-push form (rest (first segments)))
+           (let ((c (gensym "CONTINUATION-")))
+             (cached-push (list form c) *tagbody-tags*)
+             (cached-push (list c) segments))))
+     (cached-push nil (rest (first segments))))
+   (let ((segments (reverse segments))
+         (dummy-argument (gensym "DUMMY-"))
+         (other-arguments (gensym "OTHER-"))))
+   `(labels ,(mapcar
+              #'(lambda (segment)
+                  (let ((next (rest (member segment segments :test #'eq))))
+                    `(,(first segment)
+                      (&optional ,dummy-argument &rest ,other-arguments)
+                      (declare (ignore ,dummy-argument ,other-arguments))
+                      ,(cps-convert-progn
+                        (reverse (rest segment))
+                        (if next `#',(first (first next)) continuation)
+                        (if next '() types)
+                        (or next value?)
+                        environment))))
+              (rest segments))
+      (declare (dynamic-extent
+                ,@(mapcar (lambda (seg) `(function ,(first seg)))
+                          (rest segments))))
+      ,(let ((next (rest segments)))
+         (cps-convert-progn
+          (reverse (rest (first segments)))
+          (if next `#',(first (first next)) continuation)
+          (if next '() types)
+          (or next value?)
+          environment)))))
 
 (defun-compile-time cps-convert-local-setf/setq
     (arguments continuation types value? environment)
@@ -2036,8 +2203,8 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
          `#'(lambda (,c)
               (declare (magic))
               (,(cps-convert-function-name function-name)
-                ,c
-                ,@(reverse dummy-arguments)))
+               ,c
+               ,@(reverse dummy-arguments)))
          '()
          (if value? continuation (void-continuation continuation))
          t))
@@ -2055,7 +2222,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                 types
                 value?
                 environment
-                (cons dummy-argument dummy-arguments)))
+                (cached-cons dummy-argument dummy-arguments)))
          '()
          t
          environment))))
@@ -2090,7 +2257,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                 types
                 value?
                 environment
-                (cons dummy-argument dummy-arguments)))
+                (cached-cons dummy-argument dummy-arguments)))
          '()
          t
          environment))))
@@ -2121,6 +2288,11 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                     types
                     (perform-substitutions form environment)
                     value?))
+                  ;; TODO: Make GO in TAGBODY forms walkable?
+                  ;; NOTE: Is it already? Not sure if we have
+                  ;; any actual failing test cases...
+                  ;; NOTE: There may be other ways to make
+                  ;; TAGBODY work properly, though...
                   (go (error "This shouldn't happen"))
                   (if (cps-convert-if (second form)
                                       (third form)
@@ -2187,7 +2359,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                             (rest form) continuation types value? environment))
                   (the (cps-convert (third form)
                                     continuation
-                                    (cons (second form) types)
+                                    (cached-cons (second form) types)
                                     value?
                                     environment))
                   (for-effects (possibly-beta-reduce-funcall
@@ -2233,7 +2405,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                    (cl:multiple-value-bind (body declarations)
                        (peal-off-documentation-string-and-declarations
                         (rest (rest (first form))) t)
-                     ;; note: The documentation string is lost for lambda calls
+                     ;; NOTE: The documentation string is lost for lambda calls
                      ;;       that are CPS Converted.
                      (cps-convert-let
                       (mapcar #'list (second (first form)) (rest form))
@@ -2278,7 +2450,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
         nil))
 
 (defun-compile-time compute-callees (body environment)
-  ;; note: What bogosity in Common Lisp! UNION should allow zero arguments and
+  ;; NOTE: What bogosity in Common Lisp! UNION should allow zero arguments and
   ;;       return NIL as the identity element for use by REDUCE.
   (reduce
    #'union
@@ -2293,7 +2465,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     (setf (function-record-callees function-record) callees)))
 
 (defun-compile-time determine-whether-deterministic (function-name environment)
-  ;; note: This is using the current rather than the saved ENVIRONMENT.
+  ;; NOTE: This is using the current rather than the saved ENVIRONMENT.
   (let* ((function-record (get-function-record function-name)))
     (setf (function-record-deterministic? function-record)
           (and (every #'(lambda (form) (deterministic? form environment))
@@ -2304,15 +2476,15 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
 
 (defun-compile-time determine-whether-callers-are-deterministic
     (function-name function-names environment)
-  ;; note: This is using the current rather than the saved ENVIRONMENT.
+  ;; NOTE: This is using the current rather than the saved ENVIRONMENT.
   (dolist (caller (callers function-name))
     (unless (member caller function-names :test #'equal)
       (determine-whether-deterministic caller environment)
       (determine-whether-callers-are-deterministic
-       caller (cons caller function-names) environment))))
+       caller (cached-cons caller function-names) environment))))
 
 (defun-compile-time function-definition (function-name environment)
-  ;; note: This is using the current rather than the saved ENVIRONMENT.
+  ;; NOTE: This is using the current rather than the saved ENVIRONMENT.
   (let* ((function-record (get-function-record function-name))
          (lambda-list (function-record-lambda-list function-record))
          (body (function-record-body function-record)))
@@ -2320,7 +2492,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
         (peal-off-documentation-string-and-declarations body t)
       (if (function-record-deterministic? function-record)
           (let ((*block-tags* (list (list function-name nil))))
-            ;; needs work: To process subforms of lambda list.
+            ;; TODO: Fix to process subforms of lambda list.
             (list `(cl:defun ,function-name ,lambda-list
                      ,@(if documentation-string (list documentation-string))
                      ,@declarations
@@ -2329,7 +2501,7 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                                body))
                   `(declare-deterministic ',function-name)))
           (let* ((continuation (gensym "CONTINUATION-"))
-                 ;; note: Could provide better TYPES and VALUE? here.
+                 ;; NOTE: Could provide better TYPES and VALUE? here.
                  (*block-tags* (list (list function-name continuation '() t))))
             (list `(cl:defun ,function-name ,lambda-list
                      ,@(if documentation-string (list documentation-string))
@@ -2363,28 +2535,28 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
                   `(declare-nondeterministic ',function-name)))))))
 
 (defun-compile-time modified-function-definitions (function-name environment)
-  ;; note: This is using the current rather than the saved ENVIRONMENT.
+  ;; NOTE: This is using the current rather than the saved ENVIRONMENT.
   (let ((function-record (get-function-record function-name))
         (callers (indirect-callers function-name))
         (function-records '()))
     (setf (function-record-old-deterministic? function-record)
           (function-record-deterministic? function-record))
     (setf (function-record-deterministic? function-record) t)
-    (push function-record function-records)
+    (cached-push function-record function-records)
     (dolist (caller callers)
       (let ((function-record (get-function-record caller)))
         (unless (member function-record function-records :test #'eq)
           (setf (function-record-old-deterministic? function-record)
                 (function-record-deterministic? function-record))
           (setf (function-record-deterministic? function-record) t)
-          (push function-record function-records))))
+          (cached-push function-record function-records))))
     (dolist (caller callers)
       (dolist (callee (callees caller))
         (let ((function-record (get-function-record callee)))
           (unless (member function-record function-records :test #'eq)
             (setf (function-record-old-deterministic? function-record)
                   (function-record-deterministic? function-record))
-            (push function-record function-records)))))
+            (cached-push function-record function-records)))))
     (determine-whether-deterministic function-name environment)
     (determine-whether-callers-are-deterministic function-name nil environment)
     (let ((definitions (function-definition function-name environment)))
@@ -2402,11 +2574,14 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
               (setf definitions
                     (append (function-definition caller environment)
                             definitions)))))
-      ;; note: This is so that macroexpand without compile doesn't get out of
+      ;; NOTE: This is so that macroexpand without compile doesn't get out of
       ;;       sync.
       (dolist (function-record function-records)
         (setf (function-record-deterministic? function-record)
               (function-record-old-deterministic? function-record)))
+      ;; TODO: Test the below before uncommenting!
+      ;; (release-list callers)
+      ;; (release-list function-records)
       definitions)))
 
 ;;; The protocol
@@ -2418,20 +2593,20 @@ contexts even though they may appear inside a SCREAMER::DEFUN.") args))
     (let* ((callees (compute-callees body environment))
            (function-record (get-function-record function-name))
            (function-record-lambda-list
-            (function-record-lambda-list function-record))
+             (function-record-lambda-list function-record))
            (function-record-body (function-record-body function-record))
            (function-record-callees (function-record-callees function-record))
            (function-record-deterministic?
-            (function-record-deterministic? function-record))
+             (function-record-deterministic? function-record))
            (function-record-old-deterministic?
-            (function-record-old-deterministic? function-record))
+             (function-record-old-deterministic? function-record))
            (function-record-screamer?
-            (function-record-screamer? function-record)))
+             (function-record-screamer? function-record)))
       (cache-definition function-name lambda-list body callees)
       (let ((modified-function-definitions
-             ;; note: This is using the current rather than the saved ENVIRONMENT.
-             (modified-function-definitions function-name environment)))
-        ;; note: This is so that macroexpand without compile doesn't get out of
+              ;; NOTE: This is using the current rather than the saved ENVIRONMENT.
+              (modified-function-definitions function-name environment)))
+        ;; NOTE: This is so that macroexpand without compile doesn't get out of
         ;;       sync.
         (setf (function-record-lambda-list function-record)
               function-record-lambda-list)
@@ -2473,6 +2648,93 @@ most recent choice-point."
          `(if (a-boolean)
               ,(first alternatives)
               (either ,@(rest alternatives))))))
+
+(defmacro-compile-time either-prob-internal (&body alternatives)
+  ;; FIXME: ref to operators providing nondeterministic contexts
+  (cond ((not alternatives)
+         '(fail))
+        ((not (rest alternatives))
+         (let* ((alt (first alternatives))
+                (val (first alt))
+                (prob (second alt)))
+           (prog1
+               `(progn
+                  (trail-prob nil (* (current-probability)
+                                     ,prob))
+                  ,val)
+             ;; TODO: Figure out why using `release-cons' here
+             ;; leads to a stack overflow
+             ;; (release-cons alternatives)
+             )))
+        (t
+         `(if (a-boolean)
+              (either-prob-internal ,(first alternatives))
+              (either-prob-internal ,@(rest alternatives))))))
+
+(defmacro-compile-time either-prob (&body alternatives)
+  "Nondeterministically evaluates and returns the value of one of its
+ALTERNATIVES, and updates the current probability accordingly.
+
+Acts as EITHER, but alternatives are 2-element lists
+of values and probabilities.
+
+Probabilities must be provided as numbers, which will be normalized
+to probabilities between 0 and 1 (i.e. (either-prob (1 2) (2 1/2))
+would give 4/5 chance to 1 and 1/5 chance to 2).
+
+Probabilities cannot be provided as forms that evaluate
+to numbers.
+
+If any choices are provided without associated probabilities
+(i.e. not a 2-element list with the second element a number),
+then they will be assigned the average probability number of
+those elements where such was provided. If no elements
+match this pattern, then the uniform prior will be used.
+
+If a choice is a 2-element list with the second element nil,
+it will be treated as if the first element was the value
+and no probability was provided (i.e. (either-prob ((+ 1) nil) 2)
+gives equal probability to 1 and 2)."
+  (flet ((normalize (alt-list)
+           (let* ((prob-pred (andf #'listp
+                                   (compose #'numberp
+                                            #'second)
+                                   (compose (curry #'= 2)
+                                            #'length)))
+                  (prob-provided (s:~>> alt-list
+                                        ;; Filter by valid probability values
+                                        (s:filter prob-pred)
+                                        ;; Extract probability values
+                                        (mapcar #'second)))
+                  (prob-provided (or prob-provided (cached-list 1)))
+                  (prob-sum (apply #'+ prob-provided))
+                  (prob-avg (/ prob-sum (length prob-provided)))
+                  (prob-sum (* prob-avg (length alt-list)))
+                  (prob-ignore-pred (andf #'listp
+                                          (compose #'null
+                                                   #'second)
+                                          (compose (curry #'= 2)
+                                                   #'length)))
+                  (alt-list (mapcar (lambda (elem)
+                                      (if (funcall prob-ignore-pred elem)
+                                          (cached-list (first elem)
+                                                       prob-avg)
+                                          elem))
+                                    alt-list))
+                  (normalized (mapcar (lambda (elem)
+                                        (if (funcall prob-pred elem)
+                                            (cached-list (first elem)
+                                                         (/ (second elem)
+                                                            prob-sum))
+                                            (cached-list elem
+                                                         (/ prob-avg
+                                                            prob-sum))))
+                                      alt-list)))
+             (release-list prob-provided)
+             (release-list alt-list)
+             normalized)))
+    `(either-prob-internal
+       ,@(sort (normalize alternatives) #'> :key #'second))))
 
 (defmacro-compile-time local (&body body &environment environment)
   "Evaluates BODY in the same fashion as PROGN except that all SETF and SETQ
@@ -2548,7 +2810,7 @@ always in a nondeterministic context. A FOR-EFFECTS expression is is always
 deterministic."
   `(choice-point
     ,(let ((*nondeterministic-context?* t))
-          (cps-convert-progn body '#'fail nil nil environment))))
+       (cps-convert-progn body '#'fail nil nil environment))))
 
 (defmacro-compile-time one-value (form &optional (default '(fail)))
   "Returns the first nondeterministic value yielded by FORM.
@@ -2611,10 +2873,10 @@ appears in, its body is always in a nondeterministic context. A NECESSARILY?
 expression is always deterministic."
   `(let ((result t))
      (one-value
-      (let ((value (progn ,@body)))
-        (when value (setf result value) (fail))
-        value)
-      result)))
+         (let ((value (progn ,@body)))
+           (when value (setf result value) (fail))
+           value)
+         result)))
 
 (defmacro-compile-time all-values (&body body)
   "Evaluates BODY as an implicit PROGN and returns a list of all of the
@@ -2635,18 +2897,207 @@ always in a nondeterministic context. An ALL-VALUES expression itself is
 always deterministic.
 
 ALL-VALUES is analogous to the `bagof' primitive in Prolog."
-  (let ((values (gensym "VALUES"))
-        (last-value-cons (gensym "LAST-VALUE-CONS")))
+  (let ((values '*screamer-results*)
+        (last-value-cons (gensym "last-value-cons")))
     `(let ((,values '())
            (,last-value-cons nil))
        (for-effects
          (let ((value (progn ,@body)))
            (global (if (null ,values)
-                       (setf ,last-value-cons (list value)
+                       (setf ,last-value-cons (cached-list value)
                              ,values ,last-value-cons)
-                       (setf (rest ,last-value-cons) (list value)
+                       (setf (rest ,last-value-cons) (cached-list value)
                              ,last-value-cons (rest ,last-value-cons))))))
-       ,values)))
+       (if *possibility-consolidator*
+           (flet ((merge-vals (vals)
+                    (let ((prev nil))
+                      (mapc (lambda (v)
+                              (unless (position v prev
+                                                :test *possibility-consolidator*)
+                                (cached-push v prev)))
+                            vals)
+                      (release-list vals)
+                      prev)))
+             (merge-vals ,values))
+           ,values))))
+
+(defmacro-compile-time all-values-prob (&body body)
+  "Evaluates BODY as an implicit PROGN and returns a list pairing all of the
+nondeterministic values yielded by it with their corresponding probabilities.
+
+Other than the output format, semantics are equivalent to
+ALL-VALUES.
+
+Note that some possibilities may have duplicate return values.
+
+Note that the probabilities are measured with respect to the
+distributions provided at probabilistic choice points; if
+constraints or FAIL calls remove potential branches, then the
+sum of the probabilities returned will be less than 1."
+  (let ((values '*screamer-results*)
+        (last-value-cons (gensym "last-value-cons"))
+        (pointer (gensym "enclosing-trail-pointer")))
+    `(let ((,values '())
+           (,last-value-cons nil)
+           ;; Reset probability
+           (,pointer (prog1 (fill-pointer *trail*)
+                       (trail-prob nil 1))))
+       ;; Process BODY
+       (for-effects
+         (let ((value (progn ,@body)))
+           (global (if (null ,values)
+                       (setf ,last-value-cons (cached-list
+                                               (cached-list value
+                                                            (current-probability *trail*)))
+                             ,values ,last-value-cons)
+                       (setf (rest ,last-value-cons) (cached-list
+                                                      (cached-list value
+                                                                   (current-probability *trail*)))
+                             ,last-value-cons (rest ,last-value-cons))))))
+       ;; Return to enclosing trail context
+       (unwind-trail-to ,pointer)
+       ;; Consolidate probabilities
+       (if *possibility-consolidator*
+           (flet ((merge-vals (vals)
+                    (let ((prev nil))
+                      (mapc (lambda (v)
+                              (if-let (prev-val (assoc (first v) prev
+                                                       :test *possibility-consolidator*))
+                                (progn (incf (second prev-val)
+                                             (second v))
+                                       (release-cons v))
+                                (cached-push v prev)))
+                            vals)
+                      (release-list vals)
+                      prev)))
+             (merge-vals ,values))
+           ,values))))
+
+(defmacro-compile-time expected-prob (&body body)
+  "Returns the sum of the probabilities of all the values produced by
+ALL-VALUES-PROB.
+
+If there are no non-probabilistic branches in BODY, then this corresponds
+to the total probability of the constraints in BODY being satisfied."
+  `(reduce (lambda (a b) (+ a (second b)))
+    (all-values-prob
+      ,@body)
+    :initial-value 0))
+
+(defmacro-compile-time expected-value (&body body)
+  "Returns the sum of each value produced by body times its probability,
+divided by the sum of the probabilities.
+
+If there are no non-probabilistic branches in BODY, then this corresponds
+to the expected value of the output of BODY.
+
+Throws an exception if body outputs any non-numeric value.
+
+Returns NIL if all branches of BODY fail."
+  `(s:nest
+    (funcall (lambda (x)
+               (prog1
+                   (unless (zerop (second x))
+                     (/ (first x) (second x)))
+                 ;; Release the juxt list to the cons cache
+                 (release-list x))))
+    (funcall (s:juxt (lambda (x) (reduce #'+ x :key (curry #'reduce #'*)))
+                     (lambda (x) (reduce #'+ x :key #'second))))
+    (all-values-prob ,@body)))
+
+(defmacro-compile-time n-values (n form &optional (default-on-failure nil) (default nil))
+  "Returns the first N nondeterministic values yielded by FORM.
+
+N must be an integer denoting the number of values to return, or a form producing such an integer.
+
+No further execution of FORM is attempted after it successfully yields the
+desired value.
+
+If FORM fails before yielding the N values to be returned, then DEFAULT is evaluated and its value returned
+instead. DEFAULT defaults to NIL if not present.
+
+Local side effects performed by FORM are undone when N-VALUES returns, but
+local side effects performed by DEFAULT and by N are not undone when N-VALUES
+returns.
+
+An N-VALUES expression can appear in both deterministic and nondeterministic
+contexts. Irrespective of what context the N-VALUES appears in, FORM is
+always in a nondeterministic context, while DEFAULT and N are in whatever
+context the N-VALUES appears in.
+
+An N-VALUES expression is nondeterministic if DEFAULT is present and is
+nondeterministic, or if N is nondeterministic. Otherwise it is deterministic.
+
+If DEFAULT is present and nondeterministic, and if FORM fails, then it is
+possible to backtrack into the DEFAULT and for the N-VALUES expression to
+nondeterministically return multiple times.
+
+If N is nondeterministic then the N-VALUES expression operates
+nondeterministically on each value of N. In this case, backtracking for each
+value of FORM and DEFAULT is nested in, and restarted for, each backtrack of
+N."
+  (when (numberp n) (assert (and (integerp n) (>= n 0))))
+  (let ((counter (gensym "I"))
+        (value (gensym "value"))
+        (value-list '*screamer-results*)
+        (last-value-cons (gensym "last-value-cons")))
+    `(block n-values
+       (let* ((,counter (value-of ,n))
+              (,value-list nil)
+              (,last-value-cons nil))
+         (declare (integer ,counter) ((or cons null) ,value-list))
+         (for-effects
+           (unless (zerop ,counter)
+             (global
+               (let ((,value ,form))
+                 (decf ,counter)
+                 ;; Add the value to the collected list
+                 (if (null ,value-list)
+                     (setf ,last-value-cons (cached-list ,value)
+                           ,value-list ,last-value-cons)
+                     (setf (rest ,last-value-cons) (cached-list ,value)
+                           ,last-value-cons (rest ,last-value-cons)))
+                 (when (zerop ,counter)
+                   (return-from n-values ,value-list))))))
+         ,(if default-on-failure default value-list)))))
+
+(defmacro-compile-time n-values-prob (n form &optional (default-on-failure nil) (default nil))
+  "Identical to N-VALUES, but returns pairs of values and probabilities.
+See the docstring of `ALL-VALUES-PROB' for more details."
+  (when (numberp n) (assert (and (integerp n) (>= n 0))))
+  (let ((counter (gensym "I"))
+        (value (gensym "value"))
+        (value-list '*screamer-results*)
+        (last-value-cons (gensym "last-value-cons"))
+        (pointer (gensym "enclosing-trail-pointer")))
+    `(block n-values
+       (let ((,counter (value-of ,n))
+             (,value-list nil)
+             (,last-value-cons nil)
+             ;; Reset probability
+             (,pointer (prog1 (fill-pointer *trail*)
+                         (trail-prob nil 1))))
+         (declare (integer ,counter) ((or cons null) ,value-list))
+         ;; Process BODY
+         (for-effects
+           (unless (zerop ,counter)
+             (let* ((,value ,form)
+                    (,value (cached-list ,value
+                                         (current-probability *trail*))))
+               (decf ,counter)
+               ;; Add the value to the collected list
+               (if (null ,value-list)
+                   (setf ,last-value-cons (cached-list ,value)
+                         ,value-list ,last-value-cons)
+                   (setf (rest ,last-value-cons) (cached-list ,value)
+                         ,last-value-cons (rest ,last-value-cons)))
+               (when (zerop ,counter)
+                 ;; Return to enclosing trail context
+                 (unwind-trail-to ,pointer)
+                 (return-from n-values ,value-list)))))
+         ;; Return to enclosing trail context
+         (unwind-trail-to ,pointer)
+         ,(if default-on-failure default value-list)))))
 
 (defmacro-compile-time ith-value (i form &optional (default '(fail)))
   "Returns the Ith nondeterministic value yielded by FORM.
@@ -2682,7 +3133,12 @@ nondeterministically return multiple times.
 If I is nondeterministic then the ITH-VALUE expression operates
 nondeterministically on each value of I. In this case, backtracking for each
 value of FORM and DEFAULT is nested in, and restarted for, each backtrack of
-I."
+I.
+
+Note that ITH-VALUE does not collect the results it encounters, and so cannot
+provide that information to other screamer functions that interact with prior
+results. For this functionality, use `N-VALUES' and get the last element of
+the output."
   (let ((counter (gensym "I")))
     `(block ith-value
        (let ((,counter (value-of ,i)))
@@ -2705,11 +3161,22 @@ Outside non-deterministic context does nothing.
 
 Functions on the trail are called when unwinding from a nondeterministic
 selection (due to either a normal return, or calling FAIL.)"
-  ;; note: Is it really better to use VECTOR-PUSH-EXTEND than CONS for the
+  ;; NOTE: Is it really better to use VECTOR-PUSH-EXTEND than CONS for the
   ;;       trail?
   (when *nondeterministic?*
     (vector-push-extend function *trail* 1024))
   function)
+(defun trail-prob (function prob)
+  (when *nondeterministic?*
+    (vector-push-extend
+     (cond ((and function prob) (list function prob))
+           (function function)
+           (prob prob))
+     *trail*
+     1024)))
+
+(defun pop-trail (trail)
+  (vector-pop trail))
 
 (defun unwind-trail-to (trail-pointer)
   (declare (fixnum trail-pointer))
@@ -2719,8 +3186,14 @@ selection (due to either a normal return, or calling FAIL.)"
   (let ((trail *trail*))
     (loop (when (<= (fill-pointer trail) trail-pointer)
             (return-from unwind-trail-to))
-          (funcall (vector-pop trail))
-          ;; note: This is to allow the trail closures to be garbage collected.
+          (let ((fun (pop-trail trail)))
+            (when (consp fun)
+              (let ((c fun))
+                (setf fun (car fun))
+                (release-cons c)))
+            (when (functionp fun)
+              (funcall fun)))
+          ;; NOTE: This is to allow the trail closures to be garbage collected.
           (setf (aref trail (fill-pointer trail)) nil))))
 
 ;;; FIXME: Since Screamer doesn't use UNWIND-TRAIL even internally, it should
@@ -2735,6 +3208,21 @@ eg. undo effects of local assignments -- hence users should never call it. It
 is provided at the moment only for backwards compatibility with classic
 Screamer."
   (unwind-trail-to 0))
+
+(defun current-probability (&optional (trail *trail*))
+  (labels ((zero-one (n)
+             (typecase n
+               ;; N is a number between 0 and 1
+               (number (<= 0 n 1))))
+           (get-trail-prob (elem)
+             (cond ((zero-one elem) elem)
+                   ((and (listp elem)
+                         (zero-one (second elem)))
+                    (second elem)))))
+    (or (find-if #'identity trail
+                 :from-end t
+                 :key #'get-trail-prob)
+        1)))
 
 (defun y-or-n-p
     (&optional (format-string nil format-string?) &rest format-args)
@@ -2793,7 +3281,7 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
          (unless (y-or-n-p "Do you want another solution?")
            (throw 'succeed value))))))
 
-;;; note: Should have way of having a stream of values.
+;;; NOTE: Should have way of having a stream of values.
 
 (eval-when (:compile-toplevel :load-toplevel :execute) (setf *screamer?* t))
 
@@ -2816,6 +3304,13 @@ PRINT-VALUES is analogous to the standard top-level user interface in Prolog."
 (cl:defun a-boolean-nondeterministic (continuation)
   (choice-point (funcall continuation t))
   (funcall continuation nil))
+
+(defun a-boolean-prob (&optional (p 1/2))
+  "Equivalent to \(EITHER-PROB (T p) (NIL (- 1 p))."
+  (assert (<= 0 p 1))
+  (if (>= p 1/2)
+      (either-prob-internal (t p) (nil (- 1 p)))
+      (either-prob-internal (nil (- 1 p)) (t p))))
 
 (defvar *fail* (lambda ()
                  (if *nondeterministic?*
@@ -2922,11 +3417,9 @@ function."
     (continuation function argument &rest arguments)
   (let ((function (value-of function)))
     (if (nondeterministic-function? function)
-        ;; note: I don't know how to avoid the consing here.
-        (apply (nondeterministic-function-function function)
-               continuation
-               (apply #'list* (cons argument arguments)))
-        (funcall continuation (apply function argument arguments)))))
+        (apply #'apply (nondeterministic-function-function function)
+               continuation argument arguments)
+        (funcall continuation (apply #'apply function argument arguments)))))
 
 (cl:defun multiple-value-call-nondeterministic (function-form &rest values-forms)
   "Analogous to the CL:MULTIPLE-VALUE-CALL, except FUNCTION-FORM can evaluate
@@ -2979,7 +3472,7 @@ Screamer's who-calls database."
            *function-record-table*)
   t)
 
-;;; note: These optimized versions of AN-INTEGER, AN-INTEGER-ABOVE,
+;;; NOTE: These optimized versions of AN-INTEGER, AN-INTEGER-ABOVE,
 ;;;       AN-INTEGER-BELOW, AN-INTEGER-BETWEEN and A-MEMBER-OF have different
 ;;;       failure behavior as far as WHEN-FAILING is concerned than the
 ;;;       original purely Screamer versions. This is likely to affect only
@@ -3000,8 +3493,8 @@ Screamer's who-calls database."
    (choice-point-internal (funcall continuation 0))
    (let ((i 1))
      (loop (choice-point-internal (funcall continuation i))
-       (choice-point-internal (funcall continuation (- i)))
-       (incf i)))))
+           (choice-point-internal (funcall continuation (- i)))
+           (incf i)))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'an-integer-above))
@@ -3019,7 +3512,7 @@ in increasing direction."
     (choice-point-external
      (let ((i low))
        (loop (choice-point-internal (funcall continuation i))
-         (incf i))))))
+             (incf i))))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'an-integer-below))
@@ -3037,7 +3530,7 @@ in decreasing direction."
     (choice-point-external
      (let ((i high))
        (loop (choice-point-internal (funcall continuation i))
-         (decf i))))))
+             (decf i))))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'an-integer-between))
@@ -3061,6 +3554,39 @@ integers. Fails if the interval does not contain any integers."
       (funcall continuation high))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'an-integer-between-prob))
+
+(cl:defun an-integer-between-prob (low high)
+  "Nondeterministically returns an integer in the closed interval [LOW, HIGH].
+The results are returned in ascending order. Both LOW and HIGH must be
+integers. Fails if the interval does not contain any integers."
+  (declare (ignore low high))
+  (screamer-error
+   "AN-INTEGER-BETWEEN-PROB is a nondeterministic function. As such, it must be~%~
+   called only from a nondeterministic context."))
+
+(cl:defun an-integer-between-prob-nondeterministic (continuation low high)
+  (let* ((low (ceiling (value-of low)))
+         (high (floor (value-of high)))
+         (possibilities (max 0 (1+ (- high low))))
+         (prob-avg (if (zerop possibilities) 0 (/ 1 possibilities))))
+    (unless (> low high)
+      (choice-point-external
+       (do ((i low (1+ i))) ((= i high))
+         (choice-point-internal
+          (progn (trail-prob nil (* (current-probability) prob-avg))
+                 (funcall continuation i)))))
+      (progn (trail-prob nil (* (current-probability) prob-avg))
+             (funcall continuation high)))))
+
+(defmacro let-integers-betweenv (((min max) var-list) &rest body)
+  "Defines multiple logic variables with numerical values between min and max (in the same manner as with an-integer-betweenv).
+Duplicate variable names will be ignored."
+  `(let ,(loop for i in (remove-duplicates var-list)
+               collect (list i `(an-integer-betweenv ,min ,max)))
+     ,@body))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (declare-nondeterministic 'a-member-of))
 
 (cl:defun a-member-of (sequence)
@@ -3073,26 +3599,383 @@ either a list or a vector."
    only from a nondeterministic context."))
 
 (cl:defun a-member-of-nondeterministic (continuation sequence)
-  (let ((sequence (value-of sequence)))
-    (cond
-      ((listp sequence)
-       (unless (null sequence)
-         (choice-point-external
-          (loop (if (null (rest sequence)) (return))
-            (choice-point-internal (funcall continuation (first sequence)))
-            (setf sequence (value-of (rest sequence)))))
-         (funcall continuation (first sequence))))
-      ((vectorp sequence)
-       (let ((n (length sequence)))
-         (unless (zerop n)
-           (let ((n (1- n)))
-             (choice-point-external
-              (dotimes (i n)
-                (choice-point-internal (funcall continuation (aref sequence i)))))
-             (funcall continuation (aref sequence n))))))
-      (t (error "SEQUENCE must be a sequence")))))
+  (serapeum:nest
+   (let* ((sequence (value-of sequence))))
+   (macrolet ((call-continuation (cont inp)
+                `(funcall ,cont ,inp))))
+   (cond
+     ((listp sequence)
+      (unless (null sequence)
+        (choice-point-external
+         (loop (if (null (rest sequence)) (return))
+               (choice-point-internal (call-continuation continuation (first sequence)))
+               (setf sequence (value-of (rest sequence)))))
+        (call-continuation continuation (first sequence))))
+     ((vectorp sequence)
+      (let ((n (length sequence)))
+        (unless (zerop n)
+          (let ((n (1- n)))
+            (choice-point-external
+             (dotimes (i n)
+               (choice-point-internal (call-continuation continuation (aref sequence i)))))
+            (call-continuation continuation (aref sequence n))))))
+     (t (error "SEQUENCE must be a sequence")))))
 
-;;; note: The following two functions work only when Screamer is running under
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'a-member-of-prob))
+
+(cl:defun a-member-of-prob (sequence)
+  "Nondeterministically returns an element of SEQUENCE. The elements are
+returned in the order that they appear in SEQUENCE. The SEQUENCE must be
+either a list or a vector."
+  (declare (ignore sequence))
+  (screamer-error
+   "A-MEMBER-OF-PROB is a nondeterministic function. As such, it must be called~%~
+   only from a nondeterministic context."))
+
+(cl:defun a-member-of-prob-nondeterministic (continuation sequence)
+  (serapeum:nest
+   (let* ((sequence (value-of sequence))
+          (seq-count (length sequence))
+          (prob-avg (if (zerop seq-count) 0 (/ 1 seq-count)))))
+   (macrolet ((call-continuation (cont inp)
+                `(progn
+                   (trail-prob nil (* (current-probability) prob-avg))
+                   (funcall ,cont ,inp)))))
+   (cond
+     ((listp sequence)
+      (unless (null sequence)
+        (choice-point-external
+         (loop (if (null (rest sequence)) (return))
+               (choice-point-internal (call-continuation continuation (first sequence)))
+               (setf sequence (value-of (rest sequence)))))
+        (call-continuation continuation (first sequence))))
+     ((vectorp sequence)
+      (let ((n (length sequence)))
+        (unless (zerop n)
+          (let ((n (1- n)))
+            (choice-point-external
+             (dotimes (i n)
+               (choice-point-internal (call-continuation continuation (aref sequence i)))))
+            (call-continuation continuation (aref sequence n))))))
+     (t (error "SEQUENCE must be a sequence")))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'sample))
+
+(cl:defun sample (source &optional (count nil))
+  "Continuously samples random values from SOURCE.
+
+If SOURCE is a list, it is a plist where the keys are possible
+return values and the values are the probabilities of each
+value. Values will be normalized to sum to one, i.e.
+'((hi 3) (bye 7)) gives 0.3 probability to hi and 0.7 to bye.
+
+If SOURCE is a function, it will be called to return a 2-member
+list with the first element being the value and the second being
+a number between 0 and 1 representing its probability.
+
+If COUNT is nil, only a single value will be sampled per attempt.
+If it is a non-negative integer, then a list of samples will be
+returned. In this case samples are treated as probabilistically
+independent, i.e. the chance of the returned list is the product
+of the chance of each sample taken.
+
+NOTE: Execution will NOT backtrack past a SAMPLE statement!
+Ensure you limit the number of values you request, and do not
+expect choice points before a sample to be backtracked to!
+
+If you want to use SAMPLE inside a larger nondeterministic
+block, it may be useful to wrap it in its own ALL-VALUES,
+ALL-VALUES-PROB, N-VALUES, N-VALUES-PROB, ONE-VALUE, or
+similar form."
+  (declare (ignore source count))
+  (screamer-error
+   "SAMPLE is a nondeterministic function. As such, it must be~%~
+   called only from a nondeterministic context."))
+
+(cl:defun sample-nondeterministic (continuation source &optional count)
+  (s:nest
+   (flet ((normalize (d psum)
+            ;; Normalize a list-distribution given the sum
+            ;; of the probabilities
+            (mapcar (lambda (c)
+                      (cached-list (first c)
+                                   (/ (second c)
+                                      psum)))
+                    d))))
+   ;; Normalize the input distribution if its a plist
+   (let ((source (typecase source
+                   ((or function null) source)
+                   (cons
+                    (normalize source
+                               (reduce #'+ source
+                                       :key #'second)))))))
+   ;; Get an individual sample from a distribution
+   ;; Returns a list of the value and the probability
+   (flet ((sample-internal (source)
+            (typecase source
+              (function (funcall source))
+              (list
+               (let* ((probs (mapcar #'second source))
+                      (selection (random 1.0))
+                      (index (iter:iter
+                               (iter:with sum = 0)
+                               (iter:for i from 0)
+                               ;; Note: probabilities must be normalized
+                               (iter:for p in probs)
+                               (incf sum p)
+                               ;; Stop when we pass the random selection
+                               (iter:while (< sum selection))
+                               ;; Return the current index
+                               (iter:finally (return i)))))
+                 (release-list probs)
+                 (nth index source))))))
+     (declare (inline sample-internal)))
+   ;; Syntax sugar for updating probabilities and calling CONTINUATION
+   (macrolet ((call-continuation (cont inp)
+                `(progn
+                   (trail-prob nil (* (current-probability)
+                                      (second ,inp)))
+                   (funcall ,cont (first ,inp))))))
+   (typecase count
+     ;; When count is provided
+     (non-negative-integer
+      (s:nest
+       (choice-point-external)
+       (loop)
+       ;; Keep sampling with every loop iteration
+       (choice-point-internal)
+       ;; Get the list of values and multiply their probabilities together
+       (let ((ret (iter:iter (iter:for i below count)
+                    (iter:for (s sp) = (sample-internal source))
+                    (iter:collect s into members)
+                    (iter:multiply sp into prob)
+                    (iter:finally (return (list members prob)))))))
+       ;; Call the continuation with the given values
+       (call-continuation continuation)
+       ret))
+     ;; When count is absent
+     (null
+      (s:nest
+       (choice-point-external)
+       (loop)
+       (choice-point-internal)
+       (call-continuation continuation)
+       (sample-internal source))))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'sample-optimizing))
+
+(cl:defun sample-optimizing (source &optional (stop nil stop-supplied) (test 'eql))
+  "Continuously samples values from SOURCE.
+
+SOURCE must be a function which takes as input a list of prior outputs
+from the next enclosing `-VALUES' or `-VALUES-PROB' form (i.e. the current
+value of `screamer::*screamer-results*'). This may be `nil'. Note that
+this means the input will be different in probabilistic vs non-probabilistic
+forms, as the former collect lists of values and corresponding probabilities.
+
+Every time this choice point is encountered, SAMPLE will be called and
+its result will be interpreted as a list of possible outputs, represented
+as 2-element lists of a value and a probability. For each possible output,
+the value will be used as a potential output of this form, and the
+probability will modify the value of `current-probability'. The probabilities
+should be numbers between 0 and 1. If an element of the output of SAMPLE is
+not a list, then it will be wrapped in a list with probability element 1.
+
+If STOP is explicitly provided as an argument, each output of SAMPLE will
+be checked against STOP using TEST (i.e. (funcall test sample stop)). If
+the output of this is non-`nil', this form will `fail' rather than giving
+an output."
+  (declare (ignore source stop stop-supplied test))
+  (screamer-error
+   "SAMPLE-OPTIMIZING is a nondeterministic function. As such, it must be~%~
+   called only from a nondeterministic context."))
+
+(cl:defun sample-optimizing-nondeterministic (continuation source &optional (stop nil stop-supplied) (test 'eql))
+  (s:nest
+   (flet ((ensure-prob-list (e)
+            (typecase e
+              (list e)
+              (t (list e 1)))))
+     (declare (inline ensure-prob-list)))
+   (flet ((sample-internal ()
+            (print "sample-start")
+            (format t "~%current results: ~A" *screamer-results*)
+            (let ((ans (s:nest
+
+                        (mapcar #'ensure-prob-list)
+                        (print)
+                        (funcall source *screamer-results*))))
+              (format t "~%output of sample: ~A" ans)
+              ans))
+          (check-stop (val) (and stop-supplied (funcall test val stop))))
+     (declare (inline sample-internal check-stop)))
+   (macrolet ((call-continuation (cont inp)
+                (with-gensyms (val)
+                  `(let ((,val ,inp))
+                     (print ,val)
+                     (trail-prob nil (* (current-probability)
+                                        (second ,val)))
+                     (funcall ,cont (first ,val)))))))
+   (choice-point-external)
+   (block sample-optimizing-block)
+   (iter:iter
+     (iter:for possibilities = (sample-internal))
+     (iter:while possibilities))
+   (iter:iter (iter:for poss in possibilities))
+   (if (check-stop poss) (return-from sample-optimizing-block))
+   (choice-point-internal)
+   (call-continuation continuation poss)))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declare-nondeterministic 'state-transition))
+
+(cl:defun state-transition (state-machine current-state &optional (times 1))
+  "Transitions from the current state to all possible next states.
+
+STATE-MACHINE may be an alist with keys being states and values being
+plists of state-probability pairs of the transition states.
+
+STATE-MACHINE may instead be a single-argument function which takes a state
+as input and returns a plist of state-probability pairs of the transition states.
+
+These transition probabilities must be positive numbers summing to 1 for each
+state (measured per `SCREAMER::ROUGHLY-='). If STATE-MACHINE is an alist this
+will be verified. If it is a function, then the user is expected to assure this
+condition.
+
+When STATE-MACHINE is an alist, note that you can transition to a state which
+was not specified in the alist, in which case it will be treated as a node with
+no successors.
+
+TIMES must be a non-negative integer."
+  (declare (ignore state-machine current-state times))
+  (screamer-error
+   "STATE-TRANSITION is a nondeterministic function. As such, it must be~%~
+   called only from a nondeterministic context."))
+
+(cl:defun state-transition-nondeterministic
+    (continuation state-machine current-state &optional (times 1))
+  (assert (typep times 'non-negative-integer))
+  (serapeum:nest
+   (let* ((alist-machine (typecase state-machine (cons t)))
+          (test (or (and alist-machine
+                         (cond ((every (compose (rcurry #'typep 'symbol)
+                                                #'first)
+                                       state-machine)
+                                'eq)
+                               ((every (compose (rcurry #'typep '(or symbol character))
+                                                #'first)
+                                       state-machine)
+                                'eql)
+                               ((every (compose (rcurry #'typep 'number)
+                                                #'first)
+                                       state-machine)
+                                ;; Note: not using '= because there might be unlisted
+                                ;; states with non-numeric values
+                                ;; Example: '((nil (nil 0.99) (t 0.01)))
+                                'eq)))
+                    'equal))))
+   (labels ((get-state (state machine)
+              (typecase machine
+                (list
+                 (or (assoc state machine :test test)
+                     ;; If not found, loop to the same state
+                     (cached-list state (cached-list state 1))))
+                (function
+                 (cached-cons state (funcall machine state)))))))
+   ;; For alist state-machines, check that all transition-probability sets sum to 1
+   (if (and alist-machine
+            (some (s:nest
+                   (lambda (state-spec))
+                   (let* ((transitions (rest state-spec))
+                          (prob-sum (reduce (lambda (a b)
+                                              (+ (second b) a))
+                                            transitions
+                                            :initial-value 0))))
+                   (or (emptyp transitions)
+                       (not (roughly-= prob-sum 1))
+                       (not (every (compose (curry #'<= 0)
+                                            #'second)
+                                   transitions))))
+                  state-machine))
+       (fail))
+
+   (let ((recursion-check-interval (s:nest
+                                    (ash 16)
+                                    (max 1)
+                                    (integer-length)
+                                    (float-precision *numeric-bounds-collapse-threshold*)))))
+   (labels ((recurse-transitions (start &optional (n 1))
+              ;; Get the starting probability distribution
+              (let ((state-probs (cached-list (cached-list start 1)))
+                    ;; Track the next probability distribution
+                    (new-probs nil))
+                (s:nest
+                 ;; Allow short-circuiting if transitions have stabilized.
+                 (block short-circuit)
+                 ;; Gets the probabilities in a distribution
+                 ;; so we can increment them
+                 (labels ((get-new-prob (state)
+                            (or (assoc state new-probs :test test)
+                                (let ((c (cached-list state 0)))
+                                  (cached-push c new-probs)
+                                  c)))))
+
+                 ;; Recurse over the state machine n times
+                 (iter:iter (iter:for i from 1 to n)
+                   (setf new-probs nil))
+
+                 (progn
+                   ;; Iterate over currently-possible states
+                   (iter:iter (iter:for (s p) in state-probs)
+                     (iter:for s-spec = (get-state s state-machine))
+
+                     ;; Get the follow-up states and each of their odds
+                     (iter:for s-trans = (cdr s-spec))
+
+                     (iter:iterate (iter:for (targ targ-p) in s-trans)
+                       ;; Get the currently-tracked probability for the target
+                       (iter:for targ-new-prob = (get-new-prob targ))
+                       ;; Increment the probability by the current probability
+                       ;; times the odds of the transition
+                       (incf (second targ-new-prob) (* p targ-p)))
+                     (unless alist-machine
+                       (release-cons s-spec)))
+
+                   ;; If the state machine stabilizes, return early
+                   ;; NOTE: We don't do this for function machines,
+                   ;; as we don't know what latent variables are involved
+                   ;; in generating the function output.
+                   (when (and alist-machine
+                              (zerop (mod i recursion-check-interval))
+                              (equal state-probs new-probs))
+                     (mapc #'release-list state-probs)
+                     (release-list state-probs)
+                     (setf state-probs new-probs)
+                     (return-from short-circuit))
+
+                   ;; Replace the old probability state with the new one
+                   (mapc #'release-list state-probs)
+                   (release-list state-probs)
+                   (setf state-probs new-probs)))
+
+                ;; Return the state probabilities after everything
+                state-probs))))
+   (let* ((transitions (recurse-transitions current-state
+                                            times))
+          (transitions (sort transitions #'> :key #'second))))
+
+   ;; Implement choice point over final set of possible states
+   (choice-point-external)
+   (dolist (next transitions))
+   (choice-point-internal)
+   (progn (trail-prob nil (* (current-probability) (second next)))
+          (funcall continuation (first next)))))
+
+;;; NOTE: The following two functions work only when Screamer is running under
 ;;;       ILisp/GNUEmacs with iscream.el loaded.
 
 (defun emacs-eval (expression)
@@ -3133,27 +4016,39 @@ Discretize all integer variables if NIL. Must be an integer or NIL.")
   "Strategy to use for FUNCALLV and APPLYV. Either :GFC for Generalized
 Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 
-;;; note: Enable this to use CLOS instead of DEFSTRUCT for variables.
+;;; NOTE: Enable this to use CLOS instead of DEFSTRUCT for variables.
 #+(or)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew :screamer-clos *features* :test #'eq))
 
+;;; TODO: Figure out how to track atoms that a variable
+;;; is dependent on, and its relationship to said atoms
+;;; (e.g. relative lower/upper bounds, etc)
+;;; This is necessary both for probabilistic reasoning by
+;;; weighted model counting, as well as for correct
+;;; lifted logical inference (e.g. in cases where the same
+;;; variable appears multiple times in an arithmetic
+;;; structure).
+;;; NOTE: How would this actually be /used/ to resolve
+;;; the second case? It seems that if grounding would
+;;; be a valid approach then it would already be done
+;;; via the noticer system...
 #-screamer-clos
 (defstruct-compile-time (variable (:print-function print-variable)
                                   (:predicate variable?)
                                   (:constructor make-variable-internal))
   name
-  (noticers nil)
-  (enumerated-domain t)
-  (enumerated-antidomain nil)
+  (noticers nil :type list)
+  (enumerated-domain t :type (or boolean list))
+  (enumerated-antidomain nil :type (or boolean list))
   value
-  (possibly-integer? t)
-  (possibly-noninteger-real? t)
-  (possibly-nonreal-number? t)
-  (possibly-boolean? t)
-  (possibly-nonboolean-nonnumber? t)
-  (lower-bound nil)
-  (upper-bound nil))
+  (possibly-integer? t :type boolean)
+  (possibly-noninteger-real? t :type boolean)
+  (possibly-nonreal-number? t :type boolean)
+  (possibly-boolean? t :type boolean)
+  (possibly-nonboolean-nonnumber? t :type boolean)
+  (lower-bound nil :type (or null number))
+  (upper-bound nil :type (or null number)))
 
 #+screamer-clos
 (defclass variable ()
@@ -3175,12 +4070,21 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
    (lower-bound :accessor variable-lower-bound :initform nil)
    (upper-bound :accessor variable-upper-bound :initform nil)))
 
+;;; Helpers to interact with variable objects
 #+screamer-clos
 (defmethod print-object ((variable variable) stream)
   (print-variable variable stream nil))
 
 #+screamer-clos
 (defun-compile-time variable? (thing) (typep thing 'variable))
+
+(defun-compile-time noticer-member (val var)
+  (declare (function val) (variable var))
+  (iter:iter
+    (iter:for i in (variable-noticers var))
+    (when (typecase i (function (eq val i)))
+      (return t))))
+
 
 (defun integers-between (low high)
   (cond ((and (typep low 'fixnum) (typep high 'fixnum))
@@ -3191,13 +4095,13 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
               (i low (1+ i)))
              ((> i high) (nreverse result))
            (declare (type fixnum i))
-           (push i result)))
+           (cached-push i result)))
         (t
          ;; KLUDGE: As above.
          (do ((result nil)
               (i low (1+ i)))
              ((> i high) (nreverse result))
-           (push i result)))))
+           (cached-push i result)))))
 
 (defun booleanp (x)
   "Returns true iff X is T or NIL."
@@ -3216,14 +4120,16 @@ Forward Checking, or :AC for Arc Consistency. Default is :GFC.")
 (defun contains-variables? (x)
   (typecase x
     (cons (or (contains-variables? (car x)) (contains-variables? (cdr x))))
+    (vector (some #'contains-variables? x))
     (variable t)
     (otherwise nil)))
 
 (defun eliminate-variables (x)
   (if (contains-variables? x)
-      (if (consp x)
-          (cons (eliminate-variables (car x)) (eliminate-variables (cdr x)))
-          (eliminate-variables (variable-value x)))
+      (typecase x
+        (cons (cached-cons (eliminate-variables (car x)) (eliminate-variables (cdr x))))
+        (vector (map 'vector #'eliminate-variables x))
+        (t (eliminate-variables (variable-value x))))
       x))
 
 (defun print-variable (x stream print-level)
@@ -3273,7 +4179,7 @@ parameter NAME is given then it is assigned as the name of the
 variable. Otherwise, a unique name is assigned. The parameter NAME can
 be any Lisp object."
   (let ((variable
-         #-screamer-clos
+          #-screamer-clos
           (make-variable-internal :name (if name? name (incf *name*)))
           #+screamer-clos
           (make-instance 'variable :name (if name? name (incf *name*)))))
@@ -3389,12 +4295,12 @@ a freshly consed copy of the tree with all variables dereferenced.
 Otherwise returns the value of X."
   (let ((x (value-of x)))
     (if (consp x)
-        (cons (apply-substitution (car x)) (apply-substitution (cdr x)))
+        (cached-cons (apply-substitution (car x)) (apply-substitution (cdr x)))
         x)))
 
 (defun occurs-in? (x value)
-  ;; note: X must be a variable such that (EQ X (VALUE-OF X)).
-  ;; note: Will loop if VALUE is circular.
+  ;; NOTE: X must be a variable such that (EQ X (VALUE-OF X)).
+  ;; NOTE: Will loop if VALUE is circular.
   (cond
     ((eq x value) t)
     ((and (variable? value) (not (eq value (variable-value value))))
@@ -3403,18 +4309,21 @@ Otherwise returns the value of X."
     (t nil)))
 
 (defun attach-noticer!-internal (noticer x)
-  ;; note: Will loop if X is circular.
-  (typecase x
-    (cons (attach-noticer!-internal noticer (car x))
-          (attach-noticer!-internal noticer (cdr x)))
-    (variable (if (eq x (variable-value x))
-                  ;; note: I can't remember why this check for duplication is
-                  ;;       here.
-                  (unless (member noticer (variable-noticers x) :test #'eq)
-                    ;; note: This can't be a PUSH because of the Lucid screw.
-                    (local (setf (variable-noticers x)
-                                 (cons noticer (variable-noticers x)))))
-                  (attach-noticer!-internal noticer (variable-value x))))))
+  ;; NOTE: Will loop if X is circular.
+  (s:nest
+   (typecase x
+     (cons
+      (attach-noticer!-internal noticer (car x))
+      (attach-noticer!-internal noticer (cdr x))))
+   (variable)
+   (if (eq x (variable-value x))
+       ;; NOTE: I can't remember why this check for duplication is
+       ;;       here.
+       (unless (noticer-member noticer x)
+         ;; NOTE: This can't be a PUSH because of the Lucid screw.
+         (local (setf (variable-noticers x)
+                      (cached-cons noticer (variable-noticers x)))))
+       (attach-noticer!-internal noticer (variable-value x)))))
 
 (defun attach-noticer! (noticer x)
   (attach-noticer!-internal noticer x)
@@ -3426,7 +4335,7 @@ Otherwise returns the value of X."
 ;;; Restrictions
 
 (defun restrict-integer! (x)
-  ;; note: X must be a variable.
+  ;; NOTE: X must be a variable.
   (unless (variable-possibly-integer? x) (fail))
   (if (or (eq (variable-value x) x) (not (variable? (variable-value x))))
       (let ((run? nil))
@@ -3472,14 +4381,14 @@ Otherwise returns the value of X."
                          (variable-lower-bound x)
                          (variable-upper-bound x)))))
                 ((not (every #'integerp (variable-enumerated-domain x)))
-                 ;; note: Could do less consing if had LOCAL DELETE-IF.
+                 ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
                  ;;       This would also allow checking list only once.
                  (set-enumerated-domain!
                   x (remove-if-not #'integerp (variable-enumerated-domain x)))))
           (run-noticers x)))))
 
 (defun restrict-noninteger! (x)
-  ;; note: X must be a variable.
+  ;; NOTE: X must be a variable.
   (unless (or (variable-possibly-noninteger-real? x)
               (variable-possibly-nonreal-number? x)
               (variable-possibly-boolean? x)
@@ -3490,14 +4399,14 @@ Otherwise returns the value of X."
     (local (setf (variable-possibly-integer? x) nil))
     (if (and (not (eq (variable-enumerated-domain x) t))
              (some #'integerp (variable-enumerated-domain x)))
-        ;; note: Could do less consing if had LOCAL DELETE-IF.
+        ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
         ;;       This would also allow checking list only once.
         (set-enumerated-domain!
          x (remove-if #'integerp (variable-enumerated-domain x))))
     (run-noticers x)))
 
 (defun restrict-real! (x)
-  ;; note: X must be a variable.
+  ;; NOTE: X must be a variable.
   (unless (or (variable-possibly-integer? x)
               (variable-possibly-noninteger-real? x))
     (fail))
@@ -3515,14 +4424,14 @@ Otherwise returns the value of X."
         (when run?
           (if (and (not (eq (variable-enumerated-domain x) t))
                    (not (every #'realp (variable-enumerated-domain x))))
-              ;; note: Could do less consing if had LOCAL DELETE-IF.
+              ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
               ;;       This would also allow checking list only once.
               (set-enumerated-domain!
                x (remove-if-not #'realp (variable-enumerated-domain x))))
           (run-noticers x)))))
 
 (defun restrict-nonreal! (x)
-  ;; note: X must be a variable.
+  ;; NOTE: X must be a variable.
   (unless (or (variable-possibly-nonreal-number? x)
               (variable-possibly-boolean? x)
               (variable-possibly-nonboolean-nonnumber? x))
@@ -3538,14 +4447,14 @@ Otherwise returns the value of X."
         (when run?
           (if (and (not (eq (variable-enumerated-domain x) t))
                    (some #'realp (variable-enumerated-domain x)))
-              ;; note: Could do less consing if had LOCAL DELETE-IF.
+              ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
               ;;       This would also allow checking list only once.
               (set-enumerated-domain!
                x (remove-if #'realp (variable-enumerated-domain x))))
           (run-noticers x)))))
 
 (defun restrict-number! (x)
-  ;; note: X must be a variable.
+  ;; NOTE: X must be a variable.
   (unless (or (variable-possibly-integer? x)
               (variable-possibly-noninteger-real? x)
               (variable-possibly-nonreal-number? x))
@@ -3561,14 +4470,14 @@ Otherwise returns the value of X."
         (when run?
           (if (and (not (eq (variable-enumerated-domain x) t))
                    (not (every #'numberp (variable-enumerated-domain x))))
-              ;; note: Could do less consing if had LOCAL DELETE-IF.
+              ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
               ;;       This would also allow checking list only once.
               (set-enumerated-domain!
                x (remove-if-not #'numberp (variable-enumerated-domain x))))
           (run-noticers x)))))
 
 (defun restrict-nonnumber! (x)
-  ;; note: X must be a variable.
+  ;; NOTE: X must be a variable.
   (unless (or (variable-possibly-boolean? x)
               (variable-possibly-nonboolean-nonnumber? x))
     (fail))
@@ -3586,14 +4495,14 @@ Otherwise returns the value of X."
         (when run?
           (if (and (not (eq (variable-enumerated-domain x) t))
                    (some #'numberp (variable-enumerated-domain x)))
-              ;; note: Could do less consing if had LOCAL DELETE-IF.
+              ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
               ;;       This would also allow checking list only once.
               (set-enumerated-domain!
                x (remove-if #'numberp (variable-enumerated-domain x))))
           (run-noticers x)))))
 
 (defun restrict-boolean! (x)
-  ;; note: X must be a variable.
+  ;; NOTE: X must be a variable.
   (unless (variable-possibly-boolean? x) (fail))
   (if (or (eq (variable-value x) x) (not (variable? (variable-value x))))
       (let ((run? nil))
@@ -3628,14 +4537,14 @@ Otherwise returns the value of X."
                     (unless (null (variable-enumerated-antidomain x))
                       (setf (variable-enumerated-antidomain x) '()))))))
             ((not (every #'booleanp (variable-enumerated-domain x)))
-             ;; note: Could do less consing if had LOCAL DELETE-IF.
+             ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
              ;;       This would also allow checking list only once.
              (set-enumerated-domain!
               x (remove-if-not #'booleanp (variable-enumerated-domain x)))))
           (run-noticers x)))))
 
 (defun restrict-nonboolean! (x)
-  ;; note: X must be a variable.
+  ;; NOTE: X must be a variable.
   (unless (or (variable-possibly-integer? x)
               (variable-possibly-noninteger-real? x)
               (variable-possibly-nonreal-number? x)
@@ -3651,15 +4560,15 @@ Otherwise returns the value of X."
                                         :test #'eq)
                                 :test #'eq))))
           ((some #'booleanp (variable-enumerated-domain x))
-           ;; note: Could do less consing if had LOCAL DELETE-IF.
+           ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
            ;;       This would also allow checking list only once.
            (set-enumerated-domain!
             x (remove-if #'booleanp (variable-enumerated-domain x)))))
     (run-noticers x)))
 
 (defun restrict-lower-bound! (x lower-bound)
-  ;; note: X must be a variable.
-  ;; note: LOWER-BOUND must be a real constant.
+  ;; NOTE: X must be a variable.
+  ;; NOTE: LOWER-BOUND must be a real constant.
   (if (variable-integer? x) (setf lower-bound (ceiling lower-bound)))
   (when (and (or (eq (variable-value x) x) (not (variable? (variable-value x))))
              (or (not (variable-lower-bound x))
@@ -3684,16 +4593,20 @@ Otherwise returns the value of X."
                                       (variable-upper-bound x)))))
             ((some #'(lambda (element) (< element lower-bound))
                    (variable-enumerated-domain x))
-             ;; note: Could do less consing if had LOCAL DELETE-IF.
+             ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
              ;;       This would also allow checking list only once.
              (set-enumerated-domain!
               x (remove-if #'(lambda (element) (< element lower-bound))
                            (variable-enumerated-domain x)))))
+      (when (and (variable-lower-bound x)
+                 (variable-upper-bound x)
+                 (roughly-= (variable-upper-bound x) (variable-lower-bound x)))
+        (setf (variable-value x) (variable-lower-bound x)))
       (run-noticers x))))
 
 (defun restrict-upper-bound! (x upper-bound)
-  ;; note: X must be a variable.
-  ;; note: UPPER-BOUND must be a real constant.
+  ;; NOTE: X must be a variable.
+  ;; NOTE: UPPER-BOUND must be a real constant.
   (when (variable-integer? x)
     (setf upper-bound (floor upper-bound)))
   (when (and (or (eq (variable-value x) x) (not (variable? (variable-value x))))
@@ -3719,16 +4632,20 @@ Otherwise returns the value of X."
                                     upper-bound))))
             ((some #'(lambda (element) (> element upper-bound))
                    (variable-enumerated-domain x))
-             ;; note: Could do less consing if had LOCAL DELETE-IF.
+             ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
              ;;       This would also allow checking list only once.
              (set-enumerated-domain!
               x (remove-if #'(lambda (element) (> element upper-bound))
                            (variable-enumerated-domain x)))))
+      (when (and (variable-lower-bound x)
+                 (variable-upper-bound x)
+                 (roughly-= (variable-lower-bound x) (variable-upper-bound x)))
+        (setf (variable-value x) (variable-lower-bound x)))
       (run-noticers x))))
 
 (defun restrict-bounds! (x lower-bound upper-bound)
-  ;; note: X must be a variable.
-  ;; note: LOWER-BOUND and UPPER-BOUND must be real constants.
+  ;; NOTE: X must be a variable.
+  ;; NOTE: LOWER-BOUND and UPPER-BOUND must be real constants.
   (when (variable-integer? x)
     (if lower-bound (setf lower-bound (ceiling lower-bound)))
     (if upper-bound (setf upper-bound (floor upper-bound))))
@@ -3737,9 +4654,9 @@ Otherwise returns the value of X."
         (when (and lower-bound
                    (or (not (variable-lower-bound x))
                        (> lower-bound (variable-lower-bound x))))
-          (if (and (variable-upper-bound x)
-                   (< (variable-upper-bound x) lower-bound))
-              (fail))
+          (when (and (variable-upper-bound x)
+                     (< (variable-upper-bound x) lower-bound))
+            (fail))
           (when (or (not (variable-lower-bound x))
                     (not (variable-upper-bound x))
                     (>= (/ (- lower-bound (variable-lower-bound x))
@@ -3750,9 +4667,9 @@ Otherwise returns the value of X."
         (when (and upper-bound
                    (or (not (variable-upper-bound x))
                        (< upper-bound (variable-upper-bound x))))
-          (if (and (variable-lower-bound x)
-                   (> (variable-lower-bound x) upper-bound))
-              (fail))
+          (when (and (variable-lower-bound x)
+                     (> (variable-lower-bound x) upper-bound))
+            (fail))
           (when (or (not (variable-lower-bound x))
                     (not (variable-upper-bound x))
                     (>= (/ (- (variable-upper-bound x) upper-bound)
@@ -3779,13 +4696,24 @@ Otherwise returns the value of X."
                      (and upper-bound
                           (some #'(lambda (element) (> element upper-bound))
                                 (variable-enumerated-domain x))))
-                 ;; note: Could do less consing if had LOCAL DELETE-IF.
+                 ;; NOTE: Could do less consing if had LOCAL DELETE-IF.
                  ;;       This would also allow checking list only once.
                  (set-enumerated-domain!
                   x (remove-if #'(lambda (element)
                                    (or (and lower-bound (< element lower-bound))
                                        (and upper-bound (> element upper-bound))))
                                (variable-enumerated-domain x)))))
+          ;; When the range-size of x is 0, set (variable-value x)
+          (let ((domain (domain-size x))
+                (range (range-size x))
+                (enumerated (variable-enumerated-domain x))
+                (lower (variable-lower-bound x)))
+            (when (or (and (numberp domain) (= domain 1))
+                      (and (numberp range) (roughly-= range 0)))
+              (setf (variable-value x)
+                    (cond ((listp enumerated) (first enumerated))
+                          (lower lower)
+                          (t (variable-value x))))))
           (run-noticers x)))))
 
 (defun prune-enumerated-domain (x &optional (enumerated-domain (variable-enumerated-domain x)))
@@ -3815,7 +4743,7 @@ Otherwise returns the value of X."
                  enumerated-domain))
 
 (defun share! (x y)
-  ;; note: X and Y must be variables such that (EQ X (VALUE-OF X)) and
+  ;; NOTE: X and Y must be variables such that (EQ X (VALUE-OF X)) and
   ;;       (EQ Y (VALUE-OF Y)).
   (let ((run? nil)
         (y-lower-bound? nil)
@@ -3934,8 +4862,8 @@ Otherwise returns the value of X."
     (run-noticers y)))
 
 (defun restrict-value! (x value)
-  ;; note: X must be a variable such that (EQ X (VALUE-OF X)).
-  ;; note: VALUE must not be a variable.
+  ;; NOTE: X must be a variable such that (EQ X (VALUE-OF X)).
+  ;; NOTE: VALUE must not be a variable.
   (if (occurs-in? x value) (fail))
   (typecase value
     (integer (unless (variable-possibly-integer? x) (fail)))
@@ -3956,91 +4884,93 @@ Otherwise returns the value of X."
                     (> value (variable-upper-bound x)))))
       (fail))
   (local (setf (variable-value x) value)
-         (typecase value
-           (integer (if (variable-possibly-noninteger-real? x)
-                        (setf (variable-possibly-noninteger-real? x) nil))
-                    (if (variable-possibly-nonreal-number? x)
-                        (setf (variable-possibly-nonreal-number? x) nil))
-                    (if (variable-possibly-boolean? x)
-                        (setf (variable-possibly-boolean? x) nil))
-                    (if (variable-possibly-nonboolean-nonnumber? x)
-                        (setf (variable-possibly-nonboolean-nonnumber? x) nil))
-                    (if (or (null (variable-lower-bound x))
-                            (not (integerp (variable-lower-bound x)))
-                            (> value (variable-lower-bound x)))
-                        (setf (variable-lower-bound x) value))
-                    (if (or (null (variable-upper-bound x))
-                            (not (integerp (variable-upper-bound x)))
-                            (< value (variable-upper-bound x)))
-                        (setf (variable-upper-bound x) value)))
-           (real (if (variable-possibly-integer? x)
+    (typecase value
+      (integer (if (variable-possibly-noninteger-real? x)
+                   (setf (variable-possibly-noninteger-real? x) nil))
+       (if (variable-possibly-nonreal-number? x)
+           (setf (variable-possibly-nonreal-number? x) nil))
+       (if (variable-possibly-boolean? x)
+           (setf (variable-possibly-boolean? x) nil))
+       (if (variable-possibly-nonboolean-nonnumber? x)
+           (setf (variable-possibly-nonboolean-nonnumber? x) nil))
+       (if (or (null (variable-lower-bound x))
+               (not (integerp (variable-lower-bound x)))
+               (> value (variable-lower-bound x)))
+           (setf (variable-lower-bound x) value))
+       (if (or (null (variable-upper-bound x))
+               (not (integerp (variable-upper-bound x)))
+               (< value (variable-upper-bound x)))
+           (setf (variable-upper-bound x) value)))
+      (real (if (variable-possibly-integer? x)
+                (setf (variable-possibly-integer? x) nil))
+       (if (variable-possibly-nonreal-number? x)
+           (setf (variable-possibly-nonreal-number? x) nil))
+       (if (variable-possibly-boolean? x)
+           (setf (variable-possibly-boolean? x) nil))
+       (if (variable-possibly-nonboolean-nonnumber? x)
+           (setf (variable-possibly-nonboolean-nonnumber? x) nil))
+       (if (or (null (variable-lower-bound x))
+               (> value (variable-lower-bound x)))
+           (setf (variable-lower-bound x) value))
+       (if (or (null (variable-upper-bound x))
+               (< value (variable-upper-bound x)))
+           (setf (variable-upper-bound x) value)))
+      (number (if (variable-possibly-integer? x)
+                  (setf (variable-possibly-integer? x) nil))
+       (if (variable-possibly-noninteger-real? x)
+           (setf (variable-possibly-noninteger-real? x) nil))
+       (if (variable-possibly-boolean? x)
+           (setf (variable-possibly-boolean? x) nil))
+       (if (variable-possibly-nonboolean-nonnumber? x)
+           (setf (variable-possibly-nonboolean-nonnumber? x) nil)))
+      (boolean (if (variable-possibly-integer? x)
+                   (setf (variable-possibly-integer? x) nil))
+       (if (variable-possibly-noninteger-real? x)
+           (setf (variable-possibly-noninteger-real? x) nil))
+       (if (variable-possibly-nonreal-number? x)
+           (setf (variable-possibly-nonreal-number? x) nil))
+       (if (variable-possibly-nonboolean-nonnumber? x)
+           (setf (variable-possibly-nonboolean-nonnumber? x) nil)))
+      (otherwise (if (variable-possibly-integer? x)
                      (setf (variable-possibly-integer? x) nil))
-                 (if (variable-possibly-nonreal-number? x)
-                     (setf (variable-possibly-nonreal-number? x) nil))
-                 (if (variable-possibly-boolean? x)
-                     (setf (variable-possibly-boolean? x) nil))
-                 (if (variable-possibly-nonboolean-nonnumber? x)
-                     (setf (variable-possibly-nonboolean-nonnumber? x) nil))
-                 (if (or (null (variable-lower-bound x))
-                         (> value (variable-lower-bound x)))
-                     (setf (variable-lower-bound x) value))
-                 (if (or (null (variable-upper-bound x))
-                         (< value (variable-upper-bound x)))
-                     (setf (variable-upper-bound x) value)))
-           (number (if (variable-possibly-integer? x)
-                       (setf (variable-possibly-integer? x) nil))
-                   (if (variable-possibly-noninteger-real? x)
-                       (setf (variable-possibly-noninteger-real? x) nil))
-                   (if (variable-possibly-boolean? x)
-                       (setf (variable-possibly-boolean? x) nil))
-                   (if (variable-possibly-nonboolean-nonnumber? x)
-                       (setf (variable-possibly-nonboolean-nonnumber? x) nil)))
-           (boolean (if (variable-possibly-integer? x)
-                        (setf (variable-possibly-integer? x) nil))
-                    (if (variable-possibly-noninteger-real? x)
-                        (setf (variable-possibly-noninteger-real? x) nil))
-                    (if (variable-possibly-nonreal-number? x)
-                        (setf (variable-possibly-nonreal-number? x) nil))
-                    (if (variable-possibly-nonboolean-nonnumber? x)
-                        (setf (variable-possibly-nonboolean-nonnumber? x) nil)))
-           (otherwise (if (variable-possibly-integer? x)
-                          (setf (variable-possibly-integer? x) nil))
-                      (if (variable-possibly-noninteger-real? x)
-                          (setf (variable-possibly-noninteger-real? x) nil))
-                      (if (variable-possibly-nonreal-number? x)
-                          (setf (variable-possibly-nonreal-number? x) nil))
-                      (if (variable-possibly-boolean? x)
-                          (setf (variable-possibly-boolean? x) nil))))
-         (cond ((eq (variable-enumerated-domain x) t)
-                ;; needs work: This is sound only if VALUE does not contain any
-                ;;             variables.
-                (setf (variable-enumerated-domain x) (list value))
-                (setf (variable-enumerated-antidomain x) '()))
-               ((not (null (rest (variable-enumerated-domain x))))
-                ;; needs work: This is sound only if VALUE does not contain any
-                ;;             variables.
-                (setf (variable-enumerated-domain x) (list value)))))
+       (if (variable-possibly-noninteger-real? x)
+           (setf (variable-possibly-noninteger-real? x) nil))
+       (if (variable-possibly-nonreal-number? x)
+           (setf (variable-possibly-nonreal-number? x) nil))
+       (if (variable-possibly-boolean? x)
+           (setf (variable-possibly-boolean? x) nil))))
+    (cond ((eq (variable-enumerated-domain x) t)
+           ;; needs work: This is sound only if VALUE does not contain any
+           ;;             variables.
+           (setf (variable-enumerated-domain x) (cached-list value))
+           (setf (variable-enumerated-antidomain x) '()))
+          ((not (null (rest (variable-enumerated-domain x))))
+           ;; needs work: This is sound only if VALUE does not contain any
+           ;;             variables.
+           (setf (variable-enumerated-domain x) (cached-list value)))))
   (run-noticers x))
 
 (defun restrict-true! (x)
-  ;; note: X must be a Boolean variable.
+  ;; NOTE: X must be a Boolean variable.
   (if (eq (variable-value x) nil) (fail))
   (when (eq (variable-value x) x)
-    (local (setf (variable-value x) t)
-           (setf (variable-enumerated-domain x) '(t)))
+    (local
+      (setf (variable-value x) t)
+      (setf (variable-enumerated-domain x) '(t)))
     (run-noticers x)))
 
 (defun restrict-false! (x)
-  ;; note: X must be a Boolean variable.
+  ;; NOTE: X must be a Boolean variable.
   (if (eq (variable-value x) t) (fail))
   (when (eq (variable-value x) x)
-    (local (setf (variable-value x) nil)
-           (setf (variable-enumerated-domain x) '(nil)))
+    (local
+      (setf (variable-value x) nil)
+      (setf (variable-enumerated-domain x) '(nil)))
     (run-noticers x)))
 
 (defun set-enumerated-domain! (x enumerated-domain)
-  ;; note: X must be a variable such that (EQ X (VALUE-OF X)).
-  ;; note: All callers must insure that the new ENUMERATED-DOMAIN is a subset
+  ;; NOTE: X must be a variable such that (EQ X (VALUE-OF X)).
+  ;; NOTE: All callers must insure that the new ENUMERATED-DOMAIN is a subset
   ;;       of the old one.
   (if (null enumerated-domain) (fail))
   (local
@@ -4116,8 +5046,8 @@ Otherwise returns the value of X."
       (t nil))))
 
 (defun restrict-enumerated-domain! (x enumerated-domain)
-  ;; note: X must be a variable such that (EQ X (VALUE-OF X)).
-  ;; note: ENUMERATED-DOMAIN must not be a variable.
+  ;; NOTE: X must be a variable such that (EQ X (VALUE-OF X)).
+  ;; NOTE: ENUMERATED-DOMAIN must not be a variable.
   (unless (typep enumerated-domain 'sequence) (fail))
   (when (every #'ground? enumerated-domain)
     (setf enumerated-domain
@@ -4159,8 +5089,8 @@ Otherwise returns the value of X."
     (if (set-enumerated-domain! x enumerated-domain) (run-noticers x))))
 
 (defun restrict-enumerated-antidomain! (x enumerated-antidomain)
-  ;; note: X must be a variable such that (EQ X (VALUE-OF X)).
-  ;; note: ENUMERATED-ANTIDOMAIN must not be a variable.
+  ;; NOTE: X must be a variable such that (EQ X (VALUE-OF X)).
+  ;; NOTE: ENUMERATED-ANTIDOMAIN must not be a variable.
   (unless (typep enumerated-antidomain 'sequence) (fail))
   (when (every #'ground? enumerated-antidomain)
     (setf enumerated-antidomain
@@ -4185,7 +5115,7 @@ Otherwise returns the value of X."
 
 (defun +-rule-up (z x y)
   (if (and (variable-integer? x) (variable-integer? y)) (restrict-integer! z))
-  ;; note: We can't assert that Z in not an integer when either X or Y are not
+  ;; NOTE: We can't assert that Z in not an integer when either X or Y are not
   ;;       integers since they may be Gaussian integers. But we can if either
   ;;       X or Y is real. If the Screamer type system could distinguish
   ;;       Gaussian integers from other complex numbers we could whenever X or
@@ -4194,7 +5124,7 @@ Otherwise returns the value of X."
            (or (variable-real? x) (variable-real? y)))
       (restrict-noninteger! z))
   (if (and (variable-real? x) (variable-real? y)) (restrict-real! z))
-  ;; note: Ditto.
+  ;; NOTE: Ditto.
   (if (and (or (variable-nonreal? x) (variable-nonreal? y))
            (or (variable-real? x) (variable-real? y)))
       (restrict-nonreal! z))
@@ -4213,15 +5143,15 @@ Otherwise returns the value of X."
         (fail))))
 
 (defun +-rule-down (z x y)
-  ;; note: We can't assert that X and Y are integers when Z is an integer since
+  ;; NOTE: We can't assert that X and Y are integers when Z is an integer since
   ;;       Z may be an integer when X and Y are Gaussian integers. But we can
-  ;;       make such an assertion if either X or Y is real. If the Screamer
+  ;;       make such an assertion if either X or Y is an integer. If the Screamer
   ;;       type system could distinguish Gaussian integers from other complex
   ;;       numbers we could make such an assertion whenever either X or Y was
   ;;       not a Gaussian integer.
-  (if (and (variable-integer? z) (or (variable-real? x) (variable-real? y)))
+  (if (and (variable-integer? z) (or (variable-integer? x) (variable-integer? y)))
       (restrict-integer! x))
-  ;; note: Ditto.
+  ;; NOTE: Ditto.
   (if (and (variable-real? z) (or (variable-real? x) (variable-real? y)))
       (restrict-real! x))
   (if (and (variable-real? x) (variable-real? y) (variable-real? z))
@@ -4302,7 +5232,7 @@ Otherwise returns the value of X."
 
 (defun *-rule-up (z x y)
   (if (and (variable-integer? x) (variable-integer? y)) (restrict-integer! z))
-  ;; note: We can't assert that Z in not an integer when either X or Y are not
+  ;; NOTE: We can't assert that Z in not an integer when either X or Y are not
   ;;       integers since they may be Gaussian integers. But we can if either
   ;;       X or Y is real. If the Screamer type system could distinguish
   ;;       Gaussian integers from other complex numbers we could whenever X or
@@ -4311,29 +5241,39 @@ Otherwise returns the value of X."
            (or (variable-real? x) (variable-real? y)))
       (restrict-noninteger! z))
   (if (and (variable-real? x) (variable-real? y)) (restrict-real! z))
-  ;; note: Ditto.
+  ;; NOTE: Ditto.
   (if (and (or (variable-nonreal? x) (variable-nonreal? y))
            (or (variable-real? x) (variable-real? y)))
       (restrict-nonreal! z))
   (if (and (variable-real? x) (variable-real? y) (variable-real? z))
-      ;; note: Can sometimes do better than the following even when ranges are
+      ;; NOTE: Can sometimes do better than the following even when ranges are
       ;;       not finite.
       (restrict-bounds!
        z
-       (infinity-min
-        (infinity-* (variable-lower-bound x) (variable-lower-bound y))
+       (s:nest
         (infinity-min
-         (infinity-* (variable-lower-bound x) (variable-upper-bound y))
-         (infinity-min
-          (infinity-* (variable-upper-bound x) (variable-lower-bound y))
-          (infinity-* (variable-upper-bound x) (variable-upper-bound y)))))
-       (infinity-max
-        (infinity-* (variable-lower-bound x) (variable-lower-bound y))
+         (infinity-* (variable-lower-bound x)
+                     (variable-lower-bound y)))
+        (infinity-min
+         (infinity-* (variable-lower-bound x)
+                     (variable-upper-bound y)))
+        (infinity-min
+         (infinity-* (variable-upper-bound x)
+                     (variable-lower-bound y))
+         (infinity-* (variable-upper-bound x)
+                     (variable-upper-bound y))))
+       (s:nest
         (infinity-max
-         (infinity-* (variable-lower-bound x) (variable-upper-bound y))
-         (infinity-max
-          (infinity-* (variable-upper-bound x) (variable-lower-bound y))
-          (infinity-* (variable-upper-bound x) (variable-upper-bound y)))))))
+         (infinity-* (variable-lower-bound x)
+                     (variable-lower-bound y)))
+        (infinity-max
+         (infinity-* (variable-lower-bound x)
+                     (variable-upper-bound y)))
+        (infinity-max
+         (infinity-* (variable-upper-bound x)
+                     (variable-lower-bound y))
+         (infinity-* (variable-upper-bound x)
+                     (variable-upper-bound y))))))
   (let ((x (value-of x))
         (y (value-of y))
         (z (value-of z)))
@@ -4344,15 +5284,15 @@ Otherwise returns the value of X."
         (fail))))
 
 (defun *-rule-down (z x y)
-  ;; note: We can't assert that X and Y are integers when Z is an integer since
+  ;; NOTE: We can't assert that X and Y are integers when Z is an integer since
   ;;       Z may be an integer when X and Y are Gaussian integers. But we can
-  ;;       make such an assertion if either X or Y is real. If the Screamer
+  ;;       make such an assertion if either X or Y is an integer. If the Screamer
   ;;       type system could distinguish Gaussian integers from other complex
   ;;       numbers we could make such an assertion whenever either X or Y was
   ;;       not a Gaussian integer.
-  (if (and (variable-integer? z) (or (variable-real? x) (variable-real? y)))
+  (if (and (variable-integer? z) (or (variable-integer? x) (variable-integer? y)))
       (restrict-integer! x))
-  ;; note: Ditto.
+  ;; NOTE: Ditto.
   (if (and (variable-real? z) (or (variable-real? x) (variable-real? y)))
       (restrict-real! x))
   (if (and (variable-real? x) (variable-real? y) (variable-real? z))
@@ -4386,7 +5326,7 @@ Otherwise returns the value of X."
         (fail))))
 
 (defun min-rule-down (z x y)
-  ;; note: The analog of the following for upper bounds, namely restricting
+  ;; NOTE: The analog of the following for upper bounds, namely restricting
   ;;       the upper bound of either X or Y to (VARIABLE-UPPER-BOUND Z) is
   ;;       nondeterministic.
   (if (variable-lower-bound z)
@@ -4420,7 +5360,7 @@ Otherwise returns the value of X."
         (fail))))
 
 (defun max-rule-down (z x y)
-  ;; note: The analog of the following for lower bounds, namely restricting
+  ;; NOTE: The analog of the following for lower bounds, namely restricting
   ;;       the lower bound of either X or Y to (VARIABLE-LOWER-BOUND Z) is
   ;;       nondeterministic.
   (if (variable-upper-bound z)
@@ -4436,13 +5376,33 @@ Otherwise returns the value of X."
 
 (defun =-rule (x y)
   (cond
-    ;; note: I forget why +-RULE *-RULE MIN-RULE and MAX-RULE must perform the
+    ;; NOTE: I forget why +-RULE *-RULE MIN-RULE and MAX-RULE must perform the
     ;;       check in the second COND clause irrespective of whether the first
     ;;       clause is executed.
     ((and (variable-real? x) (variable-real? y))
      (restrict-bounds! x (variable-lower-bound y) (variable-upper-bound y))
      (restrict-bounds! y (variable-lower-bound x) (variable-upper-bound x)))
-    ((and (not (variable? x)) (not (variable? y)) (/= x y)) (fail))))
+    ((and (not (variable? x)) (not (variable? y)) (/= x y)) (fail)))
+  (when (or (variable? x) (variable? y))
+    (let ((xdom (cond
+                  ((and (variable? x)
+                        (subtypep (type-of (variable-enumerated-domain x)) 'list))
+                   (variable-enumerated-domain x))
+                  ((bound? x) (list (value-of x)))
+                  (t nil)))
+          (ydom (cond
+                  ((and (variable? y)
+                        (subtypep (type-of (variable-enumerated-domain y)) 'list))
+                   (variable-enumerated-domain y))
+                  ((bound? y) (list (value-of y)))
+                  (t nil))))
+      (when (and xdom ydom)
+        (let ((joined (intersection xdom ydom)))
+          (mapc
+           (lambda (v)
+             (when (variable? v)
+               (restrict-enumerated-domain! v joined)))
+           (list x y)))))))
 
 (defun <=-rule (x y)
   (if (variable-lower-bound x)
@@ -4464,10 +5424,22 @@ Otherwise returns the value of X."
     (if (and (not (variable? x)) (not (variable? y)) (>= x y)) (fail))))
 
 (defun /=-rule (x y)
-  ;; note: Got rid of the nondeterministic version of /=-RULE.
-  (let ((x (value-of x))
-        (y (value-of y)))
-    (if (and (not (variable? x)) (not (variable? y)) (= x y)) (fail))))
+  ;; NOTE: Got rid of the nondeterministic version of /=-RULE.
+  (let ((xv (value-of x))
+        (yv (value-of y)))
+    (cond ((and (not (variable? xv)) (not (variable? yv)) (= xv yv)) (fail))
+          ((and (bound? xv)
+                (variable? y))
+           (if (listp (variable-enumerated-domain y))
+               (when (member (value-of xv) (variable-enumerated-domain y))
+                 (restrict-enumerated-domain! y (remove (value-of xv) (variable-enumerated-domain y))))
+               (restrict-enumerated-antidomain! y (cached-cons (value-of xv) (variable-enumerated-antidomain y)))))
+          ((and (bound? yv)
+                (variable? x))
+           (if (listp (variable-enumerated-domain x))
+               (when (member (value-of yv) (variable-enumerated-domain x))
+                 (restrict-enumerated-domain! x (remove (value-of yv) (variable-enumerated-domain x))))
+               (restrict-enumerated-antidomain! x (cached-cons (value-of yv) (variable-enumerated-antidomain x))))))))
 
 ;;; Lifted Arithmetic Functions (Two argument optimized)
 
@@ -4789,7 +5761,7 @@ Otherwise returns the value of X."
   (assert!-numberpv y)
   (let ((x (variablize x))
         (y (variablize y)))
-    ;; note: Got rid of the nondeterministic version that called the
+    ;; NOTE: Got rid of the nondeterministic version that called the
     ;;       nondeterministic version of /=-RULE.
     (attach-noticer! #'(lambda () (/=-rule x y)) x)
     (attach-noticer! #'(lambda () (/=-rule x y)) y)))
@@ -4951,7 +5923,7 @@ if X is known to be non-numeric.
   (cond ((and (variable? x) (not (eq (variable-value x) x)))
          (known?-memberv (variable-value x) y))
         ((and (variable? x) (not (eq (variable-enumerated-domain x) t)))
-         ;; note: This first alternative is an optimization in case membership
+         ;; NOTE: This first alternative is an optimization in case membership
          ;;       can be determined simply through sharing relationships.
          (or (known?-memberv-internal x y)
              (every #'(lambda (element) (known?-memberv-internal element y))
@@ -4999,7 +5971,7 @@ if X is known to be non-numeric.
     ((and (variable? x) (not (eq (variable-value x) x)))
      (known?-notv-memberv (variable-value x) y))
     ((and (variable? x) (not (eq (variable-enumerated-domain x) t)))
-     ;; note: This first alternative is an optimization in case membership
+     ;; NOTE: This first alternative is an optimization in case membership
      ;;       can be determined simply through sharing relationships.
      (or (known?-notv-memberv-internal x y)
          (every #'(lambda (element) (known?-notv-memberv-internal element y))
@@ -5393,8 +6365,8 @@ arguments. Secondly, any non-boolean argument causes it to fail."
           (let ((x (first xrest))
                 (p (first prest)))
             (unless (eq x (not p))
-              (push x new-xs)
-              (push p new-ps))))
+              (cached-push x new-xs)
+              (cached-push p new-ps))))
         (let ((count (length new-xs)))
           (cond ((zerop count) (fail))
                 ((= count 1)
@@ -5506,7 +6478,7 @@ V and arguments are mutually constrained:
              (variable-lower-bound variable)
              (variable-upper-bound variable)))))
 
-;;; note: SOLUTION, LINEAR-FORCE and STATIC-ORDERING were moved here to be
+;;; NOTE: SOLUTION, LINEAR-FORCE and STATIC-ORDERING were moved here to be
 ;;;       before KNOWN?-CONSTRAINT to avoid forward references to
 ;;;       nondeterministic functions.
 
@@ -5615,7 +6587,7 @@ Screamer currently provides two convenient force-functions, namely
 #'LINEAR-FORCE and #'DIVIDE-AND-CONQUER-FORCE though future implementations
 may provide additional ones. \(The defined Screamer protocol does not provide
 sufficient hooks for the user to define her own force functions.)"
-  ;; note: This closure will heap cons.
+  ;; NOTE: This closure will heap cons.
   (let ((force-function (value-of force-function)))
     #'(lambda (variables) (static-ordering-internal variables force-function))))
 
@@ -5637,7 +6609,7 @@ sufficient hooks for the user to define her own force functions.)"
            t))))
 
 (defun propagate-gfc (predicate polarity? variables unassigned-variable)
-  ;; note: UNASSIGNED-VARIABLE must be a variable which is not bound and
+  ;; NOTE: UNASSIGNED-VARIABLE must be a variable which is not bound and
   ;;       all of the VARIABLES except the UNASSIGNED-VARIABLE must be bound.
   (let ((unassigned-variable (value-of unassigned-variable)))
     ;; There is no way to propagate a value to a variable that doesn't have an
@@ -5645,44 +6617,45 @@ sufficient hooks for the user to define her own force functions.)"
     (if (and (not (eq (variable-enumerated-domain unassigned-variable) t))
              (not (null (rest (variable-enumerated-domain
                                unassigned-variable)))))
-        ;; note: Could do less consing if had LOCAL DELETE-IF-NOT.
-        ;; note: Consing.
+        ;; NOTE: Could do less consing if had LOCAL DELETE-IF-NOT.
+        ;; NOTE: Consing.
         (let* ((variable-values (mapcar #'value-of variables))
                (new-enumerated-domain
-                (if polarity?
-                    (remove-if-not
-                     #'(lambda (value)
-                         (apply predicate
-                                ;; note: Consing.
-                                (mapcar #'(lambda (variable variable-value)
-                                            (if (eq variable unassigned-variable)
-                                                value
-                                                variable-value))
-                                        variables
-                                        variable-values)))
-                     (variable-enumerated-domain unassigned-variable))
-                    (remove-if
-                     #'(lambda (value)
-                         (apply predicate
-                                ;; note: Consing.
-                                (mapcar #'(lambda (variable variable-value)
-                                            (if (eq variable unassigned-variable)
-                                                value
-                                                variable-value))
-                                        variables
-                                        variable-values)))
-                     (variable-enumerated-domain unassigned-variable)))))
+                 (if polarity?
+                     (remove-if-not
+                      #'(lambda (value)
+                          (apply predicate
+                                 ;; NOTE: Consing.
+                                 (mapcar #'(lambda (variable variable-value)
+                                             (if (eq variable unassigned-variable)
+                                                 value
+                                                 variable-value))
+                                         variables
+                                         variable-values)))
+                      (variable-enumerated-domain unassigned-variable))
+                     (remove-if
+                      #'(lambda (value)
+                          (apply predicate
+                                 ;; NOTE: Consing.
+                                 (mapcar #'(lambda (variable variable-value)
+                                             (if (eq variable unassigned-variable)
+                                                 value
+                                                 variable-value))
+                                         variables
+                                         variable-values)))
+                      (variable-enumerated-domain unassigned-variable)))))
+          (release-list variable-values)
           (if (set-enumerated-domain! unassigned-variable new-enumerated-domain)
               (run-noticers unassigned-variable))))))
 
 (defun a-tuple (variables variable value)
   (if (null variables)
       nil
-      (cons (cond ((eq (first variables) variable) value)
-                  ((variable? (first variables))
-                   (a-member-of (variable-enumerated-domain (first variables))))
-                  (t (first variables)))
-            (a-tuple (rest variables) variable value))))
+      (cached-cons (cond ((eq (first variables) variable) value)
+                         ((variable? (first variables))
+                          (a-member-of (variable-enumerated-domain (first variables))))
+                         (t (first variables)))
+                   (a-tuple (rest variables) variable value))))
 
 (defun propagate-ac (predicate polarity? variables)
   (unless (some #'(lambda (variable)
@@ -5690,22 +6663,22 @@ sufficient hooks for the user to define her own force functions.)"
                          (eq (variable-enumerated-domain variable) t)))
                 variables)
     (dolist (variable variables)
-      ;; note: Could do less consing if had LOCAL DELETE-IF-NOT.
+      ;; NOTE: Could do less consing if had LOCAL DELETE-IF-NOT.
       (if (variable? variable)
           (let ((new-enumerated-domain
-                 (if polarity?
-                     (remove-if-not
-                      #'(lambda (value)
-                          (possibly?
-                            ;; note: Consing.
-                            (apply predicate (a-tuple variables variable value))))
-                      (variable-enumerated-domain variable))
-                     (remove-if
-                      #'(lambda (value)
-                          (possibly?
-                            ;; note: Consing.
-                            (apply predicate (a-tuple variables variable value))))
-                      (variable-enumerated-domain variable)))))
+                  (if polarity?
+                      (remove-if-not
+                       #'(lambda (value)
+                           (possibly?
+                             ;; NOTE: Consing.
+                             (apply predicate (a-tuple variables variable value))))
+                       (variable-enumerated-domain variable))
+                      (remove-if
+                       #'(lambda (value)
+                           (possibly?
+                             ;; NOTE: Consing.
+                             (apply predicate (a-tuple variables variable value))))
+                       (variable-enumerated-domain variable)))))
             (if (set-enumerated-domain! variable new-enumerated-domain)
                 (run-noticers variable)))))))
 
@@ -5752,7 +6725,7 @@ sufficient hooks for the user to define her own force functions.)"
        ;; The case where all but one of the variables are bound
        (propagate-gfc predicate polarity? variables unassigned-variable))
       ;; The case where all variables are bound
-      ;; note: Consing.
+      ;; NOTE: Consing.
       (t (unless (if polarity?
                      (apply predicate (mapcar #'value-of variables))
                      (not (apply predicate (mapcar #'value-of variables))))
@@ -5805,7 +6778,7 @@ restricted to be consistent with other arguments."
         (apply f (mapcar #'value-of x))
         (let ((z (make-variable)))
           (assert!-constraint
-           #'(lambda (&rest x) (equal (first x) (apply f (rest x)))) t (cons z x))
+           #'(lambda (&rest x) (equal (first x) (apply f (rest x)))) t (cached-cons z x))
           (dolist (argument x)
             (attach-noticer!
              #'(lambda ()
@@ -5815,10 +6788,10 @@ restricted to be consistent with other arguments."
           z))))
 
 (defun arguments-for-applyv (x xs)
-  (unless (bound? (first (last (cons x xs))))
+  (unless (bound? (first (last (cached-cons x xs))))
     (error "The current implementation does not allow the last argument to~%~
           APPLYV to be an unbound variable"))
-  (apply #'list* (mapcar #'value-of (cons x xs))))
+  (apply #'list* (mapcar #'value-of (cached-cons x xs))))
 
 (defun known?-applyv (f x &rest xs)
   (known?-constraint f t (arguments-for-applyv x xs)))
@@ -5855,7 +6828,7 @@ restricted to be consistent with other arguments."
             (assert!-constraint
              #'(lambda (&rest x) (equal (first x) (apply f (rest x))))
              t
-             (cons z arguments))
+             (cached-cons z arguments))
             (dolist (argument arguments)
               (attach-noticer!
                #'(lambda ()
@@ -5863,108 +6836,6 @@ restricted to be consistent with other arguments."
                        (assert!-equalv z (apply f (mapcar #'value-of arguments)))))
                argument))
             z)))))
-
-;;; Lifted EQUALV
-
-(defun known?-equalv (x y)
-  (or (eql x y)
-      (cond ((variable? x)
-             (and (not (eq (variable-value x) x))
-                  (known?-equalv (variable-value x) y)))
-            ((variable? y)
-             (and (not (eq (variable-value y) y))
-                  (known?-equalv x (variable-value y))))
-            (t (and (consp x)
-                    (consp y)
-                    (known?-equalv (car x) (car y))
-                    (known?-equalv (cdr x) (cdr y)))))))
-
-(defun assert!-equalv (x y)
-  (unless (eql x y)
-    (cond ((variable? x)
-           (cond ((not (eq (variable-value x) x))
-                  (assert!-equalv (variable-value x) y))
-                 ((variable? y)
-                  (if (eq (variable-value y) y)
-                      (share! x y)
-                      (assert!-equalv x (variable-value y))))
-                 (t (restrict-value! x y))))
-          ((variable? y)
-           (if (eq (variable-value y) y)
-               (restrict-value! y x)
-               (assert!-equalv x (variable-value y))))
-          ((and (consp x) (consp y))
-           (assert!-equalv (car x) (car y))
-           (assert!-equalv (cdr x) (cdr y)))
-          (t (fail)))))
-
-(defun known?-notv-equalv (x y) (one-value (progn (assert!-equalv x y) nil) t))
-
-(defun assert!-notv-equalv (x y)
-  ;; note: Can be made more efficient so that if you later find out that
-  ;;       X and Y are KNOWN?-NUMBERPV you can then ASSERT!-/=V2.
-  (if (known?-equalv x y) (fail))
-  (unless (known?-notv-equalv x y)
-    (let ((x (variablize x))
-          (y (variablize y)))
-      (attach-noticer! #'(lambda () (if (known?-equalv x y) (fail))) x)
-      (attach-noticer! #'(lambda () (if (known?-equalv x y) (fail))) y))))
-
-(defun equalv (x y)
-  "Returns T if the aggregate object X is known to equal the aggregate object
-Y, NIL if the aggregate object X is known not to equal the aggregate object Y,
-and a new boolean variable V if it is not known whether or not X equals Y when
-EQUALV is called.
-
-The values of X, Y and V are mutually constraints via noticers so that V
-equals T if and only if X is known to equal Y and V equals NIL if and only if
-X is known not to equal Y.
-
-Noticers are attached to V as well as to all variables nested in both in X and
-Y. When the noticers attached to variables nested in X and Y detect that X is
-known to equal Y they restrict V to equal T. Likewise, when the noticers
-attached to variables nested in X and Y detect that X is known not to equal Y
-they restrict V to equal NIL.
-
-Furthermore, if V later becomes known to equal T then X and Y are unified.
-Likewise, if V later becomes known to equal NIL then X and Y are restricted to
-not be equal. This is accomplished by attaching noticers to the variables
-nested in X and Y which detect when X becomes equal to Y and fail.
-
-The expression \(KNOWN? (EQUALV X Y)) is analogous to the extra-logical predicate
-`==' typically available in Prolog.
-
-The expression \(KNOWN? (NOTV (EQUALV X Y))) is analogous to the extra-logical
-predicate `\\=' typically available in Prolog.
-
-The expression \(ASSERT! (EQUALV X Y)) is analogous to Prolog unification.
-
-The expression \(ASSERT! (NOTV (EQUALV X Y))) is analogous to the
-disunification operator available in Prolog-II."
-  ;; note: Can be made more efficient and return an AND tree of individual
-  ;;       constraints needed to make EQUALV true. This can be done also for
-  ;;       the KNOWN? and ASSERT! versions.
-  (cond ((known?-equalv x y) t)
-        ((known?-notv-equalv x y) nil)
-        (t (let ((x (variablize x))
-                 (y (variablize y))
-                 (z (a-booleanv)))
-             (attach-noticer!
-              #'(lambda ()
-                  (cond ((known?-equalv x y) (restrict-true! z))
-                        ((known?-notv-equalv x y) (restrict-false! z))))
-              x)
-             (attach-noticer!
-              #'(lambda ()
-                  (cond ((known?-equalv x y) (restrict-true! z))
-                        ((known?-notv-equalv x y) (restrict-false! z))))
-              y)
-             (attach-noticer!
-              #'(lambda ()
-                  (cond ((variable-true? z) (assert!-equalv x y))
-                        ((variable-false? z) (assert!-notv-equalv x y))))
-              z)
-             z))))
 
 ;;; Lifted Arithmetic Functions
 
@@ -6518,6 +7389,408 @@ restrictions and fail when any assertion causes X1 to be known to be equal to
 X2."
   (/=v-internal x xs))
 
+;;; == for as close to proper unification as Screamer currently supports
+;;; Effectively a Screamer analogue of equalpv
+(defun known?-==v2-variable (x y)
+  (s:nest
+   (or (equalp x y))
+   (cond
+     ((and (variable-real? x)
+           (variable-real? y))
+      (and (known?-<=v2 x y)
+           (known?-<=v2 y x))))
+   ((and (ground? x)
+         (ground? y)))
+   (let ((x (variable-value x))
+         (y (variable-value y))))
+   (cond ((and (consp x) (consp y))
+          (and (known?-==v2 (car x) (car y))
+               (known?-==v2 (cdr x) (cdr y))))
+         ((and x y (s:sequencep x) (s:sequencep y)
+               (= (length x) (length y)))
+          (every #'known?-==v2 x y))
+         (t (equalp x y)))))
+
+(defun known?-/==v2-variable (x y)
+  (let ((xv (value-of x))
+        (yv (value-of y)))
+    (cond ((and (variable-real? x)
+                (variable-real? y))
+           (or (known?-<v2-variable x y) (known?-<v2-variable y x)))
+          ((and (consp xv) (consp yv))
+           (and (known?-/==v2 (car xv) (car yv))
+                (known?-/==v2 (cdr xv) (cdr yv))))
+          ((and (s:sequencep xv) (s:sequencep yv)
+                xv yv ;; Make sure it's not just them being nil
+                )
+           (or (not (= (length xv) (length yv)))
+               (every #'known?-/==v2 xv yv)))
+          ;;; TODO: Make this correct when dealing with e.g. structs
+          ((and (bound? x) (bound? y)
+                (not (equalp xv yv))) t))))
+
+(defun known?-==v2-internal (x y)
+  (known?-==v2-variable (variablize x) (variablize y)))
+
+(defun known?-/==v2-internal (x y)
+  (known?-/==v2-variable (variablize x) (variablize y)))
+
+(defun known?-==v2 (x y)
+  (known?-==v2-internal x y))
+
+(defun known?-/==v2 (x y)
+  (known?-/==v2-internal x y))
+
+(defun known?-==v-internal (x xs)
+  (if (null xs)
+      t
+      (and (known?-==v2 x (first xs))
+           (known?-==v-internal (first xs) (rest xs)))))
+
+(defun known?-==v (x &rest xs) (known?-==v-internal x xs))
+
+(defun known?-/==v-internal (x xs)
+  (if (null xs)
+      t
+      (and (known?-/==v2 x (first xs))
+           (known?-/==v-internal x (rest xs))
+           (known?-/==v-internal (first xs) (rest xs)))))
+
+(defun known?-/==v (x &rest xs) (known?-/==v-internal x xs))
+
+(defun ==-rule (x y)
+  (when (known?-/==v2 x y) (fail))
+  (when (and (variable-real? x) (variable-real? y))
+    (restrict-bounds! x (variable-lower-bound y) (variable-upper-bound y))
+    (restrict-bounds! y (variable-lower-bound x) (variable-upper-bound x)))
+  (let ((xv (when (bound? x) (value-of x)))
+        (yv (when (bound? y) (value-of y))))
+    (s:nest
+     (cond ((and (consp xv)
+                 (consp yv))
+            (==-rule (variablize (car xv))
+                     (variablize (car yv)))
+            (==-rule (variablize (cdr xv))
+                     (variablize (cdr yv))))
+           ((and (s:sequencep xv) (s:sequencep yv)
+                 xv yv ;; Make sure it's not just them being nil
+                 )
+            (map nil (lambda (a b) (==-rule (variablize a)
+                                            (variablize b)))
+                 xv yv)))
+     (t)
+     (let ((xdom (cond
+                   ((and (variable? x)
+                         (subtypep (type-of (variable-enumerated-domain x)) 'list))
+                    (variable-enumerated-domain x))
+                   ((bound? x) (list (value-of x)))
+                   (t nil)))
+           (ydom (cond
+                   ((and (variable? y)
+                         (subtypep (type-of (variable-enumerated-domain y)) 'list))
+                    (variable-enumerated-domain y))
+                   ((bound? y) (list (value-of y)))
+                   (t nil)))))
+     (cond ((and (bound? y) (not xdom))
+            (set-enumerated-domain! x ydom))
+           ((and (bound? x) (not ydom))
+            (set-enumerated-domain! y xdom)))
+     (t)
+     (when (and xdom ydom
+                (or (variable? x) (variable? y))))
+     (let ((joined (intersection xdom ydom :test #'equal))))
+     (mapc (lambda (v)
+             (when (variable? v)
+               (restrict-enumerated-domain! v joined)))
+           (list x y)))))
+
+(defun /==-rule (x y)
+  ;; NOTE: sequences are handled in assert!-/==v2
+  (labels ((block-possible-value (var val)
+             (let ((dom (variable-enumerated-domain var))
+                   (antidom (variable-enumerated-antidomain var)))
+               (if (subtypep (type-of (variable-enumerated-domain var)) 'list)
+                   (when (member (value-of val) dom)
+                     (restrict-enumerated-domain! var
+                                                  (remove (value-of val) dom)))
+                   (restrict-enumerated-antidomain! var
+                                                    (cached-cons (value-of val) antidom))))))
+    (let ((xv (value-of x))
+          (yv (value-of y)))
+      (when (known?-==v2 x y) (fail))
+      (when (and (bound? x)
+                 (variable? y))
+        (block-possible-value y xv))
+      (when (and (bound? y)
+                 (variable? x))
+        (block-possible-value x yv)))))
+
+(defun assert!-==v2 (x y)
+  (let ((x (variablize x))
+        (y (variablize y)))
+    (attach-noticer! #'(lambda () (==-rule x y)) x)
+    (attach-noticer! #'(lambda () (==-rule x y)) y)))
+
+(defun assert!-==v-internal (x xs)
+  (unless (null xs)
+    (assert!-==v2 x (first xs))
+    (assert!-==v-internal (first xs) (rest xs))))
+
+(defun assert!-==v (x &rest xs) (assert!-==v-internal x xs))
+
+(defun assert!-/==v2 (x y)
+  (let ((xv (value-of x))
+        (yv (value-of y)))
+    (cond
+      ((and (bound? x) (bound? y)
+            (s:sequencep xv) (s:sequencep yv))
+       (let ((known-mismatch nil)
+             (a-variables nil)
+             (b-variables nil))
+         (iter:iter
+           (iter:for a in-sequence xv)
+           (iter:for b in-sequence yv)
+           (if (or (not (bound? a))
+                   (not (bound? b)))
+               (progn
+                 (cached-push a a-variables)
+                 (cached-push b b-variables))
+               (unless (equalp (value-of a) (value-of b))
+                 (setf known-mismatch t)
+                 (return nil))))
+         (unless known-mismatch
+           (assert! (notv (apply #'andv
+                                 (mapcar #'==v
+                                         a-variables
+                                         b-variables)))))))
+      (t (let ((x (variablize x))
+               (y (variablize y)))
+           (attach-noticer! #'(lambda () (/==-rule x y)) x)
+           (attach-noticer! #'(lambda () (/==-rule x y)) y))))))
+
+(defun assert!-/==v-internal (x xs)
+  (unless (null xs)
+    (assert!-/==v2 x (first xs))
+    (assert!-/==v-internal (first xs) (rest xs))))
+
+(defun assert!-/==v (x &rest xs) (assert!-/==v-internal x xs))
+
+(defun ==v2 (x y)
+  (cond ((known?-==v2-internal x y) t)
+        ((known?-/==v2-internal x y) nil)
+        (t (let ((x (variablize x))
+                 (y (variablize y))
+                 (z (a-booleanv)))
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-==v2-variable x y) (restrict-true! z))
+                        ((known?-/==v2-variable x y) (restrict-false! z))))
+              x)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-==v2-variable x y) (restrict-true! z))
+                        ((known?-/==v2-variable x y) (restrict-false! z))))
+              y)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((variable-true? z) (assert!-==v2 x y))
+                        ((variable-false? z) (assert!-/==v2 x y))))
+              z)
+             z))))
+
+(defun /==v2 (x y)
+  (cond ((known?-/==v2-internal x y) t)
+        ((known?-==v2-internal x y) nil)
+        (t (let ((x (variablize x))
+                 (y (variablize y))
+                 (z (a-booleanv)))
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-/==v2-variable x y) (restrict-true! z))
+                        ((known?-==v2-variable x y) (restrict-false! z))))
+              x)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-/==v2-variable x y) (restrict-true! z))
+                        ((known?-==v2-variable x y) (restrict-false! z))))
+              y)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((variable-true? z) (assert!-/==v2 x y))
+                        ((variable-false? z) (assert!-==v2 x y))))
+              z)
+             z))))
+
+(defun ==v-internal (x xs)
+  (if (null xs)
+      t
+      (andv (==v2 x (first xs))
+            (==v-internal (first xs) (rest xs)))))
+
+(defun ==v (x &rest xs)
+  "An extension of `=v' to work on most atoms by using `equal' to check equality."
+  (==v-internal x xs))
+
+(defun /==v-internal (x xs)
+  (if (null xs)
+      t
+      (andv (/==v2 x (first xs))
+            (/==v-internal x (rest xs))
+            (/==v-internal (first xs) (rest xs)))))
+
+(defun /==v (x &rest xs)
+  "The inverse of `==v'"
+  (/==v-internal x xs))
+
+(s:defalias == #'equalp)
+(s:defalias /== (notf #'equalp))
+
+(defun all-different (li &key (test #'equal))
+  (if (null (cdr li))
+      t
+      (let ((l nil))
+        (not
+         ;; Return t if there *is* a duplicate
+         (loop for i in li
+               when (member i l :test test)
+                 return t
+               do (cached-push i l))))))
+
+(defun all-differentv (inp)
+  "Functionally the same as (apply #'/=v inp), but faster.
+Works on nested sequences which potentially contain variables, e.g. (all-differentv '((1 2) (2 3))."
+  (let* ((val-diff-func (cond
+                          ((every #'known?-numberpv inp)
+                           #'/=v)
+                          (t #'/==v)))
+         (seq-diff-func (lambda (a b) (notv (equalv a b))))
+         (diff-func (lambda (a b)
+                      (funcall (if (or (subtypep (type-of a) 'sequence)
+                                       (subtypep (type-of b) 'sequence))
+                                   seq-diff-func
+                                   val-diff-func)
+                               a b))))
+    (apply #'andv
+           (mapcon
+            (lambda (xs)
+              (when (cdr xs)
+                (mapcar
+                 (curry diff-func (car xs))
+                 (cdr xs))))
+            (coerce inp 'list))))
+  ;; (apply #'andv
+  ;;        (mapcar (alexandria:curry #'apply #'andv)
+  ;;                (maplist (lambda (xs) (when (cdr xs) (mapcar (alexandria:curry #'/=v (car xs)) (cdr xs)))) inp)))
+  )
+
+;;; Lifted EQUALV
+
+(defun known?-equalv (x y)
+  (or (eql x y)
+      (cond ((variable? x)
+             (and (not (eq (variable-value x) x))
+                  (known?-equalv (variable-value x) y)))
+            ((variable? y)
+             (and (not (eq (variable-value y) y))
+                  (known?-equalv x (variable-value y))))
+            ((and (consp x) (consp y))
+             (known?-equalv (car x) (car y))
+             (known?-equalv (cdr x) (cdr y)))
+            (t (equal x y)))))
+
+(defun assert!-equalv (x y)
+  (unless (eql x y)
+    (cond ((variable? x)
+           (cond ((not (eq (variable-value x) x))
+                  (assert!-equalv (variable-value x) y))
+                 ((variable? y)
+                  (if (eq (variable-value y) y)
+                      (share! x y)
+                      (assert!-equalv x (variable-value y))))
+                 (t (restrict-value! x y))))
+          ((variable? y)
+           (if (eq (variable-value y) y)
+               (restrict-value! y x)
+               (assert!-equalv x (variable-value y))))
+          ((and (consp x) (consp y))
+           (assert!-equalv (car x) (car y))
+           (assert!-equalv (cdr x) (cdr y)))
+          ((and (s:sequencep x) (s:sequencep y) (= (length x) (length y)))
+           (cl:map nil #'assert!-equalv x y))
+          (t (fail)))))
+
+(defun known?-notv-equalv (x y) (one-value (progn (assert!-equalv x y) nil) t))
+
+(defun assert!-notv-equalv (x y)
+  (cond
+    ((known?-equalv x y) (fail))
+    ((not (known?-notv-equalv x y))
+     (let* ((x (variablize x))
+            (y (variablize y))
+            (noticer #'(lambda ()
+                         (cond ((and (known?-numberpv x)
+                                     (known?-numberpv y))
+                                (/=-rule x y))
+                               ((known?-equalv x y) (fail))))))
+       (attach-noticer! noticer x)
+       (attach-noticer! noticer y)))))
+
+(defun equalv (x y)
+  "Returns T if the aggregate object X is known to equal the aggregate object
+Y, NIL if the aggregate object X is known not to equal the aggregate object Y,
+and a new boolean variable V if it is not known whether or not X equals Y when
+EQUALV is called.
+
+The values of X, Y and V are mutually constraints via noticers so that V
+equals T if and only if X is known to equal Y and V equals NIL if and only if
+X is known not to equal Y.
+
+Noticers are attached to V as well as to all variables nested in both in X and
+Y. When the noticers attached to variables nested in X and Y detect that X is
+known to equal Y they restrict V to equal T. Likewise, when the noticers
+attached to variables nested in X and Y detect that X is known not to equal Y
+they restrict V to equal NIL.
+
+Furthermore, if V later becomes known to equal T then X and Y are unified.
+Likewise, if V later becomes known to equal NIL then X and Y are restricted to
+not be equal. This is accomplished by attaching noticers to the variables
+nested in X and Y which detect when X becomes equal to Y and fail.
+
+The expression \(KNOWN? (EQUALV X Y)) is analogous to the extra-logical predicate
+`==' typically available in Prolog.
+
+The expression \(KNOWN? (NOTV (EQUALV X Y))) is analogous to the extra-logical
+predicate `\\=' typically available in Prolog.
+
+The expression \(ASSERT! (EQUALV X Y)) is analogous to Prolog unification.
+
+The expression \(ASSERT! (NOTV (EQUALV X Y))) is analogous to the
+disunification operator available in Prolog-II."
+  ;; NOTE: Can be made more efficient and return an AND tree of individual
+  ;;       constraints needed to make EQUALV true. This can be done also for
+  ;;       the KNOWN? and ASSERT! versions.
+  (cond ((known?-equalv x y) t)
+        ((known?-notv-equalv x y) nil)
+        (t (let ((x (variablize x))
+                 (y (variablize y))
+                 (z (a-booleanv)))
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-equalv x y) (restrict-true! z))
+                        ((known?-notv-equalv x y) (restrict-false! z))))
+              x)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((known?-equalv x y) (restrict-true! z))
+                        ((known?-notv-equalv x y) (restrict-false! z))))
+              y)
+             (attach-noticer!
+              #'(lambda ()
+                  (cond ((variable-true? z) (assert!-equalv x y))
+                        ((variable-false? z) (assert!-notv-equalv x y))))
+              z)
+             z))))
+
 ;;; The Optimizer Macros for ASSERT!, KNOWN? and DECIDE
 
 (defun known?-true (x) (assert!-booleanpv x) (eq (value-of x) t))
@@ -6531,49 +7804,49 @@ X2."
               (= (length form) 2))
          (transform-known? (second form) (not polarity?)))
         ((eq (first form) 'andv)
-         (cons (if polarity? 'and 'or)
-               (mapcar #'(lambda (form) (transform-known? form polarity?))
-                       (rest form))))
+         (cached-cons (if polarity? 'and 'or)
+                      (mapcar #'(lambda (form) (transform-known? form polarity?))
+                              (rest form))))
         ((eq (first form) 'orv)
-         (cons (if polarity? 'or 'and)
-               (mapcar #'(lambda (form) (transform-known? form polarity?))
-                       (rest form))))
+         (cached-cons (if polarity? 'or 'and)
+                      (mapcar #'(lambda (form) (transform-known? form polarity?))
+                              (rest form))))
         ((member (first form)
                  '(integerpv realpv numberpv memberv booleanpv
                    =v <v <=v >v >=v /=v funcallv applyv equalv)
                  :test #'eq)
-         (cons (cdr (assoc (first form)
-                           (if polarity?
-                               '((integerpv . known?-integerpv)
-                                 (realpv . known?-realpv)
-                                 (numberpv . known?-numberpv)
-                                 (memberv . known?-memberv)
-                                 (booleanpv . known?-booleanpv)
-                                 (=v . known?-=v)
-                                 (<v . known?-<v)
-                                 (<=v . known?-<=v)
-                                 (>v . known?->v)
-                                 (>=v . known?->=v)
-                                 (/=v . known?-/=v)
-                                 (funcallv . known?-funcallv)
-                                 (applyv . known?-applyv)
-                                 (equalv . known?-equalv))
-                               '((integerpv . known?-notv-integerpv)
-                                 (realpv . known?-notv-realpv)
-                                 (numberpv . known?-notv-numberpv)
-                                 (memberv . known?-notv-memberv)
-                                 (booleanpv . known?-notv-booleanpv)
-                                 (=v . known?-/=v)
-                                 (<v . known?->=v)
-                                 (<=v . known?->v)
-                                 (>v . known?-<=v)
-                                 (>=v . known?-<v)
-                                 (/=v . known?-=v)
-                                 (funcallv . known?-notv-funcallv)
-                                 (applyv . known?-notv-applyv)
-                                 (equalv . known?-notv-equalv)))
-                           :test #'eq))
-               (rest form)))
+         (cached-cons (cdr (assoc (first form)
+                                  (if polarity?
+                                      '((integerpv . known?-integerpv)
+                                        (realpv . known?-realpv)
+                                        (numberpv . known?-numberpv)
+                                        (memberv . known?-memberv)
+                                        (booleanpv . known?-booleanpv)
+                                        (=v . known?-=v)
+                                        (<v . known?-<v)
+                                        (<=v . known?-<=v)
+                                        (>v . known?->v)
+                                        (>=v . known?->=v)
+                                        (/=v . known?-/=v)
+                                        (funcallv . known?-funcallv)
+                                        (applyv . known?-applyv)
+                                        (equalv . known?-equalv))
+                                      '((integerpv . known?-notv-integerpv)
+                                        (realpv . known?-notv-realpv)
+                                        (numberpv . known?-notv-numberpv)
+                                        (memberv . known?-notv-memberv)
+                                        (booleanpv . known?-notv-booleanpv)
+                                        (=v . known?-/=v)
+                                        (<v . known?->=v)
+                                        (<=v . known?->v)
+                                        (>v . known?-<=v)
+                                        (>=v . known?-<v)
+                                        (/=v . known?-=v)
+                                        (funcallv . known?-notv-funcallv)
+                                        (applyv . known?-notv-applyv)
+                                        (equalv . known?-notv-equalv)))
+                                  :test #'eq))
+                      (rest form)))
         (polarity? `(known?-true ,form))
         (t `(known?-false ,form)))
       (if polarity? `(known?-true ,form) `(known?-false ,form))))
@@ -6634,40 +7907,44 @@ nested in a call to KNOWN?, are similarly transformed."
                         (rest form)))))
         ((member (first form)
                  '(integerpv realpv numberpv memberv booleanpv
-                   =v <v <=v >v >=v /=v funcallv applyv equalv)
+                   =v <v <=v >v >=v /=v funcallv applyv ==v /==v equalv)
                  :test #'eq)
-         (cons (cdr (assoc (first form)
-                           (if polarity?
-                               '((integerpv . assert!-integerpv)
-                                 (realpv . assert!-realpv)
-                                 (numberpv . assert!-numberpv)
-                                 (memberv . assert!-memberv)
-                                 (booleanpv . assert!-booleanpv)
-                                 (=v . assert!-=v)
-                                 (<v . assert!-<v)
-                                 (<=v . assert!-<=v)
-                                 (>v . assert!->v)
-                                 (>=v . assert!->=v)
-                                 (/=v . assert!-/=v)
-                                 (funcallv . assert!-funcallv)
-                                 (applyv . assert!-applyv)
-                                 (equalv . assert!-equalv))
-                               '((integerpv . assert!-notv-integerpv)
-                                 (realpv . assert!-notv-realpv)
-                                 (numberpv . assert!-notv-numberpv)
-                                 (memberv . assert!-notv-memberv)
-                                 (booleanpv . assert!-notv-booleanpv)
-                                 (=v . assert!-/=v)
-                                 (<v . assert!->=v)
-                                 (<=v . assert!->v)
-                                 (>v . assert!-<=v)
-                                 (>=v . assert!-<v)
-                                 (/=v . assert!-=v)
-                                 (funcallv . assert!-notv-funcallv)
-                                 (applyv . assert!-notv-applyv)
-                                 (equalv . assert!-notv-equalv)))
-                           :test #'eq))
-               (rest form)))
+         (cached-cons (cdr (assoc (first form)
+                                  (if polarity?
+                                      '((integerpv . assert!-integerpv)
+                                        (realpv . assert!-realpv)
+                                        (numberpv . assert!-numberpv)
+                                        (memberv . assert!-memberv)
+                                        (booleanpv . assert!-booleanpv)
+                                        (=v . assert!-=v)
+                                        (<v . assert!-<v)
+                                        (<=v . assert!-<=v)
+                                        (>v . assert!->v)
+                                        (>=v . assert!->=v)
+                                        (/=v . assert!-/=v)
+                                        (funcallv . assert!-funcallv)
+                                        (applyv . assert!-applyv)
+                                        (==v . assert!-==v)
+                                        (/==v . assert!-/==v)
+                                        (equalv . assert!-equalv))
+                                      '((integerpv . assert!-notv-integerpv)
+                                        (realpv . assert!-notv-realpv)
+                                        (numberpv . assert!-notv-numberpv)
+                                        (memberv . assert!-notv-memberv)
+                                        (booleanpv . assert!-notv-booleanpv)
+                                        (=v . assert!-/=v)
+                                        (<v . assert!->=v)
+                                        (<=v . assert!->v)
+                                        (>v . assert!-<=v)
+                                        (>=v . assert!-<v)
+                                        (/=v . assert!-=v)
+                                        (funcallv . assert!-notv-funcallv)
+                                        (applyv . assert!-notv-applyv)
+                                        (==v . assert!-/==v)
+                                        (/==v . assert!-==v)
+                                        (equalv . assert!-notv-equalv)))
+                                  :test #'eq))
+                      (rest form)))
         (polarity? `(assert!-true ,form))
         (t `(assert!-false ,form)))
       (if polarity? `(assert!-true ,form) `(assert!-false ,form))))
@@ -6709,93 +7986,97 @@ directly nested in a call to ASSERT!, are similarly transformed."
                                     (transform-decide form polarity?)))
                                (rest form))))
            (values (reduce #'append (mapcar #'first result))
-                   (cons (if polarity? 'progn 'either)
-                         (mapcar #'second result))
-                   (cons (if polarity? 'either 'progn)
-                         (mapcar #'third result)))))
+                   (cached-cons (if polarity? 'progn 'either)
+                                (mapcar #'second result))
+                   (cached-cons (if polarity? 'either 'progn)
+                                (mapcar #'third result)))))
         ((eq (first form) 'orv)
          (let ((result (mapcar #'(lambda (form)
                                    (multiple-value-list
                                     (transform-decide form polarity?)))
                                (rest form))))
            (values (reduce #'append (mapcar #'first result))
-                   (cons (if polarity? 'either 'progn)
-                         (mapcar #'second result))
-                   (cons (if polarity? 'progn 'either)
-                         (mapcar #'third result)))))
+                   (cached-cons (if polarity? 'either 'progn)
+                                (mapcar #'second result))
+                   (cached-cons (if polarity? 'progn 'either)
+                                (mapcar #'third result)))))
         ((member (first form)
                  '(integerpv realpv numberpv memberv booleanpv
-                   =v <v <=v >v >=v /=v funcallv applyv equalv)
+                   =v <v <=v >v >=v /=v funcallv applyv ==v /==v equalv)
                  :test #'eq)
          (let ((arguments (mapcar #'(lambda (argument)
                                       (declare (ignore argument))
                                       (gensym "ARGUMENT-"))
                                   (rest form))))
            (values (mapcar #'list arguments (rest form))
-                   (cons (cdr (assoc (first form)
-                                     (if polarity?
-                                         '((integerpv . assert!-integerpv)
-                                           (realpv . assert!-realpv)
-                                           (numberpv . assert!-numberpv)
-                                           (memberv . assert!-memberv)
-                                           (booleanpv . assert!-booleanpv)
-                                           (=v . assert!-=v)
-                                           (<v . assert!-<v)
-                                           (<=v . assert!-<=v)
-                                           (>v . assert!->v)
-                                           (>=v . assert!->=v)
-                                           (/=v . assert!-/=v)
-                                           (funcallv . assert!-funcallv)
-                                           (applyv . assert!-applyv)
-                                           (equalv . assert!-equalv))
-                                         '((integerpv . assert!-notv-integerpv)
-                                           (realpv . assert!-notv-realpv)
-                                           (numberpv . assert!-notv-numberpv)
-                                           (memberv . assert!-notv-memberv)
-                                           (booleanpv . assert!-notv-booleanpv)
-                                           (=v . assert!-/=v)
-                                           (<v . assert!->=v)
-                                           (<=v . assert!->v)
-                                           (>v . assert!-<=v)
-                                           (>=v . assert!-<v)
-                                           (/=v . assert!-=v)
-                                           (funcallv . assert!-notv-funcallv)
-                                           (applyv . assert!-notv-applyv)
-                                           (equalv . assert!-notv-equalv)))
-                                     :test #'eq))
-                         arguments)
-                   (cons (cdr (assoc (first form)
-                                     (if polarity?
-                                         '((integerpv . assert!-notv-integerpv)
-                                           (realpv . assert!-notv-realpv)
-                                           (numberpv . assert!-notv-numberpv)
-                                           (memberv . assert!-notv-memberv)
-                                           (booleanpv . assert!-notv-booleanpv)
-                                           (=v . assert!-/=v)
-                                           (<v . assert!->=v)
-                                           (<=v . assert!->v)
-                                           (>v . assert!-<=v)
-                                           (>=v . assert!-<v)
-                                           (/=v . assert!-=v)
-                                           (funcallv . assert!-notv-funcallv)
-                                           (applyv . assert!-notv-applyv)
-                                           (equalv . assert!-notv-equalv))
-                                         '((integerpv . assert!-integerpv)
-                                           (realpv . assert!-realpv)
-                                           (numberpv . assert!-numberpv)
-                                           (memberv . assert!-memberv)
-                                           (booleanpv . assert!-booleanpv)
-                                           (=v . assert!-=v)
-                                           (<v . assert!-<v)
-                                           (<=v . assert!-<=v)
-                                           (>v . assert!->v)
-                                           (>=v . assert!->=v)
-                                           (/=v . assert!-/=v)
-                                           (funcallv . assert!-funcallv)
-                                           (applyv . assert!-applyv)
-                                           (equalv . assert!-equalv)))
-                                     :test #'eq))
-                         arguments))))
+                   (cached-cons (cdr (assoc (first form)
+                                            (if polarity?
+                                                '((integerpv . assert!-integerpv)
+                                                  (realpv . assert!-realpv)
+                                                  (numberpv . assert!-numberpv)
+                                                  (memberv . assert!-memberv)
+                                                  (booleanpv . assert!-booleanpv)
+                                                  (=v . assert!-=v)
+                                                  (<v . assert!-<v)
+                                                  (<=v . assert!-<=v)
+                                                  (>v . assert!->v)
+                                                  (>=v . assert!->=v)
+                                                  (/=v . assert!-/=v)
+                                                  (funcallv . assert!-funcallv)
+                                                  (applyv . assert!-applyv)
+                                                  (==v . assert!-==v)
+                                                  (/==v . assert!-/==v)
+                                                  (equalv . assert!-equalv))
+                                                '((integerpv . assert!-notv-integerpv)
+                                                  (realpv . assert!-notv-realpv)
+                                                  (numberpv . assert!-notv-numberpv)
+                                                  (memberv . assert!-notv-memberv)
+                                                  (booleanpv . assert!-notv-booleanpv)
+                                                  (=v . assert!-/=v)
+                                                  (<v . assert!->=v)
+                                                  (<=v . assert!->v)
+                                                  (>v . assert!-<=v)
+                                                  (>=v . assert!-<v)
+                                                  (/=v . assert!-=v)
+                                                  (funcallv . assert!-notv-funcallv)
+                                                  (applyv . assert!-notv-applyv)
+                                                  (==v . assert!-/==v)
+                                                  (/==v . assert!-==v)
+                                                  (equalv . assert!-notv-equalv)))
+                                            :test #'eq))
+                                arguments)
+                   (cached-cons (cdr (assoc (first form)
+                                            (if polarity?
+                                                '((integerpv . assert!-notv-integerpv)
+                                                  (realpv . assert!-notv-realpv)
+                                                  (numberpv . assert!-notv-numberpv)
+                                                  (memberv . assert!-notv-memberv)
+                                                  (booleanpv . assert!-notv-booleanpv)
+                                                  (=v . assert!-/=v)
+                                                  (<v . assert!->=v)
+                                                  (<=v . assert!->v)
+                                                  (>v . assert!-<=v)
+                                                  (>=v . assert!-<v)
+                                                  (/=v . assert!-=v)
+                                                  (funcallv . assert!-notv-funcallv)
+                                                  (applyv . assert!-notv-applyv)
+                                                  (equalv . assert!-notv-equalv))
+                                                '((integerpv . assert!-integerpv)
+                                                  (realpv . assert!-realpv)
+                                                  (numberpv . assert!-numberpv)
+                                                  (memberv . assert!-memberv)
+                                                  (booleanpv . assert!-booleanpv)
+                                                  (=v . assert!-=v)
+                                                  (<v . assert!-<v)
+                                                  (<=v . assert!-<=v)
+                                                  (>v . assert!->v)
+                                                  (>=v . assert!->=v)
+                                                  (/=v . assert!-/=v)
+                                                  (funcallv . assert!-funcallv)
+                                                  (applyv . assert!-applyv)
+                                                  (equalv . assert!-equalv)))
+                                            :test #'eq))
+                                arguments))))
         (t (let ((argument (gensym "ARGUMENT-")))
              (values (list (list argument form))
                      (if polarity?
@@ -6848,7 +8129,7 @@ directly nested in a call to decide, are similarly transformed."
        (either (progn ,true t) (progn ,false nil)))))
 
 ;;; Lifted Generators
-;;; note: The following functions could be handled more efficiently as special
+;;; NOTE: The following functions could be handled more efficiently as special
 ;;;       cases.
 
 (defun a-booleanv (&optional (name nil name?))
@@ -6949,10 +8230,10 @@ VALUES can be either a vector or a list designator."
 (defun variables-in (x)
   (typecase x
     (cons (append (variables-in (car x)) (variables-in (cdr x))))
-    (variable (list x))
+    (variable (cached-list x))
     (otherwise nil)))
 
-;;; note: SOLUTION and LINEAR-FORCE used to be here but was moved to be before
+;;; NOTE: SOLUTION and LINEAR-FORCE used to be here but was moved to be before
 ;;;       KNOWN?-CONSTRAINT to avoid forward references to nondeterministic
 ;;;       functions.
 
@@ -6995,7 +8276,7 @@ domain size is odd, the halves differ in size by at most one."
              (set-enumerated-domain!
               variable
               (either (subseq (variable-enumerated-domain variable) 0 n)
-                      (subseq (variable-enumerated-domain variable) n)))
+                (subseq (variable-enumerated-domain variable) n)))
              (run-noticers variable)))
           ((and (variable-real? variable)
                 (variable-lower-bound variable)
@@ -7008,10 +8289,10 @@ domain size is odd, the halves differ in size by at most one."
                            (restrict-upper-bound! variable midpoint)
                            (if (= old-bound (variable-upper-bound variable))
                                (fail)))
-                         (let ((old-bound (variable-lower-bound variable)))
-                           (restrict-lower-bound! variable (1+ midpoint))
-                           (if (= old-bound (variable-lower-bound variable))
-                               (fail)))))
+                   (let ((old-bound (variable-lower-bound variable)))
+                     (restrict-lower-bound! variable (1+ midpoint))
+                     (if (= old-bound (variable-lower-bound variable))
+                         (fail)))))
                (let ((midpoint (/ (+ (variable-lower-bound variable)
                                      (variable-upper-bound variable))
                                   2)))
@@ -7019,15 +8300,15 @@ domain size is odd, the halves differ in size by at most one."
                            (restrict-upper-bound! variable midpoint)
                            (if (= old-bound (variable-upper-bound variable))
                                (fail)))
-                         (let ((old-bound (variable-lower-bound variable)))
-                           (restrict-lower-bound! variable midpoint)
-                           (if (= old-bound (variable-lower-bound variable))
-                               (fail)))))))
+                   (let ((old-bound (variable-lower-bound variable)))
+                     (restrict-lower-bound! variable midpoint)
+                     (if (= old-bound (variable-lower-bound variable))
+                         (fail)))))))
           (t (error "It is only possible to divide and conquer force a~%~
                   variable that has a countable domain or a finite range")))))
   (value-of variable))
 
-;;; note: STATIC-ORDERING used to be here but was moved to be before
+;;; NOTE: STATIC-ORDERING used to be here but was moved to be before
 ;;;       KNOWN?-CONSTRAINT to avoid a forward reference to a nondeterministic
 ;;;       function.
 
@@ -7141,7 +8422,7 @@ Screamer currently provides two convenient force-functions, namely
 #'linear-force and #'divide-and-conquer-force though future implementations
 may provide additional ones. \(The defined Screamer protocol does not provide
 sufficient hooks for the user to define her own force functions.)"
-  ;; note: This closure will heap cons.
+  ;; NOTE: This closure will heap cons.
   (let ((cost-function (value-of cost-function))
         (terminate? (value-of terminate?))
         (order (value-of order))
@@ -7189,8 +8470,9 @@ nikodemus@random-state.net."
         ,objective)
        (for-effects
          (let ((value ,form1))
-           (global (setf ,bound (variable-upper-bound ,objective))
-                   (setf ,best value))))
+           (global
+             (setf ,bound (variable-upper-bound ,objective))
+             (setf ,best value))))
        (if ,bound (list ,best ,bound) ,(if form2? form2 '(fail))))))
 
 (defun template-internal (template variables)
@@ -7200,13 +8482,13 @@ nikodemus@random-state.net."
        (if binding
            (values (cdr binding) variables)
            (let ((variable (make-variable template)))
-             (values variable (cons (cons template variable) variables))))))
+             (values variable (cached-cons (cached-cons template variable) variables))))))
     ((consp template)
      (cl:multiple-value-bind (car-template car-variables)
          (template-internal (car template) variables)
        (cl:multiple-value-bind (cdr-template cdr-variables)
            (template-internal (cdr template) car-variables)
-         (values (cons car-template cdr-template) cdr-variables))))
+         (values (cached-cons car-template cdr-template) cdr-variables))))
     (t (values template variables))))
 
 (defun template (template)
@@ -7230,4 +8512,27 @@ This is useful for creating patterns to be unified with other structures."
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew :screamer *features* :test #'eq))
 
-;;; Tam V'Nishlam Shevah L'El Borei Olam
+;;; TODO: Fix the below examples:
+
+;; NOTE: Seems to have something to do with integer bounds not propagating
+;; properly when one of the values wasn't initially known to be an integer?
+;; NOTE: This occurs because the sum of the first 4 elements of b is an
+;; integer without a finite range. We don't track which atoms a variable
+;; is dependent on, so we aren't able to recognize that (+ (+ 1 2 a 4) a)
+;; is the same as (+ 1 2 4 (* 2 a))
+;; NOTE: How to resolve this? Figure out how to track atoms and use that
+;; somehow? Do a compilation pass of the variable graph in `solution'
+;; before trying to actually solve it?
+;; NOTE: Using flow-cl here would be pretty useful... Organize the
+;; current state as a standalone library and publish it?
+;; (all-values
+;;      (let* ((b (template '(1 2 ?a 4 ?a)))
+;;             (c (applyv #'+v b)))
+;;        (print b)
+;;        (print c)
+;;        (assert! (integerpv (third b)))
+;;        (assert! (=v (an-integer-betweenv 1 3) c))
+;;        (assert! (integerpv c))
+;;        (print b)
+;;        (print c)
+;;        (solution (list b c) (static-ordering #'linear-force))))

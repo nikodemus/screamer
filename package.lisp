@@ -26,33 +26,43 @@
 
 (defpackage :screamer
   (:shadow :defun :multiple-value-bind :y-or-n-p :variable)
-  (:use :cl)
+  (:use :cl :alexandria)
+  (:local-nicknames (:s :serapeum)
+                    (:iter :iterate))
   (:export #:either
+           #:either-prob
            #:fail
            #:local
            #:global
            #:for-effects
            #:multiple-value-call-nondeterministic
-           #:one-value
            #:possibly?
            #:necessarily?
-           #:all-values
-           #:ith-value
+           #:one-value #:all-values #:n-values #:ith-value
+           #:all-values-prob #:n-values-prob
+           #:expected-prob
+           #:expected-value
            #:print-values
            #:nondeterministic-function?
            #:funcall-nondeterministic
            #:apply-nondeterministic
            #:unwind-trail
+           #:with-trail
            #:trail
+           #:trail-prob
+           #:current-probability
            #:purge
            #:unwedge-screamer
            #:local-output
            #:a-boolean
-           #:an-integer
-           #:an-integer-above
-           #:an-integer-below
-           #:an-integer-between
+           #:a-boolean-prob
+           #:an-integer #:an-integer-above #:an-integer-below #:an-integer-between
+           #:an-integer-between-prob
            #:a-member-of
+           #:a-member-of-prob
+           #:sample
+           #:sample-optimizing
+           #:state-transition
            #:when-failing
            #:count-failures
            #:boolean
@@ -66,34 +76,19 @@
            #:assert!
            #:known?
            #:decide
-           #:=v
-           #:<v
-           #:<=v
-           #:>v
-           #:>=v
-           #:/=v
+           #:=v #:<v #:<=v #:>v #:>=v #:/=v
            #:a-booleanv
-           #:an-integerv
-           #:an-integer-abovev
-           #:an-integer-belowv
-           #:an-integer-betweenv
-           #:a-realv
-           #:a-real-abovev
-           #:a-real-belowv
-           #:a-real-betweenv
+           #:an-integerv #:an-integer-abovev #:an-integer-belowv #:an-integer-betweenv
+           #:let-integers-betweenv
+           #:a-realv #:a-real-abovev #:a-real-belowv #:a-real-betweenv
            #:a-numberv
            #:a-member-ofv
-           #:notv
-           #:andv
-           #:orv
-           #:count-trues
-           #:count-truesv
-           #:+v
-           #:-v
-           #:*v
-           #:/v
-           #:minv
-           #:maxv
+           #:notv #:andv #:orv
+           #:count-trues #:count-truesv
+           #:+v #:-v #:*v #:/v
+           #:minv #:maxv
+           #:==v #:/==v #:== #:/==
+           #:all-different #:all-differentv
            #:funcallv
            #:applyv
            #:equalv
@@ -116,4 +111,6 @@
            #:*iscream?*
            #:*minimum-shrink-ratio*
            #:*maximum-discretization-range*
-           #:*strategy*))
+           #:*strategy*
+           #:*possibility-consolidator*
+           #:*numeric-bounds-collapse-threshold*))
